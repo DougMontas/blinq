@@ -1,0 +1,99 @@
+{
+  "name": "blinqfix-frontend",
+  "version": "1.0.0",
+  "resolutions": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "npx expo start",
+    "android": "npx expo start --android",
+    "ios": "npx expo start --ios",
+    "web": "npx expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~4.0.1",!
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-navigation/native": "^7.1.6",
+    "@react-navigation/native-stack": "^7.3.10",
+    "@react-navigation/stack": "^7.2.10",
+    "@stripe/stripe-react-native": "^0.38.6",
+    "antd-mobile": "^5.39.0",!
+    "axios": "^1.8.4",
+    "client": "^0.0.1",!
+    "expo": "~52.0.46",
+    "expo-checkbox": "^4.0.1",!
+    "expo-document-picker": "^13.0.3",
+    "expo-linear-gradient": "~14.0.2",
+    "expo-location": "~18.0.10",
+    "expo-status-bar": "~2.0.1",
+    "install": "^0.13.0",!
+    "jwt-decode": "^4.0.0",
+    "path": "^0.12.7",!
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-native": "0.76.9",
+    "react-native-config": "^1.5.5",!
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.4.0",
+    "react-native-web": "^0.20.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  }
+}
+
+router.get("/me", auth, async (req, res) => {
+  try {
+    console.time("🔍 MongoDB user fetch");
+
+    const fields = [
+      "name",
+      "email",
+      "address",
+      "phoneNumber",
+      "role",
+      "trade",
+      "serviceType",
+      "portfolio",
+      "zipcode",
+      "serviceZipcode",
+      "isActive",
+      "location",
+      "billingTier",
+      "profitSharingFeePercentage",
+      "date",
+      "stripeAccountId",
+      "stripeCustomerId",
+      "aboutMe",
+      "businessName",
+      "yearsExperience",
+    ].join(" ");
+
+    const user = await Users.findById(req.user.id, fields).lean();
+
+    console.timeEnd("🔍 MongoDB user fetch");
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    console.log("📦 slimUser output keys:", Object.keys(user));
+    res.json(user);
+  } catch (err) {
+    console.error("GET /me error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+
+//_______
+export default coveredDescriptions;
+
+
+__
+
+I want to add another features. similiar to uber. I need 2 maps one for the dashbords. this one will 
+show all service pros with a color coded pin. location is capture on line but ideally it needs to be 
+based of the phone geolocation or other best method. the second map should be for the JobStatus page. this one 
+should render both customer and service pro. hopefully it can be live to view service pro in 
+route. provide the code to make this happen. if anything needs to be install provide that info as well.

@@ -1,0 +1,144 @@
+// import mongoose from "mongoose";
+
+// const userSchema = new mongoose.Schema(
+//   {
+//     email: { type: String, required: true, unique: true },
+//     password: { type: String, required: true }
+//   },
+//   { timestamps: true }
+// );
+
+// export default mongoose.model("Users", userSchema);
+// backend/models/User.js
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+
+const REQUIRED_FOR_PROVIDER = [
+  "w9",
+  "businessLicense",
+  "proofOfInsurance",
+  "independentContractorAgreement",
+];
+
+const usersSchema = new mongoose.Schema(
+  {
+    /* ---------- core identity ---------- */
+    name: { type: String, required: true },
+    businessName: { type: String },
+    email: { type: String, required: true, unique: true },
+    address: { type: String, required: true },
+    phoneNumber: { type: String, required: false },
+
+    /* ---------- auth ---------- */
+    password: { type: String, required: true, select: false },
+
+    role: {
+      type: String,
+      enum: ["customer", "serviceProvider", "admin"],
+      default: "customer",
+    },
+
+    /* ---------- provider docs ---------- */
+    w9: { type: String },
+    businessLicense: { type: String },
+    proofOfInsurance: { type: String },
+    independentContractorAgreement: { type: String },
+    yearsExperience: { type: Number },
+    trade: [
+      {
+        type: String,
+        enum: [
+          "Roofing",
+          "Plumbing",
+          "HVAC",
+          "Electrical",
+          "Handyman",
+          "Cleaning",
+          "Odd_Jobs",
+        ],
+      },
+    ],
+    aboutMe: { type: String },
+    serviceType: { type: String },
+    portfolio: [{ type: String }],
+    zipcode: [{ type: String }],
+
+    /* at least one zip when provider */
+    serviceZipcode: {
+      type: [{ type: Number }],
+      validate: {
+        validator(arr) {
+          return this.role !== "serviceProvider" || (arr && arr.length > 0);
+        },
+        message: "serviceZipcode is required for serviceProvider",
+      },
+    },
+
+    /* ---------- misc flags ---------- */
+    isActive: { type: Boolean, default: false },
+
+    /* ---------- geo ----------- */
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: {
+        type: [Number], // [lng, lat]
+        default: [0, 0],
+      },
+    },
+
+    /* ---------- billing ---------- */
+    billingTier: {
+      type: String,
+      enum: ["subscription", "profit_sharing", "hybrid"],
+      default: "profit_sharing",
+    },
+    stripeCustomerId: { type: String },
+    cardOnFile: { type: String },
+    stripeAccountId: { type: String },
+    profitSharingFeePercentage: { type: Number, default: 0.3 },
+    refreshToken: { type: String, default: "" },
+
+    /* ---------- timestamps ---------- */
+    date: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
+
+/* -------- compound indexes -------- */
+// usersSchema.index({ email: 1 });
+usersSchema.index({ location: "2dsphere" });
+usersSchema.index({ role: 1, isActive: 1 });
+
+/* -------- virtuals -------- */
+usersSchema.virtual("firstName").get(function () {
+  return this.name?.split(" ")[0] || "";
+});
+
+/* -------- pre-save hooks -------- */
+usersSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+/* -------- provider-required docs -------- */
+usersSchema.pre("validate", function (next) {
+  if (this.role === "serviceProvider") {
+    const missing = REQUIRED_FOR_PROVIDER.filter((f) => !this[f]);
+    if (missing.length) {
+      this.invalidate(
+        missing[0],
+        `${missing.join(", ")} required for serviceProvider`
+      );
+    }
+  }
+  next();
+});
+
+/* -------- methods -------- */
+usersSchema.methods.checkPassword = function (plain) {
+  return bcrypt.compare(plain, this.password);
+};
+
+export default mongoose.model("Users", usersSchema);
