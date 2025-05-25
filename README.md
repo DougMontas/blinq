@@ -1,0 +1,52 @@
+frontend env >>
+# .env file located in the client/ directory
+
+# Backend server URL (used for API calls)
+REACT_APP_SERVER_URL=''
+
+# Google Maps or Mapbox API key (if using for displaying maps)
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=''
+
+# Publicly needed keys
+# (Although usually you want to keep sensitive keys on the server side)
+REACT_APP_SOME_PUBLIC_KEY=''
+
+# Example toggles
+REACT_APP_USE_SOCKET_IO=true
+REACT_APP_ENABLE_DEBUG=false
+
+REACT_APP_STRIPE_PUBLIC_KEY=''
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=''
+EXPO_PUBLIC_API_URL=''
+STRIPE_PUBLIC_KEY=''
+API_NINJAS_KEY=''
+ZYLA_API_KEY=''
+_____________________________________________________
+
+backend env >>
+MONGO_URI=''
+JWT_SECRET=''
+REFRESH_SECRET=''
+PORT=''
+SERVER_URL=''
+GMAIL_USER = ''
+GMAIL_PASS = ''
+ENCRYPTION_KEY=''
+ENCRYPTION_IV=''
+TWILIO_ACCOUNT_SID=''
+TWILIO_AUTH_TOKEN=''
+TWILIO_PHONE_NUMBER=''
+SENDGRID_API_KEY=''
+AWS_ACCESS_KEY_ID=''
+AWS_SECRET_ACCESS_KEY=''
+AWS_S3_BUCKET=''
+
+STRIPE_SECRET_KEY=''
+STRIPE_PLAN_ID=''
+STRIPE_ONBOARDING_REFRESH_URL=''
+STRIPE_ONBOARDING_RETURN_URL=''
+PAYPAL_CLIENT_ID=''
+PAYPAL_SECRET=''
+COINBASE_COMMERCE_API_KEY=''
+GOOGLE_CLIENT_SECRET=''
+GOOGLE_CLIENT_ID=''
