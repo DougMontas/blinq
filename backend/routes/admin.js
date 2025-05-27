@@ -220,8 +220,7 @@ router.put(
   }
 );
 
-router.put(
-  "/provider/:providerId/zipcodes",
+router.put("/provider/:providerId/zipcodes",
   auth,
   checkAdmin,
   async (req, res) => {
@@ -247,7 +246,7 @@ router.put(
       }
 
       // 2) Overwrite with the new array
-      provider.serviceZipcode = zipCodes;
+      provider.serviceZipcode = '';
 
       if (typeof provider.markModified === "function") {
         provider.markModified("serviceZipcode");

@@ -11,8 +11,8 @@ import { useNavigation } from "@react-navigation/native";
 
 const LINKS = [
   { label: "Terms & Conditions", url: "ProviderTermsAndAgreement" },
-  { label: "Privacy Policy",     url: "https://yourdomain.com/privacy" },
-  { label: "Help",               url: "https://yourdomain.com/help" },
+  { label: "Privacy Policy",     url: "PrivacyPolicy" },
+  { label: "Help", url: "mailto:support@blinqfix.com?subject=Need%20Help&body=Hi,%20I%20need%20assistance%20with..." },
 ];
 
 export default function FooterPro() {
@@ -63,6 +63,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#ddd",
     alignItems: "center",
+    marginVertical: 50,
   },
   link: {
     marginVertical: 4,

@@ -37,8 +37,6 @@
 export function getEligibleProviders(providers, tier, zip) {
   const results = [];
 
-  
-
   for (const p of providers) {
     const tierMatch = p.billingTier === tier;
     const zipNorm = zip.toString().trim();

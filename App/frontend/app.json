@@ -43,7 +43,7 @@
     },
 
     "extra": {
-      "apiUrl": "http://192.168.0.48:8888"  // Just keep this single key
+      "apiUrl": "http://192.168.0.191:8888"  // Just keep this single key
     },
 
     "platforms": ["ios", "android", "web"],

@@ -227,7 +227,6 @@ router.get("/me/documents", auth, async (req, res) => {
   }
 });
 
-
 /**
  * GET /api/users/me/stats
  * Returns provider stats for current year

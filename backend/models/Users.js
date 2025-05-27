@@ -65,7 +65,7 @@ const usersSchema = new mongoose.Schema(
 
     /* at least one zip when provider */
     serviceZipcode: {
-      type: [{ type: Number }],
+      type: [{ type: Number}],
       validate: {
         validator(arr) {
           return this.role !== "serviceProvider" || (arr && arr.length > 0);
@@ -95,7 +95,13 @@ const usersSchema = new mongoose.Schema(
     stripeCustomerId: { type: String },
     cardOnFile: { type: String },
     stripeAccountId: { type: String },
-    profitSharingFeePercentage: { type: Number, default: 0.3 },
+    // profitSharingFeePercentage: { type: Number, default: 0.3 },
+    profitSharingFeePercentage: {
+      type: Number,
+      default: function () {
+        return this.billingTier === "hybrid" ? 0.07 : 0.07; //? hybrid : profit sharing. set both to 7%
+      },
+    },
     refreshToken: { type: String, default: "" },
 
     /* ---------- timestamps ---------- */

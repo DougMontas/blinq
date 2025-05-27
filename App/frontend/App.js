@@ -28,6 +28,9 @@ import ProviderProfile from "./screens/ProviderProfile";
 import TermsAndConditions from "./screens/TermsAndConditions";
 import NotFoundScreen from "./screens/NotFound";
 import ProviderTermsAndAgreement from "./screens/ProviderTermsAndAgreement";
+import HandymanCategoryScreen from './screens/HandymanCategoryScreen'
+import WebViewScreen from "./screens/WebViewScreen";
+import PrivacyPolicy from "./screens/PrivacyPolicy";
 
 // import ServiceProvidersMap from "./screens/ServiceProvidersMap";
 // import JobRouteMap from "./screens/JobRouteMap";
@@ -74,6 +77,7 @@ export default function App() {
 
             {/* 2) Public auth */}
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="HandymanCategoryScreen" component={HandymanCategoryScreen} />
             <Stack.Screen name="Registration" component={RegistrationScreen} />
             <Stack.Screen
               name="ResetPasswordScreen"
@@ -106,8 +110,16 @@ export default function App() {
               component={ProviderTermsAndAgreement}
             />
             <Stack.Screen
+              name="PrivacyPolicy"
+              component={PrivacyPolicy}
+            />
+            <Stack.Screen
               name="ProviderJobStatus"
               component={ProviderJobStatus}
+            />
+            <Stack.Screen
+              name="WebViewScreen"
+              component={WebViewScreen}
             />
             <Stack.Screen name="ProviderProfile" component={ProviderProfile} />
             <Stack.Screen name="RateProvider" component={RateProvider} />

@@ -98,6 +98,7 @@ import filesRoutes from "./routes/files.js";
 import imagesRoutes from "./routes/images.js";
 import zipMultiplierRoute from "./routes/zipMultiplier.js";
 import providers from "./routes/providers.js";
+import stripe from "./routes/stripe.js"
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -163,8 +164,8 @@ app.use((req, res, next) => {
   };
   next();
 });
-app.use("/api/routes", providers);
 
+app.use("/api/routes", providers);
 
 // Public routes
 app.use("/api/auth", authRoutes);
@@ -176,6 +177,7 @@ app.use("/api/jobs", auth, jobRoutes);
 app.use("/api/admin", auth, adminRoutes);
 app.use("/api/billing", auth, billingRoutes);
 app.use("/api/payments", auth, paymentsRoutes);
+app.use("/api/routes/stripe", auth, stripe);
 
 // File and Image routes
 app.use("/api/files", auth, filesRoutes);

@@ -1279,6 +1279,91 @@ const MATRIX = [
     Adjustment: 50,
   },
 
+  /* ─── Drywall Repairs ──────────────────────────────────────────── */
+  {
+    Service: "Drywall Repair",
+    Question: "What size is the damaged area?",
+    Option: "Small (less than 6\")",
+    Adjustment: 50,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "What size is the damaged area?",
+    Option: "Medium (between 6 and 12\")",
+    Adjustment: 25,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "What size is the damaged area?",
+    Option: "Large (between 1 and 3 ft)",
+    Adjustment: 0,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "What size is the damaged area?",
+    Option: "Multiple or greater than 3 ft",
+    Adjustment: 100,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "What caused the damage?",
+    Option: "Impact or wear",
+    Adjustment: 0,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "What caused the damage?",
+    Option: "Water damage",
+    Adjustment: 150,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is the surface textured?",
+    Option: "Yes",
+    Adjustment: 50,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is the surface textured?",
+    Option: "No",
+    Adjustment: 0,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is the damage on a ceiling?",
+    Option: "Yes",
+    Adjustment: 50,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is the damage on a ceiling?",
+    Option: "No",
+    Adjustment: 0,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is paint matching required?",
+    Option: "Yes",
+    Adjustment: 125,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is paint matching required?",
+    Option: "No – white or provided",
+    Adjustment: 50,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is the area obstructed?",
+    Option: "Yes",
+    Adjustment: 50,
+  },
+  {
+    Service: "Drywall Repair",
+    Question: "Is the area obstructed?",
+    Option: "No",
+    Adjustment: 0,
+  },
   /* ─── Appliance Failures ──────────────────────────────────────────── */
   {
     Service: "Appliance Failures",
@@ -1431,6 +1516,8 @@ export const coveredDescriptions = {
     "Basic part replacements (thermostat, igniter, valve), diagnosis, labor",
   "Cleaning":
     "Dusting, sweeping, vacuuming, mopping, kitchen wipe down, bathroom sanitation, trash removal, surface disinfection, bedroom and living room tidying",
+  "Drywall Repair":
+  "Patching and repair of damaged drywall, includes drywall material, joint compound, sanding supplies, paint supplies, and all necessary materials for finishing and cleanup.",
 };
 
 const BASE_PRICE = {
@@ -1444,6 +1531,7 @@ const BASE_PRICE = {
   "Broken Windows or Doors": 400,
   "Gas Leaks": 500,
   "Appliance Failures": 275,
+  "Drywall Repair": 200,
 };
 
 /** returns the base price for a service, or 0 if missing */
@@ -1475,6 +1563,7 @@ const SERVICE_TO_CATEGORY = {
   /* Handyman */
   "Broken Windows or Doors": "Handyman",
   "Appliance Failures": "Handyman",
+  "Drywall Repair": "Handyman",
 };
 
 // Build question data structures
