@@ -1,10 +1,6 @@
 // backend/middlewares/auth.js
 import jwt from "jsonwebtoken";
 
-
-/**
- * Named export "auth": checks for a token and sets req.user if valid
- */
 export function auth(req, res, next) {
   try {
     // 1. get token
@@ -12,8 +8,7 @@ export function auth(req, res, next) {
       req.headers["x-auth-token"] ||
       (req.headers["authorization"]?.split(" ")[1] ?? "");
 
-      console.log("🔐 Incoming token:", req.headers.authorization);
-
+    console.log("🔐 Incoming token:", req.headers.authorization);
 
     if (!token) {
       console.log("AUTH MIDDLEWARE: No token found in headers.");

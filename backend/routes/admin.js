@@ -16,35 +16,6 @@ const checkAdmin = (req, res, next) => {
   next();
 };
 
-// router.get("/users", auth, async (req, res) => {
-//   console.log("📥 Admin route hit: /admin/users");
-//   try {
-//     const users = await Users.find(
-//       { role: { $in: ["customer", "serviceProvider"] } },
-//       "-password -location -portfolio"
-//     ).lean();
-//     res.json(users);
-//   } catch (err) {
-//     console.error("GET /admin/users error:", err);
-//     res.status(500).json({ msg: "Server error fetching users." });
-//   }
-// });
-
-// router.get("/users", auth, async (req, res) => {
-//   console.log("📥 Admin route hit: /admin/users");
-//   try {
-//     const users = await Users.find(
-//       { role: { $in: ["customer", "serviceProvider"] } },
-//       "_id name email role serviceType isActive serviceZipcode billingTier"
-//     ).lean(); // only fetch essential fields
-//     res.json(users);
-//   } catch (err) {
-//     console.error("GET /admin/users error:", err);
-//     res.status(500).json({ msg: "Server error fetching users." });
-//   }
-// });
-
-
 router.get("/users", auth, async (req, res) => {
   console.log("📥 Admin route hit: /admin/users");
   try {
@@ -60,7 +31,6 @@ router.get("/users", auth, async (req, res) => {
   }
 });
 
-
 router.get("/admin/stats", async (req, res) => {
   try {
     const [customerCount, providerCount] = await Promise.all([
@@ -68,7 +38,8 @@ router.get("/admin/stats", async (req, res) => {
       Users.countDocuments({ role: "serviceProvider" }),
     ]);
 
-    console.log('customer count:',customerCount), console.log('provider count', providerCount);
+    console.log("customer count:", customerCount),
+      console.log("provider count", providerCount);
 
     res.json({ totalCustomers: customerCount, totalProviders: providerCount });
   } catch (err) {
@@ -99,8 +70,6 @@ router.get("/admin/stats", async (req, res) => {
 //     res.status(500).json({ msg: "Server error fetching users." });
 //   }
 // });
-
-
 
 router.get("/convenience-fees", auth, async (req, res) => {
   try {
@@ -191,8 +160,7 @@ router.get("/jobs", auth, async (req, res) => {
   }
 });
 
-router.put(
-  "/provider/:providerId/active",
+router.put("/provider/:providerId/active",
   auth,
   checkAdmin,
   async (req, res) => {
@@ -246,7 +214,7 @@ router.put("/provider/:providerId/zipcodes",
       }
 
       // 2) Overwrite with the new array
-      provider.serviceZipcode = '';
+      provider.serviceZipcode = "";
 
       if (typeof provider.markModified === "function") {
         provider.markModified("serviceZipcode");

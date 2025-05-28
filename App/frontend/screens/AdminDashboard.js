@@ -1,5 +1,3 @@
-//previous
-// screens/AdminDashboard.js
 // import React, { useState, useEffect } from "react";
 // import {
 //   View,
@@ -18,9 +16,9 @@
 // export default function AdminDashboard() {
 //   const navigation = useNavigation();
 
-//   const [users, setUsers] = useState([]);
+//   const [providerCount, setProviderCount] = useState(0);
+//   const [customerCount, setCustomerCount] = useState(0);
 //   const [providers, setProviders] = useState([]);
-//   const [customers, setCustomers] = useState([]);
 //   const [selectedProviderId, setSelectedProviderId] = useState(null);
 //   const [zipCodesInput, setZipCodesInput] = useState("");
 
@@ -36,53 +34,107 @@
 //     cancelled_by_provider: 0,
 //   });
 
-//   // 1) fetch all users
-//   useEffect(() => {
-//     const fetchUsers = async () => {
-//       try {
-//         const res = await api.get("/admin/users");
-//         // console.log("⚙️  /admin/users response:", res.data);
-//         const list = Array.isArray(res.data)
-//           ? res.data
-//           : Array.isArray(res.data.users)
-//           ? res.data.users
-//           : [];
-//         setUsers(list);
-//         setProviders(list.filter((u) => u.role === "serviceProvider"));
-//         setCustomers(list.filter((u) => u.role === "customer"));
-//       } catch (err) {
-//         console.error("Error fetching users:", err);
-//       }
-//     };
-//     fetchUsers();
-//   }, []);
+//   // useEffect(() => {
+//   //   const fetchUsers = async () => {
+//   //     try {
+//   //       const res = await api.get("/admin/users");
+//   //       const users = Array.isArray(res.data)
+//   //         ? res.data
+//   //         : Array.isArray(res.data.users)
+//   //         ? res.data.users
+//   //         : [];
+
+//   //       const customers = users.filter((user) => user.role === "customer");
+//   //       const providers = users.filter((user) => user.role === "serviceProvider");
+
+//   //       setCustomerCount(customers.length);
+//   //       setProviderCount(providers.length);
+//   //       setProviders(providers);
+//   //     } catch (err) {
+//   //       console.error("Error fetching users:", err);
+//   //     }
+//   //   };
+//   //   fetchUsers();
+//   // }, []);
+
+//   // useEffect(() => {
+//   //   const fetchCounts = async () => {
+//   //     try {
+//   //       const { data } = await api.get("/admin/users/counts");
+//   //       setProviderCount(data.providers || 0);
+//   //       setCustomerCount(data.customers || 0);
+//   //     } catch (err) {
+//   //       console.error("Error fetching user counts:", err);
+//   //     }
+//   //   };
+//   //   fetchCounts();
+//   // }, []);
+
+//   // useEffect(() => {
+//   //   const fetchUsers = async () => {
+//   //     try {
+//   //       const res = await api.get("/admin/users");
+//   //       const list = Array.isArray(res.data)
+//   //         ? res.data
+//   //         : Array.isArray(res.data.users)
+//   //         ? res.data.users
+//   //         : [];
+//   //       setProviders(list.filter((u) => u.role === "serviceProvider"));
+//   //     } catch (err) {
+//   //       console.error("Error fetching users:", err);
+//   //     }
+//   //   };
+//   //   fetchUsers();
+//   // }, []);
+
+//   // useEffect(() => {
+//   //   const fetchProviders = async () => {
+//   //     try {
+//   //       const res = await api.get("/admin/users?role=serviceProvider&fields=_id,name,email,role,serviceType,isActive");
+//   //       const list = Array.isArray(res.data)
+//   //         ? res.data
+//   //         : Array.isArray(res.data.users)
+//   //         ? res.data.users
+//   //         : [];
+//   //       setProviders(list);
+//   //     } catch (err) {
+//   //       console.error("Error fetching providers:", err);
+//   //     }
+//   //   };
+//   //   fetchProviders();
+//   // }, []);
+
+//   // useEffect(() => {
+//   //   const fetchUserStats = async () => {
+//   //     try {
+//   //       const res = await api.get("/admin/stats");
+//   //       setCustomers(Array(res.data.totalCustomers).fill({}));  // Just for count
+//   //       setProviders(Array(res.data.totalProviders).fill({}));
+//   //     } catch (err) {
+//   //       console.error("Error fetching user stats:", err);
+//   //     }
+//   //   };
+//   //   fetchUserStats();
+//   // }, []);
 
 //   useEffect(() => {
-//     const fetchUsers = async () => {
+//     const fetchStats = async () => {
 //       try {
-//         const res = await api.get("/admin/users");
-//         const list = Array.isArray(res.data)
-//           ? res.data
-//           : Array.isArray(res.data.users)
-//           ? res.data.users
-//           : [];
-//         console.log("🧾 Admin users received:", list.map(u => ({ id: u._id, role: u.role })));
-//         setUsers(list);
-//         setProviders(list.filter((u) => u.role === "serviceProvider"));
-//         setCustomers(list.filter((u) => u.role === "customer"));
+//         const res = await api.get("/admin/admin/stats");
+//         setCustomerCount(res.data.totalCustomers || 0);
+//         setProviderCount(res.data.totalProviders || 0);
 //       } catch (err) {
-//         console.error("Error fetching users:", err);
+//         console.error("Error fetching stats:", err);
 //       }
 //     };
-//     fetchUsers();
+
+//     fetchStats();
 //   }, []);
 
-//   // 2) fetch convenience fees
 //   useEffect(() => {
 //     const fetchFees = async () => {
 //       try {
 //         const res = await api.get("/admin/convenience-fees");
-//         // console.log("⚙️  /admin/convenience-fees response:", res.data);
 //         const payload = res.data.data || res.data || {};
 //         setFeesData({
 //           monthlyFees: Array.isArray(payload.monthlyFees)
@@ -99,12 +151,10 @@
 //     return () => clearInterval(id);
 //   }, []);
 
-//   // 3) fetch config
 //   useEffect(() => {
 //     const fetchConfig = async () => {
 //       try {
 //         const res = await api.get("/admin/configuration");
-//         // console.log("⚙️  /admin/configuration response:", res.data);
 //         setHardcodedEnabled(Boolean(res.data.hardcodedEnabled));
 //       } catch (err) {
 //         console.error("Error fetching configuration:", err);
@@ -113,12 +163,10 @@
 //     fetchConfig();
 //   }, []);
 
-//   // 4) fetch job statuses, now handles 500 by zeroing out
 //   useEffect(() => {
 //     const fetchJobs = async () => {
 //       try {
 //         const res = await api.get("/admin/jobs");
-//         // console.log("⚙️  /admin/jobs response:", res.data);
 //         const jobs = Array.isArray(res.data)
 //           ? res.data
 //           : Array.isArray(res.data.jobs)
@@ -140,7 +188,6 @@
 //         );
 //         setJobCounts(counts);
 //       } catch (err) {
-//         // if server threw a 500, just reset counts
 //         if (err.response?.status === 500) {
 //           console.error("Server error fetching jobs:", err);
 //           setJobCounts({
@@ -160,7 +207,24 @@
 //     return () => clearInterval(id);
 //   }, []);
 
-//   // toggle provider active
+//   useEffect(() => {
+//     const fetchProviders = async () => {
+//       try {
+//         const res = await api.get(
+//           "/admin/users?role=serviceProvider&fields=_id,name,email,role,serviceType,isActive,billingTier"
+//         );
+//         const list = Array.isArray(res.data.providers)
+//           ? res.data.providers
+//           : [];
+//         setProviders(list);
+//       } catch (err) {
+//         console.error("Error fetching providers:", err);
+//       }
+//     };
+
+//     fetchProviders();
+//   }, []);
+
 //   const handleToggleActive = async (providerId, currentValue) => {
 //     try {
 //       const newValue = !currentValue;
@@ -178,13 +242,11 @@
 //     }
 //   };
 
-//   // select provider to update zip codes
 //   const handleSelectProvider = (providerId) => {
 //     setSelectedProviderId(providerId);
 //     setZipCodesInput("");
 //   };
 
-//   // update provider’s zip codes
 //   const updateZipCodes = async () => {
 //     if (!selectedProviderId) return;
 //     const zips = zipCodesInput
@@ -192,7 +254,6 @@
 //       .map((z) => z.trim())
 //       .filter(Boolean);
 //     try {
-//       // note plural "providers" & payload key "zipCodes"
 //       await api.put(`/admin/provider/${selectedProviderId}/zipcodes`, {
 //         zipCodes: zips,
 //       });
@@ -200,17 +261,6 @@
 //     } catch (err) {
 //       console.error("Error updating ZIP codes:", err);
 //       Alert.alert("Error", "Failed to update ZIP codes");
-//     }
-//   };
-
-//   // handle config toggle
-//   const handleConfigToggle = async (newValue) => {
-//     setHardcodedEnabled(newValue);
-//     try {
-//       await api.put("/admin/configuration", { hardcodedEnabled: newValue });
-//     } catch (err) {
-//       console.error("Error updating configuration:", err);
-//       Alert.alert("Error", "Failed to update configuration");
 //     }
 //   };
 
@@ -224,18 +274,16 @@
 //   return (
 //     <ScrollView style={styles.container}>
 //       <LogoutButton />
-
 //       <Text style={styles.title}>Admin Dashboard</Text>
 
-//       {/* Overview Cards */}
 //       <View style={styles.cardRow}>
 //         <View style={styles.card}>
 //           <Text style={styles.cardTitle}>Total Customers</Text>
-//           <Text style={styles.cardValue}>{customers.length}</Text>
+//           <Text style={styles.cardValue}>{customerCount}</Text>
 //         </View>
 //         <View style={styles.card}>
 //           <Text style={styles.cardTitle}>Total Providers</Text>
-//           <Text style={styles.cardValue}>{providers.length}</Text>
+//           <Text style={styles.cardValue}>{providerCount}</Text>
 //         </View>
 //         <View style={styles.card}>
 //           <Text style={styles.cardTitle}>YTD Fees</Text>
@@ -243,7 +291,6 @@
 //         </View>
 //       </View>
 
-//       {/* Monthly breakdown */}
 //       <View style={styles.card}>
 //         <Text style={styles.cardTitle}>Monthly Fees Breakdown</Text>
 //         {feesData.monthlyFees.length > 0 ? (
@@ -258,16 +305,14 @@
 //         )}
 //       </View>
 
-//       {/* Global Config */}
 //       <View style={styles.card}>
 //         <Text style={styles.cardTitle}>Global Config</Text>
 //         <View style={styles.switchRow}>
 //           <Text style={{ marginRight: 8 }}>Hardcoded Providers Enabled:</Text>
-//           <Switch value={hardcodedEnabled} onValueChange={handleConfigToggle} />
+//           <Switch value={hardcodedEnabled} onValueChange={handleToggleActive} />
 //         </View>
 //       </View>
 
-//       {/* Job Status Cards */}
 //       <Text style={styles.subtitle}>Job Status Overview</Text>
 //       <View style={styles.cardRow}>
 //         {["completed", "pending", "invited"].map((key) => (
@@ -290,7 +335,6 @@
 //         ))}
 //       </View>
 
-//       {/* Service Providers w/ search */}
 //       <View style={styles.card}>
 //         <Text style={styles.cardTitle}>Service Providers</Text>
 //         <TextInput
@@ -308,6 +352,7 @@
 //               <Text>
 //                 {provider.name} ({provider.email})
 //               </Text>
+//               <Text>{provider.billingTier}</Text>
 //               <Text>
 //                 Service: {provider.serviceType} • Active:{" "}
 //                 {provider.isActive ? "Yes" : "No"}
@@ -323,7 +368,6 @@
 //         ))}
 //       </View>
 
-//       {/* ZIP code update for selected provider */}
 //       {selectedProviderId && (
 //         <View style={styles.card}>
 //           <Text style={styles.cardTitle}>
@@ -345,7 +389,7 @@
 // }
 
 // const styles = StyleSheet.create({
-//   container: { backgroundColor: "#fff", padding: 16, marginVertical: 22 },
+//   container: { backgroundColor: "#fff", padding: 16, marginVertical: 45 },
 //   title: {
 //     fontSize: 22,
 //     fontWeight: "bold",
@@ -394,6 +438,9 @@
 //   updateBtnText: { color: "#fff", fontWeight: "600" },
 // });
 
+
+
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -417,6 +464,8 @@ export default function AdminDashboard() {
   const [providers, setProviders] = useState([]);
   const [selectedProviderId, setSelectedProviderId] = useState(null);
   const [zipCodesInput, setZipCodesInput] = useState("");
+  const [zipSearch, setZipSearch] = useState("");
+  const [zipProCount, setZipProCount] = useState(null);
 
   const [feesData, setFeesData] = useState({ monthlyFees: [], ytdTotal: 0 });
   const [hardcodedEnabled, setHardcodedEnabled] = useState(false);
@@ -430,90 +479,6 @@ export default function AdminDashboard() {
     cancelled_by_provider: 0,
   });
 
-  // useEffect(() => {
-  //   const fetchUsers = async () => {
-  //     try {
-  //       const res = await api.get("/admin/users");
-  //       const users = Array.isArray(res.data)
-  //         ? res.data
-  //         : Array.isArray(res.data.users)
-  //         ? res.data.users
-  //         : [];
-  
-  //       const customers = users.filter((user) => user.role === "customer");
-  //       const providers = users.filter((user) => user.role === "serviceProvider");
-  
-  //       setCustomerCount(customers.length);
-  //       setProviderCount(providers.length);
-  //       setProviders(providers);
-  //     } catch (err) {
-  //       console.error("Error fetching users:", err);
-  //     }
-  //   };
-  //   fetchUsers();
-  // }, []);
-  
-
-  // useEffect(() => {
-  //   const fetchCounts = async () => {
-  //     try {
-  //       const { data } = await api.get("/admin/users/counts");
-  //       setProviderCount(data.providers || 0);
-  //       setCustomerCount(data.customers || 0);
-  //     } catch (err) {
-  //       console.error("Error fetching user counts:", err);
-  //     }
-  //   };
-  //   fetchCounts();
-  // }, []);
-
-  // useEffect(() => {
-  //   const fetchUsers = async () => {
-  //     try {
-  //       const res = await api.get("/admin/users");
-  //       const list = Array.isArray(res.data)
-  //         ? res.data
-  //         : Array.isArray(res.data.users)
-  //         ? res.data.users
-  //         : [];
-  //       setProviders(list.filter((u) => u.role === "serviceProvider"));
-  //     } catch (err) {
-  //       console.error("Error fetching users:", err);
-  //     }
-  //   };
-  //   fetchUsers();
-  // }, []);
-
-  // useEffect(() => {
-  //   const fetchProviders = async () => {
-  //     try {
-  //       const res = await api.get("/admin/users?role=serviceProvider&fields=_id,name,email,role,serviceType,isActive");
-  //       const list = Array.isArray(res.data)
-  //         ? res.data
-  //         : Array.isArray(res.data.users)
-  //         ? res.data.users
-  //         : [];
-  //       setProviders(list);
-  //     } catch (err) {
-  //       console.error("Error fetching providers:", err);
-  //     }
-  //   };
-  //   fetchProviders();
-  // }, []);
-
-  // useEffect(() => {
-  //   const fetchUserStats = async () => {
-  //     try {
-  //       const res = await api.get("/admin/stats");
-  //       setCustomers(Array(res.data.totalCustomers).fill({}));  // Just for count
-  //       setProviders(Array(res.data.totalProviders).fill({}));
-  //     } catch (err) {
-  //       console.error("Error fetching user stats:", err);
-  //     }
-  //   };
-  //   fetchUserStats();
-  // }, []);
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -524,7 +489,6 @@ export default function AdminDashboard() {
         console.error("Error fetching stats:", err);
       }
     };
-  
     fetchStats();
   }, []);
 
@@ -534,9 +498,7 @@ export default function AdminDashboard() {
         const res = await api.get("/admin/convenience-fees");
         const payload = res.data.data || res.data || {};
         setFeesData({
-          monthlyFees: Array.isArray(payload.monthlyFees)
-            ? payload.monthlyFees
-            : [],
+          monthlyFees: Array.isArray(payload.monthlyFees) ? payload.monthlyFees : [],
           ytdTotal: typeof payload.ytdTotal === "number" ? payload.ytdTotal : 0,
         });
       } catch (err) {
@@ -564,11 +526,7 @@ export default function AdminDashboard() {
     const fetchJobs = async () => {
       try {
         const res = await api.get("/admin/jobs");
-        const jobs = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data.jobs)
-          ? res.data.jobs
-          : [];
+        const jobs = Array.isArray(res.data) ? res.data : res.data.jobs || [];
         const counts = jobs.reduce(
           (acc, job) => {
             const s = (job.status || "").toLowerCase();
@@ -585,18 +543,7 @@ export default function AdminDashboard() {
         );
         setJobCounts(counts);
       } catch (err) {
-        if (err.response?.status === 500) {
-          console.error("Server error fetching jobs:", err);
-          setJobCounts({
-            completed: 0,
-            pending: 0,
-            invited: 0,
-            canceled: 0,
-            cancelled_by_provider: 0,
-          });
-        } else {
-          console.error("Error fetching jobs:", err);
-        }
+        console.error("Error fetching jobs:", err);
       }
     };
     fetchJobs();
@@ -605,130 +552,93 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const res = await api.get(
+          "/admin/users?role=serviceProvider&fields=_id,name,email,role,serviceType,isActive,billingTier,zipCodes"
+        );
+        const list = Array.isArray(res.data.providers) ? res.data.providers : [];
+        setProviders(list);
+      } catch (err) {
+        console.error("Error fetching providers:", err);
+      }
+    };
+    fetchProviders();
+  }, []);
 
-  const fetchProviders = async () => {
+  const handleToggleActive = async (providerId, currentValue) => {
     try {
-      const res = await api.get(
-        "/admin/users?role=serviceProvider&fields=_id,name,email,role,serviceType,isActive,billingTier"
+      const newValue = !currentValue;
+      await api.put(`/admin/provider/${providerId}/active`, {
+        isActive: newValue,
+      });
+      setProviders((prev) =>
+        prev.map((p) => (p._id === providerId ? { ...p, isActive: newValue } : p))
       );
-      const list = Array.isArray(res.data.providers)
-        ? res.data.providers
-        : [];
-      setProviders(list);
     } catch (err) {
-      console.error("Error fetching providers:", err);
+      console.error("Error updating provider status:", err);
+      Alert.alert("Error", "Failed to update provider status");
     }
   };
 
-  
-  fetchProviders();
-}, []);
+  const handleSelectProvider = (providerId) => {
+    setSelectedProviderId(providerId);
+    setZipCodesInput("");
+  };
 
-const handleToggleActive = async (providerId, currentValue) => {
-  try {
-    const newValue = !currentValue;
-    await api.put(`/admin/provider/${providerId}/active`, {
-      isActive: newValue,
-    });
-    setProviders((prev) =>
-      prev.map((p) =>
-        p._id === providerId ? { ...p, isActive: newValue } : p
-      )
-    );
-  } catch (err) {
-    console.error("Error updating provider status:", err);
-    Alert.alert("Error", "Failed to update provider status");
-  }
-};
+  const updateZipCodes = async () => {
+    if (!selectedProviderId) return;
+    const zips = zipCodesInput.split(",").map((z) => z.trim()).filter(Boolean);
+    try {
+      await api.put(`/admin/provider/${selectedProviderId}/zipcodes`, {
+        zipCodes: zips,
+      });
+      Alert.alert("Success", "ZIP codes updated!");
+    } catch (err) {
+      console.error("Error updating ZIP codes:", err);
+      Alert.alert("Error", "Failed to update ZIP codes");
+    }
+  };
 
-const handleSelectProvider = (providerId) => {
-  setSelectedProviderId(providerId);
-  setZipCodesInput("");
-};
+  const filteredProviders = providers.filter((p) => {
+    const q = searchTerm.toLowerCase();
+    return p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q);
+  });
 
-const updateZipCodes = async () => {
-  if (!selectedProviderId) return;
-  const zips = zipCodesInput
-    .split(",")
-    .map((z) => z.trim())
-    .filter(Boolean);
-  try {
-    await api.put(`/admin/provider/${selectedProviderId}/zipcodes`, {
-      zipCodes: zips,
-    });
-    Alert.alert("Success", "ZIP codes updated!");
-  } catch (err) {
-    console.error("Error updating ZIP codes:", err);
-    Alert.alert("Error", "Failed to update ZIP codes");
-  }
-};
+  const handleZipSearch = () => {
+    const normalizedZip = zipSearch.trim();
+    const count = providers.filter((p) => {
+      if (p.billingTier !== "hybrid") return false;
+      const zips = p.serviceZipcode;
+      if (typeof zips === "string") {
+        return zips.trim() === normalizedZip;
+      }
+      if (Array.isArray(zips)) {
+        return zips.some((z) => z.trim() === normalizedZip);
+      }
+      return false;
+    }).length;
+    setZipProCount(count);
+  };
 
-const filteredProviders = providers.filter((p) => {
-  const q = searchTerm.toLowerCase();
-  return (
-    p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)
-  );
-});
-
-//   const handleToggleActive = async (providerId, currentValue) => {
-//     try {
-//       const newValue = !currentValue;
-//       await api.put(`/admin/provider/${providerId}/active`, {
-//         isActive: newValue,
-//       });
-//       setProviders((prev) =>
-//         prev.map((p) =>
-//           p._id === providerId ? { ...p, isActive: newValue } : p
-//         )
-//       );
-//     } catch (err) {
-//       console.error("Error updating provider status:", err);
-//       Alert.alert("Error", "Failed to update provider status");
-//     }
-//   };
-
-//   const handleSelectProvider = (providerId) => {
-//     setSelectedProviderId(providerId);
-//     setZipCodesInput("");
-//   };
-
-//   const updateZipCodes = async () => {
-//     if (!selectedProviderId) return;
-//     const zips = zipCodesInput
-//       .split(",")
-//       .map((z) => z.trim())
-//       .filter(Boolean);
-//     try {
-//       await api.put(`/admin/provider/${selectedProviderId}/zipcodes`, {
-//         zipCodes: zips,
-//       });
-//       Alert.alert("Success", "ZIP codes updated!");
-//     } catch (err) {
-//       console.error("Error updating ZIP codes:", err);
-//       Alert.alert("Error", "Failed to update ZIP codes");
-//     }
-//   };
-
-//   const handleConfigToggle = async (newValue) => {
-//     setHardcodedEnabled(newValue);
-//     try {
-//       await api.put("/admin/configuration", { hardcodedEnabled: newValue });
-//     } catch (err) {
-//       console.error("Error updating configuration:", err);
-//       Alert.alert("Error", "Failed to update configuration");
-//     }
-//   };
-
-//   const filteredProviders = providers.filter((p) =>
-//   p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//   p.email.toLowerCase().includes(searchTerm.toLowerCase())
-// );
-  // const filteredProviders = providers.filter((p) => {
-  //   const q = searchTerm.toLowerCase();
-  //   return (
-  //     p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)
-  //   );
-  // });
+  // const handleZipSearch = () => {
+  //   const count = providers.filter(
+  //     (p) =>
+  //       p.billingTier === "hybrid" &&
+  //       ((typeof p.serviceZipcode === "string" && p.serviceZipcode.trim() === zipSearch.trim()) ||
+  //         (Array.isArray(p.serviceZipcode) && p.serviceZipcode.includes(zipSearch.trim())))
+  //   ).length;
+  //   setZipProCount(count);
+  // };
+  // const handleZipSearch = () => {
+  //   const count = providers.filter(
+  //     (p) =>
+  //       p.billingTier === "hybrid" &&
+  //       Array.isArray(p.serviceZipcode) &&
+  //       p.serviceZipcode.includes(zipSearch.trim())
+  //   ).length;
+  //   setZipProCount(count);
+  // };
 
   return (
     <ScrollView style={styles.container}>
@@ -755,8 +665,9 @@ const filteredProviders = providers.filter((p) => {
         {feesData.monthlyFees.length > 0 ? (
           feesData.monthlyFees.map((fee, idx) => (
             <Text key={idx}>
-              Month {fee._id.month}/{fee._id.year}: $
-              {(fee.totalConvenienceFee || 0).toFixed(2)}
+              Month {fee._id.month}/{fee._id.year}: ${
+                (fee.totalConvenienceFee || 0).toFixed(2)
+              }
             </Text>
           ))
         ) : (
@@ -809,11 +720,9 @@ const filteredProviders = providers.filter((p) => {
               onPress={() => handleSelectProvider(provider._id)}
             >
               <Text>
-                {provider.name} ({provider.email}) 
+                {provider.name} ({provider.email})
               </Text>
-              <Text>
-                {provider.billingTier}
-              </Text>
+              <Text>{provider.billingTier}</Text>
               <Text>
                 Service: {provider.serviceType} • Active:{" "}
                 {provider.isActive ? "Yes" : "No"}
@@ -845,6 +754,24 @@ const filteredProviders = providers.filter((p) => {
           </TouchableOpacity>
         </View>
       )}
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>ZIP Code Capacity</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter ZIP code"
+          value={zipSearch}
+          onChangeText={setZipSearch}
+        />
+        <TouchableOpacity style={styles.updateBtn} onPress={handleZipSearch}>
+          <Text style={styles.updateBtnText}>Check Availability</Text>
+        </TouchableOpacity>
+        {zipProCount !== null && (
+          <Text style={{ marginTop: 10 }}>
+            Hybrid providers: {zipProCount} / 7 — {zipProCount < 7 ? "Available" : "Full"}
+          </Text>
+        )}
+      </View>
     </ScrollView>
   );
 }

@@ -1,81 +1,3 @@
-//previous
-// // backend/server.js
-// import express from "express";
-// import cors from "cors";
-// import http from "http";
-// import { Server as SocketIOServer } from "socket.io";
-// import dotenv from "dotenv";
-
-// import { connectDB } from "./config/db.js";
-// import { auth } from "./middlewares/auth.js";
-
-// import authRoutes from "./routes/authRoutes.js";
-// import userRoutes from "./routes/users.js";
-// import jobRoutes from "./routes/jobs.js";
-// import adminRoutes from "./routes/admin.js";
-// import billingRoutes from "./routes/billingRoutes.js";
-// import paymentsRoutes from "./routes/payments.js";
-// import filesRoutes from "./routes/files.js";
-// import imagesRoutes from "./routes/images.js";
-// import path from "path";
-// import { fileURLToPath } from "url";
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-
-
-// dotenv.config();
-// await connectDB();
-
-// const app = express();
-// app.use(cors());
-// app.use(express.json());
-
-// // create HTTP server & socket.io
-// const server = http.createServer(app);
-// const io = new SocketIOServer(server, { cors: { origin: "*" } });
-
-// // let clients join their user‐ID room
-// io.on("connection", (socket) => {
-//   socket.on("joinUserRoom", ({ userId }) => {
-//     socket.join(userId);
-//     console.log(`Socket ${socket.id} joined room for user ${userId}`);
-//   });
-// });
-
-// // make io available on req.io
-// app.use((req, _res, next) => {
-//   req.io = io;
-//   next();
-// });
-
-// /**
-//  * Public routes (no token needed)
-//  */
-// app.use("/api/auth", authRoutes);
-
-// /**
-//  * Protected routes (JWT required)
-//  */
-// app.use("/api/users", auth, userRoutes);
-// app.use("/api/jobs", auth, jobRoutes);
-// app.use("/api/admin", auth, adminRoutes);
-// app.use("/api/billing", auth, billingRoutes);
-
-// // ← mount your payments router here:
-// app.use("/api/payments", auth, paymentsRoutes);
-
-// /**
-//  * File & Image uploads/endpoints
-//  */
-// app.use("/api/files", auth, filesRoutes);
-// app.use("/api/images", auth, imagesRoutes);
-// app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
-// const PORT = process.env.PORT || 8888;
-// server.listen(PORT, () => {
-//   console.log(`Server listening on http://localhost:${PORT}`);
-// });
-
 // backend/server.js
 import express from "express";
 import cors from "cors";
@@ -98,8 +20,7 @@ import filesRoutes from "./routes/files.js";
 import imagesRoutes from "./routes/images.js";
 import zipMultiplierRoute from "./routes/zipMultiplier.js";
 import providers from "./routes/providers.js";
-import stripe from "./routes/stripe.js"
-
+import stripe from "./routes/stripe.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

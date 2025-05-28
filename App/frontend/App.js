@@ -31,6 +31,7 @@ import ProviderTermsAndAgreement from "./screens/ProviderTermsAndAgreement";
 import HandymanCategoryScreen from './screens/HandymanCategoryScreen'
 import WebViewScreen from "./screens/WebViewScreen";
 import PrivacyPolicy from "./screens/PrivacyPolicy";
+import ServiceProFaqScreen from "./screens/ServiceProFaqScreen";
 
 // import ServiceProvidersMap from "./screens/ServiceProvidersMap";
 // import JobRouteMap from "./screens/JobRouteMap";
@@ -112,6 +113,10 @@ export default function App() {
             <Stack.Screen
               name="PrivacyPolicy"
               component={PrivacyPolicy}
+            />
+            <Stack.Screen
+              name="ServiceProFaqScreen"
+              component={ServiceProFaqScreen}
             />
             <Stack.Screen
               name="ProviderJobStatus"

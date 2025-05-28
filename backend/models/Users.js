@@ -1,14 +1,3 @@
-// import mongoose from "mongoose";
-
-// const userSchema = new mongoose.Schema(
-//   {
-//     email: { type: String, required: true, unique: true },
-//     password: { type: String, required: true }
-//   },
-//   { timestamps: true }
-// );
-
-// export default mongoose.model("Users", userSchema);
 // backend/models/User.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
@@ -65,7 +54,7 @@ const usersSchema = new mongoose.Schema(
 
     /* at least one zip when provider */
     serviceZipcode: {
-      type: [{ type: Number}],
+      type: [{ type: Number }],
       validate: {
         validator(arr) {
           return this.role !== "serviceProvider" || (arr && arr.length > 0);

@@ -27,9 +27,7 @@ router.post("/subscribe", auth, async (req, res) => {
       user.role !== "serviceProvider" ||
       user.billingTier !== "subscription"
     ) {
-      return res
-        .status(400)
-        .json({ msg: "User is not a subscription member" });
+      return res.status(400).json({ msg: "User is not a subscription member" });
     }
 
     // Create or reuse Stripe customer

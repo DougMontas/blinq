@@ -9,7 +9,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
 });
 
-// Replaces old POST /stripe/create-account
 router.get("/onboard", auth, async (req, res) => {
   try {
     const user = await Users.findById(req.user.id);
@@ -33,15 +32,21 @@ router.get("/onboard", auth, async (req, res) => {
 
     const accountLink = await stripe.accountLinks.create({
       account: user.stripeAccountId,
-      refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL || "http://localhost:3000/onboarding/refresh",
-      return_url: process.env.STRIPE_ONBOARDING_RETURN_URL || "http://localhost:3000/provider",
+      refresh_url:
+        process.env.STRIPE_ONBOARDING_REFRESH_URL ||
+        "http://localhost:3000/onboarding/refresh",
+      return_url:
+        process.env.STRIPE_ONBOARDING_RETURN_URL ||
+        "http://localhost:3000/provider",
       type: "account_onboarding",
     });
     // console.log('url:>>>backend',accountLink.url)
     return res.json({ url: accountLink.url });
   } catch (err) {
     console.error("Stripe onboarding failed:", err);
-    return res.status(500).json({ msg: "Onboarding failed", error: err.message });
+    return res
+      .status(500)
+      .json({ msg: "Onboarding failed", error: err.message });
   }
 });
 

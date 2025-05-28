@@ -1,5 +1,3 @@
-// screens/ProviderProfile.js
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -18,6 +16,9 @@ import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
 import api from "../api/client";
 import * as Linking from "expo-linking";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import { Asset } from "expo-asset";
 
 const SERVICE_TYPES = [
   "Electrician",
@@ -59,16 +60,17 @@ export default function ProviderProfile() {
     (async () => {
       try {
         const { data } = await api.get("/users/me");
-        setProfile({
-          aboutMe: data.aboutMe || "",
-          yearsExperience: String(data.yearsExperience || ""),
-          serviceType: data.serviceType || "",
-        //   serviceCost: String(data.serviceCost || 350),
-          businessName: data.businessName || "",
-          address: data.address || "",
-          zipcode: data.zipcode || "",
-          serviceZipcode: data.serviceZipcode || "",
-        });
+        setProfile((prev) => ({
+          ...prev,
+          aboutMe: data.aboutMe || prev.aboutMe,
+          yearsExperience: String(data.yearsExperience || prev.yearsExperience),
+          serviceType: data.serviceType || prev.serviceType,
+          serviceCost: String(data.serviceCost || prev.serviceCost),
+          businessName: data.businessName || prev.businessName,
+          address: data.address || prev.address,
+          zipcode: data.zipcode || prev.zipcode,
+          serviceZipcode: data.serviceZipcode || prev.serviceZipcode,
+        }));
         setExisting({
           w9: data.w9Url || null,
           businessLicense: data.businessLicenseUrl || null,
@@ -100,24 +102,16 @@ export default function ProviderProfile() {
     }
   };
 
-  const handleAddressBlur = async () => {
-    if (!profile.address) return;
+  const downloadAgreementFromAssets = async () => {
     try {
-      const resp = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-          profile.address
-        )}&key=${Constants.expoConfig.extra.googleMapsKey}`
-      );
-      const { results } = await resp.json();
-      const comp =
-        results?.[0]?.address_components.find((c) =>
-          c.types.includes("postal_code")
-        ) || null;
-      if (comp) {
-        setProfile((p) => ({ ...p, zipcode: comp.long_name }));
-      }
-    } catch {
-      // silent
+      const asset = Asset.fromModule(require("../assets/BlinqFix Indepent Contractor Agreement.pdf"));
+      await asset.downloadAsync();
+      const fileUri = `${FileSystem.cacheDirectory}${asset.name}`;
+      await FileSystem.copyAsync({ from: asset.localUri, to: fileUri });
+      await Sharing.shareAsync(fileUri);
+    } catch (err) {
+      console.error("Download error:", err);
+      Alert.alert("Error", "Unable to open agreement PDF.");
     }
   };
 
@@ -182,9 +176,7 @@ export default function ProviderProfile() {
         style={s.input}
         multiline
         value={profile.aboutMe}
-        onChangeText={(t) =>
-          setProfile((p) => ({ ...p, aboutMe: t }))
-        }
+        onChangeText={(t) => setProfile((p) => ({ ...p, aboutMe: t }))}
       />
 
       <Text style={s.label}>Years of Experience</Text>
@@ -192,112 +184,74 @@ export default function ProviderProfile() {
         style={s.input}
         keyboardType="number-pad"
         value={profile.yearsExperience}
-        onChangeText={(t) =>
-          setProfile((p) => ({ ...p, yearsExperience: t }))
-        }
+        onChangeText={(t) => setProfile((p) => ({ ...p, yearsExperience: t }))}
       />
 
       <Text style={s.label}>Service Type</Text>
       <View style={s.pickerWrap}>
         <Picker
           selectedValue={profile.serviceType}
-          onValueChange={(v) =>
-            setProfile((p) => ({ ...p, serviceType: v }))
-          }
+          onValueChange={(v) => setProfile((p) => ({ ...p, serviceType: v }))}
         >
           <Picker.Item label="Select…" value="" />
           {SERVICE_TYPES.map((t) => (
-            <Picker.Item
-              key={t}
-              label={t.replace("_", " ")}
-              value={t}
-            />
+            <Picker.Item key={t} label={t.replace("_", " ")} value={t} />
           ))}
         </Picker>
       </View>
 
-      <Text style={s.label}>Service Cost</Text>
+      {/* <Text style={s.label}>Service Cost</Text>
       <TextInput
         style={s.input}
         keyboardType="number-pad"
         value={profile.serviceCost}
-        onChangeText={(t) =>
-          setProfile((p) => ({ ...p, serviceCost: t }))
-        }
-      />
+        onChangeText={(t) => setProfile((p) => ({ ...p, serviceCost: t }))}
+      /> */}
 
       <Text style={s.label}>Business Name</Text>
       <TextInput
         style={s.input}
         value={profile.businessName}
-        onChangeText={(t) =>
-          setProfile((p) => ({ ...p, businessName: t }))
-        }
+        onChangeText={(t) => setProfile((p) => ({ ...p, businessName: t }))}
       />
 
       <Text style={s.label}>Address</Text>
       <TextInput
         style={s.input}
         value={profile.address}
-        onChangeText={(t) =>
-          setProfile((p) => ({ ...p, address: t }))
-        }
-        onBlur={handleAddressBlur}
+        onChangeText={(t) => setProfile((p) => ({ ...p, address: t }))}
       />
 
       <Text style={s.label}>Extracted Zipcode</Text>
-      <TextInput
-        style={s.input}
-        value={profile.zipcode}
-        editable={false}
-      />
+      <TextInput style={s.input} value={profile.zipcode} editable={false} />
 
       <Text style={s.label}>Service Coverage Zipcode</Text>
       <TextInput
         style={s.input}
         value={profile.serviceZipcode}
-        onChangeText={(t) =>
-          setProfile((p) => ({ ...p, serviceZipcode: t }))
-        }
+        onChangeText={(t) => setProfile((p) => ({ ...p, serviceZipcode: t }))}
       />
 
       {renderLink("W-9", existing.w9)}
       <Button title="Upload W-9" onPress={() => pickFile("w9")} />
-      {files.w9 && (
-        <Text style={s.fileText}>Selected: {files.w9.name}</Text>
-      )}
+      {files.w9 && <Text style={s.fileText}>Selected: {files.w9.name}</Text>}
 
       {renderLink("Business License", existing.businessLicense)}
-      <Button
-        title="Upload Business License"
-        onPress={() => pickFile("businessLicense")}
-      />
-      {files.businessLicense && (
-        <Text style={s.fileText}>{files.businessLicense.name}</Text>
-      )}
+      <Button title="Upload Business License" onPress={() => pickFile("businessLicense")} />
+      {files.businessLicense && <Text style={s.fileText}>{files.businessLicense.name}</Text>}
 
       {renderLink("Proof of Insurance", existing.proofOfInsurance)}
-      <Button
-        title="Upload Proof of Insurance"
-        onPress={() => pickFile("proofOfInsurance")}
-      />
-      {files.proofOfInsurance && (
-        <Text style={s.fileText}>{files.proofOfInsurance.name}</Text>
-      )}
+      <Button title="Upload Proof of Insurance" onPress={() => pickFile("proofOfInsurance")} />
+      {files.proofOfInsurance && <Text style={s.fileText}>{files.proofOfInsurance.name}</Text>}
 
-      {renderLink(
-        "Contractor Agreement",
-        existing.contractorAgreement
-      )}
-      <Button
-        title="Upload Contractor Agreement"
-        onPress={() => pickFile("contractorAgreement")}
-      />
-      {files.contractorAgreement && (
-        <Text style={s.fileText}>
-          {files.contractorAgreement.name}
-        </Text>
-      )}
+      {renderLink("Contractor Agreement", existing.contractorAgreement)}
+      <Button title="Upload Contractor Agreement" onPress={() => pickFile("contractorAgreement")} />
+      {files.contractorAgreement && <Text style={s.fileText}>{files.contractorAgreement.name}</Text>}
+
+      {/* Download Agreement from Assets */}
+      <View style={{ marginTop: 12 }}>
+        <Button title="Download Contractor Agreement Template" onPress={downloadAgreementFromAssets} />
+      </View>
 
       <View style={{ marginTop: 16 }}>
         <Button title="Update Profile" onPress={handleSubmit} />
@@ -310,7 +264,7 @@ const s = StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: "#fff",
-    marginTop: 50
+    marginTop: 50,
   },
   center: {
     flex: 1,
@@ -322,9 +276,6 @@ const s = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 20,
-    // textShadowColor: "rgba(0,0,0,0.5)",
-    // textShadowOffset: { width: 2, height: 2 },
-    // textShadowRadius: 2,
   },
   label: {
     marginTop: 12,

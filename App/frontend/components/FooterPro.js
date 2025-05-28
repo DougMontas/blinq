@@ -9,10 +9,12 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
+
 const LINKS = [
   { label: "Terms & Conditions", url: "ProviderTermsAndAgreement" },
   { label: "Privacy Policy",     url: "PrivacyPolicy" },
   { label: "Help", url: "mailto:support@blinqfix.com?subject=Need%20Help&body=Hi,%20I%20need%20assistance%20with..." },
+  { label: "FAQ", url: "ServiceProFaqScreen"},
 ];
 
 export default function FooterPro() {
@@ -49,6 +51,7 @@ export default function FooterPro() {
           <Text style={styles.linkText}>{l.label}</Text>
         </TouchableOpacity>
       ))}
+    
       <Text style={styles.copy}>
         © {new Date().getFullYear()} BlinqFix
       </Text>

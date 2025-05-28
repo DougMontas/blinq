@@ -65,7 +65,7 @@ const jobSchema = new Schema(
         "paid",
         "balancePending",
         "awaiting-additional-payment",
-        "cancelled,"
+        "cancelled,",
       ],
       default: "unpaid",
     },
@@ -105,9 +105,6 @@ const jobSchema = new Schema(
   },
   { timestamps: true }
 );
-
-
-
 
 /* helpful indexes */
 jobSchema.index({ customer: 1, status: 1 });

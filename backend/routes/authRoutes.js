@@ -91,44 +91,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-//previous
-// router.post("/login", async (req, res) => {
-//   try {
-//     let { email, password } = req.body;
-
-//     if (!email || !password) {
-//       return res.status(400).json({ msg: "Email and password required." });
-//     }
-
-//     email = email.toLowerCase().trim();
-
-//     const user = await Users.findOne({ email }).select("+password role");
-
-//     if (!user) {
-//       return res.status(400).json({ msg: "Invalid credentials" });
-//     }
-
-//     // This will only work if the stored password is a bcrypt hash
-
-//     const isMatch = await bcrypt.compare(password, user.password);
-
-//     if (!isMatch) {
-//       return res.status(400).json({ msg: "Invalid credentials" });
-//     }
-
-//     const token = jwt.sign(
-//       { id: user._id, role: user.role },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "7d" }
-//     );
-
-//     return res.json({ token });
-//   } catch (err) {
-//     console.error("Error in POST /login:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -165,8 +127,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
-
-
 
 /**
  * POST /api/auth/request-reset
@@ -221,7 +181,8 @@ router.put("/reset-password/:token", async (req, res) => {
 router.post("/refresh-token", async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) return res.status(400).json({ msg: "Missing refresh token" });
+    if (!refreshToken)
+      return res.status(400).json({ msg: "Missing refresh token" });
 
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
     const user = await Users.findById(decoded.id);
@@ -229,9 +190,13 @@ router.post("/refresh-token", async (req, res) => {
       return res.status(401).json({ msg: "Invalid or expired refresh token" });
     }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: "15m",
-    });
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "15m",
+      }
+    );
 
     return res.json({ token });
   } catch (err) {

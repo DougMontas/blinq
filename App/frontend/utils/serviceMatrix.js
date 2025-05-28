@@ -1,6 +1,4 @@
-//previous
-// // utils/serviceMatrix.js
-
+// utils/serviceMatrix.js
 const MATRIX = [
   {
     Service: "Burst or Leaking Pipes",
@@ -1534,39 +1532,34 @@ const BASE_PRICE = {
   "Drywall Repair": 200,
 };
 
-/** returns the base price for a service, or 0 if missing */
+const RUSH_FEE = 100; // Global rush fee
+
+// Existing MATRIX, BASE_PRICE, coveredDescriptions defined above...
+
+// Exported functions
 export const getBasePrice = (service) => BASE_PRICE[service] ?? 0;
 
 export function getCoveredDescription(serviceKey) {
   return coveredDescriptions[serviceKey] || "";
 }
 
+export const getRushFee = () => RUSH_FEE;
+
 const SERVICE_TO_CATEGORY = {
-  /* Plumbing */
+  // Mappings
   "Burst or Leaking Pipes": "Plumbing",
   "Sewer Backups or Clogged Drains": "Plumbing",
   "Water Heater Failure": "Plumbing",
   "Gas Leaks": "Plumbing",
-
-  /* Roofing */
   "Roof Leaks or Storm Damage": "Roofing",
-
-  /* HVAC */
   "HVAC System Failure": "HVAC",
-
-  /* Electrician */
   "Electrical Panel Issues or Outages": "Electrician",
-
-  /* Mold & Water Remediation */
   "Mold or Water Damage Remediation": "Water_and_Mold_Remediation",
-
-  /* Handyman */
   "Broken Windows or Doors": "Handyman",
   "Appliance Failures": "Handyman",
   "Drywall Repair": "Handyman",
 };
 
-// Build question data structures
 const categoryServices = {};
 for (const { Service } of MATRIX) {
   const cat = SERVICE_TO_CATEGORY[Service] || "Odd_Jobs";
@@ -1574,30 +1567,25 @@ for (const { Service } of MATRIX) {
   categoryServices[cat].add(Service);
 }
 
-const questions = {}; // e.g. questions["HVAC System Failure"] → array of Q objects
-const pricing = {}; // pricing[Service][Question][Option] = numeric adjustment
+const questions = {};
+const pricing = {};
 
-// 1) category-level question: "Which <category> issue are you experiencing?"
 for (const [cat, svcSet] of Object.entries(categoryServices)) {
   questions[cat] = [
     {
       id: 1,
-      question: `Which ${cat
-        .replace(/_/g, " ")
-        .toLowerCase()} issue are you experiencing?`,
+      question: `Which ${cat.replace(/_/g, " ").toLowerCase()} issue are you experiencing?`,
       type: "multiple",
       options: Array.from(svcSet),
     },
   ];
 }
 
-// 2) service-level follow-ups
 for (const row of MATRIX) {
   const { Service, Question, Option, Adjustment } = row;
   if (!questions[Service]) questions[Service] = [];
   if (!pricing[Service]) pricing[Service] = {};
 
-  // insert question if missing
   let qObj = questions[Service].find((q) => q.question === Question);
   if (!qObj) {
     qObj = {
@@ -1608,34 +1596,33 @@ for (const row of MATRIX) {
     };
     questions[Service].push(qObj);
   }
-  // push unique options
   if (!qObj.options.find((o) => o.value === Option)) {
     qObj.options.push({ value: Option, adjustment: Adjustment });
   }
 
-  // fill pricing map
   if (!pricing[Service][Question]) pricing[Service][Question] = {};
   pricing[Service][Question][Option] = Adjustment;
 }
 
-// Helper: get single adjustment
 export const getAdjustment = (service, question, option) =>
   pricing?.[service]?.[question]?.[option] ?? 0;
 
-// Summation of all chosen answers
 export const estimateTotal = (service, answers = {}) => {
   let total = 0;
   for (const [question, option] of Object.entries(answers)) {
     total += getAdjustment(service, question, option);
   }
-  return total;
+  return total + RUSH_FEE;
 };
 
-export default { questions, pricing, getCoveredDescription, coveredDescriptions };
+export default { questions, pricing, getCoveredDescription, coveredDescriptions, getRushFee };
 
-// utils/serviceMatrix.js
-// import axios from "axios";
 
+
+
+
+
+// // utils/serviceMatrix.js
 // const MATRIX = [
 //   {
 //     Service: "Burst or Leaking Pipes",
@@ -2312,79 +2299,79 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 //     Adjustment: 75,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Visible damage?",
 //     Option: "Burn marks",
 //     Adjustment: 100,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Visible damage?",
 //     Option: "Missing breakers",
 //     Adjustment: 75,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Panel serviced in last 5 years?",
 //     Option: "Yes",
 //     Adjustment: 0,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Panel serviced in last 5 years?",
 //     Option: "5+ years ago",
 //     Adjustment: 50,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Panel serviced in last 5 years?",
 //     Option: "Never/Not sure",
 //     Adjustment: 75,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Major appliances affected?",
 //     Option: "No",
 //     Adjustment: 0,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Major appliances affected?",
 //     Option: "Fridge/AC",
 //     Adjustment: 50,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Major appliances affected?",
 //     Option: "Washer/Dryer/Oven",
 //     Adjustment: 50,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Major appliances affected?",
 //     Option: "Multiple",
 //     Adjustment: 75,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Any surges, storms, remodeling?",
 //     Option: "None",
 //     Adjustment: 0,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Any surges, storms, remodeling?",
 //     Option: "Storm",
 //     Adjustment: 50,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Any surges, storms, remodeling?",
 //     Option: "Surge",
 //     Adjustment: 50,
 //   },
 //   {
-//     Service: "Electrical Panel Issues or Outages",
+//     Service: "See All Electrical Issues",
 //     Question: "Any surges, storms, remodeling?",
 //     Option: "Remodel",
 //     Adjustment: 50,
@@ -2914,6 +2901,91 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 //     Adjustment: 50,
 //   },
 
+//   /* ─── Drywall Repairs ──────────────────────────────────────────── */
+//   {
+//     Service: "Drywall Repair",
+//     Question: "What size is the damaged area?",
+//     Option: "Small (less than 6\")",
+//     Adjustment: 50,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "What size is the damaged area?",
+//     Option: "Medium (between 6 and 12\")",
+//     Adjustment: 25,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "What size is the damaged area?",
+//     Option: "Large (between 1 and 3 ft)",
+//     Adjustment: 0,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "What size is the damaged area?",
+//     Option: "Multiple or greater than 3 ft",
+//     Adjustment: 100,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "What caused the damage?",
+//     Option: "Impact or wear",
+//     Adjustment: 0,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "What caused the damage?",
+//     Option: "Water damage",
+//     Adjustment: 150,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is the surface textured?",
+//     Option: "Yes",
+//     Adjustment: 50,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is the surface textured?",
+//     Option: "No",
+//     Adjustment: 0,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is the damage on a ceiling?",
+//     Option: "Yes",
+//     Adjustment: 50,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is the damage on a ceiling?",
+//     Option: "No",
+//     Adjustment: 0,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is paint matching required?",
+//     Option: "Yes",
+//     Adjustment: 125,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is paint matching required?",
+//     Option: "No – white or provided",
+//     Adjustment: 50,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is the area obstructed?",
+//     Option: "Yes",
+//     Adjustment: 50,
+//   },
+//   {
+//     Service: "Drywall Repair",
+//     Question: "Is the area obstructed?",
+//     Option: "No",
+//     Adjustment: 0,
+//   },
 //   /* ─── Appliance Failures ──────────────────────────────────────────── */
 //   {
 //     Service: "Appliance Failures",
@@ -3064,8 +3136,10 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 //     "Leak location, pipe sealing/replacement (up to 10 ft), pressure testing, valve checks",
 //   "Appliance Failures":
 //     "Basic part replacements (thermostat, igniter, valve), diagnosis, labor",
-//   Cleaning:
+//   "Cleaning":
 //     "Dusting, sweeping, vacuuming, mopping, kitchen wipe down, bathroom sanitation, trash removal, surface disinfection, bedroom and living room tidying",
+//   "Drywall Repair":
+//   "Patching and repair of damaged drywall, includes drywall material, joint compound, sanding supplies, paint supplies, and all necessary materials for finishing and cleanup.",
 // };
 
 // const BASE_PRICE = {
@@ -3079,6 +3153,7 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 //   "Broken Windows or Doors": 400,
 //   "Gas Leaks": 500,
 //   "Appliance Failures": 275,
+//   "Drywall Repair": 200,
 // };
 
 // /** returns the base price for a service, or 0 if missing */
@@ -3087,66 +3162,6 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 // export function getCoveredDescription(serviceKey) {
 //   return coveredDescriptions[serviceKey] || "";
 // }
-
-// Helper: returns zip price multiplier (1.0 is average, >1 is more expensive)
-// export async function fetchZipMultiplier(zip) {
-//   try {
-//     const { data } = await axios.get(
-//       `https://api.api-ninjas.com/v1/costofliving?zip=${zip}`,
-//       {
-//         headers: {
-//           "X-Api-Key": process.env.API_NINJAS_KEY || "YOUR_API_KEY_HERE",
-//         },
-//       }
-//     );
-// export async function fetchZipMultiplier(zip) {
-// const API_URL = "https://zylalabs.com/api/3427/cost+of+living+in+usa+api/3730/get+prices";
-
-//   try {
-//     const { data } = await axios.get(`API_URL${zip}`, {
-//       headers: { 'X-Api-Key': process.env.ZYLA_API_KEY || 'YOUR_API_KEY_HERE' },
-//     });
-//     // scale to normalized factor
-//     const multiplier = data?.cost_index ? Math.max(0.8, Math.min(1.5, data.cost_index / 100)) : 1.0;
-//     return multiplier;
-//   } catch (err) {
-//     console.error("Cost index API error:", err?.response?.data || err.message);
-//     return 1.0;
-//   }
-// }
-
-
-// export async function fetchZipMultiplier(zip) {
-//   const API_KEY = "8228|WqlD0W1NJuNETFQLRIOJHzgRNYg3uYRgd08XSrgR"  
-//   const API_URL = "https://zylalabs.com/api/226/cities+cost+of+living+and+average+prices+api/3775/cost+of+living+by+city+v2"
-
-//   try {
-//     const { data } = await axios.get(`${API_URL}?city=${zip}`, {
-//       headers: {
-//         "X-Api-Key": API_KEY,
-//         Accept: "application/json"
-//       }
-//     });
-
-//     const cost = parseFloat(data["Meal, Inexpensive Restaurant"]);
-//     const multiplier = isNaN(cost) ? 1.0 : Math.max(0.8, Math.min(1.5, cost / 15));
-//     return multiplier;
-//   } catch (err) {
-//     console.error("Cost index API error:", err?.response?.data || err.message);
-//     return 1.0;
-//   }
-// }
-
-//   //   // scale to normalized factor
-//   //   const multiplier = data?.cost_index
-//   //     ? Math.max(0.8, Math.min(1.5, data.cost_index / 100))
-//   //     : 1.0;
-//   //   return multiplier;
-//   // } catch (err) {
-//   //   console.error("Cost index API error:", err?.response?.data || err.message);
-//   //   return 1.0;
-//   // }
-
 
 // const SERVICE_TO_CATEGORY = {
 //   /* Plumbing */
@@ -3170,6 +3185,7 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 //   /* Handyman */
 //   "Broken Windows or Doors": "Handyman",
 //   "Appliance Failures": "Handyman",
+//   "Drywall Repair": "Handyman",
 // };
 
 // // Build question data structures
@@ -3181,27 +3197,7 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 // }
 
 // const questions = {}; // e.g. questions["HVAC System Failure"] → array of Q objects
-// // const pricing = {}; // pricing[Service][Question][Option] = numeric adjustment
-
-
-// const pricing = {};
-// for (const row of MATRIX) {
-//   const { Service, Question, Option, Adjustment } = row;
-//   if (!pricing[Service]) pricing[Service] = {};
-//   if (!pricing[Service][Question]) pricing[Service][Question] = {};
-//   pricing[Service][Question][Option] = Adjustment;
-// }
-
-// export const getAdjustment = (service, question, option) =>
-//   pricing?.[service]?.[question]?.[option] ?? 0;
-
-// export const estimateTotal = (service, answers = {}, zipMultiplier = 1.0) => {
-//   let total = 0;
-//   for (const [question, option] of Object.entries(answers)) {
-//     total += getAdjustment(service, question, option);
-//   }
-//   return Math.round((getBasePrice(service) + total) * zipMultiplier);
-// };
+// const pricing = {}; // pricing[Service][Question][Option] = numeric adjustment
 
 // // 1) category-level question: "Which <category> issue are you experiencing?"
 // for (const [cat, svcSet] of Object.entries(categoryServices)) {
@@ -3257,13 +3253,4 @@ export default { questions, pricing, getCoveredDescription, coveredDescriptions 
 //   return total;
 // };
 
-// export default {
-//   questions,
-//   pricing,
-//   getCoveredDescription,
-//   coveredDescriptions,
-//   getBasePrice,
-//   fetchZipMultiplier,
-//   estimateTotal,
-//   getAdjustment,
-// };
+// export default { questions, pricing, getCoveredDescription, coveredDescriptions };
