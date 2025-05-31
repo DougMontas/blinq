@@ -50,7 +50,7 @@ const categories = [
 ];
 
 const { width } = Dimensions.get("window");
-const LOGO_SIZE = width * 0.25;
+const LOGO_SIZE = width * 0.45;
 
 export default function CustomerDashboard() {
   const navigation = useNavigation();
@@ -113,14 +113,7 @@ export default function CustomerDashboard() {
     <ScrollView contentContainerStyle={styles.container}>
       <LogoutButton />
 
-      <LinearGradient
-        colors={["#1976d2", "#2f80ed"]}
-        style={styles.hero}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Text style={styles.heroText}>
-          <View style={styles.containerLogo}>
+      <View style={styles.containerLogo}>
             <Image
               source={require("../assets/blinqfix_logo-new.jpeg")}
               style={{
@@ -131,6 +124,15 @@ export default function CustomerDashboard() {
               resizeMode="contain"
             />
           </View>
+
+      <LinearGradient
+        colors={["#1976d2", "#2f80ed"]}
+        style={styles.hero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Text style={styles.heroText}>
+          
           {"\n"}
           Hi {firstName},{" "}
           <Text style={styles.heroSub}>how can we help today?</Text>

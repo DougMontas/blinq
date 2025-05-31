@@ -51,7 +51,7 @@ export default function LoadingScreen({
   }, [animationOnly, enterDuration, exitDuration, holdDuration, navigation, onAnimationEnd, opacity, scale]);
 
   const { width } = Dimensions.get("window");
-  const LOGO_SIZE = width * 0.5;
+  const LOGO_SIZE = width * 0.55;
 
   return (
     <View style={styles.container}>

@@ -33,7 +33,7 @@ const socket = io(SOCKET_HOST, {
 });
 
 const { width } = Dimensions.get("window");
-const LOGO_SIZE = width * 0.25;
+const LOGO_SIZE = width * 0.55;
 
 export default function ServiceProviderDashboard() {
   const navigation = useNavigation();

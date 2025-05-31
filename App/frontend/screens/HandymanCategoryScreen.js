@@ -46,7 +46,7 @@ const SUBCATEGORIES = [
 ];
 
 const { width } = Dimensions.get("window");
-const LOGO_SIZE = width * 0.25;
+const LOGO_SIZE = width * 0.85;
 
 export default function HandymanCategoryScreen() {
   const navigation = useNavigation();

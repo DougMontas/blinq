@@ -74,7 +74,10 @@ const jobSchema = new Schema(
     additionalChargeReason: { type: String, default: "" },
     additionalChargePaid: { type: Boolean, default: false },
     convenienceFee: { type: Number, default: 0 },
-
+    customerFee: { type: Number},
+    providerFee: { type: Number},
+    paymentToProvider: { type: Number},
+  
     chargeApproved: { type: Boolean, default: false },
 
     refundAmount: { type: Number, default: 0 },

@@ -10,6 +10,7 @@ import {
   Alert,
   Image,
   Dimensions,
+  TouchableOpacity,
   Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -17,10 +18,11 @@ import Constants from "expo-constants";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import JobDetails from "../components/JobDetails";
 import api from "../api/client";
+import { saveSession } from "../utils/sessionManager";
 
 const TRAVEL_FEE = 100;
 const { width } = Dimensions.get("window");
-const LOGO_SIZE = width * 0.25;
+const LOGO_SIZE = width * 0.55;
 
 export default function ProviderJobStatus() {
   const route = useRoute();
@@ -39,6 +41,12 @@ export default function ProviderJobStatus() {
 
   const phoneTimer = useRef(null);
   const confirmTimeout = useRef(null);
+  
+  useEffect(() => {
+    if (job && job.status !== "completed") {
+      saveSession({ role: "serviceProvider", jobId: job._id });
+    }
+  }, [job]);
 
   useEffect(() => {
     let alive = true;
@@ -51,12 +59,18 @@ export default function ProviderJobStatus() {
         if (data.status === "completed" && !notifiedComplete) {
           setNotifiedComplete(true);
           Alert.alert("Job Complete", "This job is now fully completed.", [
-            { text: "OK", onPress: () => navigation.navigate("ServiceProviderDashboard") },
+            {
+              text: "OK",
+              onPress: () => navigation.navigate("ServiceProviderDashboard"),
+            },
           ]);
         }
 
         if (data.acceptedProvider && !phoneTimer.current) {
-          phoneTimer.current = setTimeout(() => setShowPhone(true), 6 * 60 * 1000); // 6 minutes after acceptance - phone # renders
+          phoneTimer.current = setTimeout(
+            () => setShowPhone(true),
+            6 * 60 * 1000
+          ); // 6 minutes after acceptance - phone # renders
         }
       } catch {
         alive && Alert.alert("Error", "Unable to load job");
@@ -76,7 +90,10 @@ export default function ProviderJobStatus() {
   const handleUpdateCharge = async () => {
     const amt = Number(additionalCharge);
     if (!amt || !additionalChargeReason) {
-      return Alert.alert("Missing Info", "Both charge and reason are required.");
+      return Alert.alert(
+        "Missing Info",
+        "Both charge and reason are required."
+      );
     }
 
     try {
@@ -95,17 +112,30 @@ export default function ProviderJobStatus() {
   const handleCancelJob = async () => {
     if (!confirmingCancel) {
       setConfirmingCancel(true);
-      Alert.alert("Confirm Cancellation", "Tap again to confirm job cancellation.");
-      confirmTimeout.current = setTimeout(() => setConfirmingCancel(false), 5000);
+      Alert.alert(
+        "Confirm Cancellation",
+        "Tap again to confirm job cancellation."
+      );
+      confirmTimeout.current = setTimeout(
+        () => setConfirmingCancel(false),
+        5000
+      );
       return;
     }
 
     setCancelling(true);
     try {
       await api.put(`/jobs/${jobId}/cancel`, { travelFee: TRAVEL_FEE });
-      Alert.alert("Cancelled", `Job cancelled; a $${TRAVEL_FEE} travel fee applies.`, [
-        { text: "OK", onPress: () => navigation.navigate("ServiceProviderDashboard") },
-      ]);
+      Alert.alert(
+        "Cancelled",
+        `Job cancelled; a $${TRAVEL_FEE} travel fee applies.`,
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.navigate("ServiceProviderDashboard"),
+          },
+        ]
+      );
     } catch (err) {
       console.error("Cancel-job error:", err);
       Alert.alert("Error", "Cancellation failed.");
@@ -116,15 +146,17 @@ export default function ProviderJobStatus() {
     }
   };
 
-  
-  
   const pickAndUpload = async (phase) => {
     let result;
     const isWeb = Platform.OS === "web";
     const status = isWeb
       ? (await ImagePicker.requestMediaLibraryPermissionsAsync()).status
       : (await ImagePicker.requestCameraPermissionsAsync()).status;
-    if (status !== "granted") return Alert.alert("Permission needed", isWeb ? "Library" : "Camera" + " access is required.");
+    if (status !== "granted")
+      return Alert.alert(
+        "Permission needed",
+        isWeb ? "Library" : "Camera" + " access is required."
+      );
 
     result = isWeb
       ? await ImagePicker.launchImageLibraryAsync({ quality: 0.7 })
@@ -144,13 +176,21 @@ export default function ProviderJobStatus() {
     form.append("image", { uri: normalized, name, type });
 
     try {
-      const { data: updated } = await api.post(`/jobs/${jobId}/upload/${phase}`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data: updated } = await api.post(
+        `/jobs/${jobId}/upload/${phase}`,
+        form,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
       setJob(updated);
       Alert.alert("Uploaded", `Successfully uploaded ${phase} image.`);
     } catch (err) {
-      const msg = err.response?.data?.msg || err.response?.data?.error || err.message || "Upload failed.";
+      const msg =
+        err.response?.data?.msg ||
+        err.response?.data?.error ||
+        err.message ||
+        "Upload failed.";
       console.error("Upload failed:", msg);
       Alert.alert("Upload failed", msg);
     }
@@ -161,7 +201,10 @@ export default function ProviderJobStatus() {
       const { data } = await api.put(`/jobs/${jobId}/complete/provider`);
       setJob(data);
       Alert.alert("Done", "You’ve marked the job complete.", [
-        { text: "OK", onPress: () => navigation.navigate("ServiceProviderDashboard") },
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("ServiceProviderDashboard"),
+        },
       ]);
     } catch (err) {
       console.error("Finalize error:", err);
@@ -178,7 +221,11 @@ export default function ProviderJobStatus() {
   return (
     <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
       <View style={styles.containerLogo}>
-        <Image source={require("../assets/blinqfix_logo-new.jpeg")} style={{ width: LOGO_SIZE, height: LOGO_SIZE }} resizeMode="contain" />
+        <Image
+          source={require("../assets/blinqfix_logo-new.jpeg")}
+          style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
+          resizeMode="contain"
+        />
       </View>
 
       {job.paymentStatus !== "paid" && (
@@ -190,7 +237,15 @@ export default function ProviderJobStatus() {
       <JobDetails jobId={jobId} job={job} />
 
       {showPhone && job?.customer?.phoneNumber && (
-        <Text style={{ marginTop: 20, fontSize: 16, fontWeight: "800", color: "red", textAlign: 'center' }}>
+        <Text
+          style={{
+            marginTop: 20,
+            fontSize: 16,
+            fontWeight: "800",
+            color: "red",
+            textAlign: "center",
+          }}
+        >
           Customer Phone: {job.customer.phoneNumber}
         </Text>
       )}
@@ -199,36 +254,82 @@ export default function ProviderJobStatus() {
         <Text style={styles.title}>Provider Actions</Text>
 
         <View style={{ marginBottom: 12, textAlign: "center" }}>
-          <Text style={{ marginBottom: 2, textAlign: "center" }}>Additional Charge: ${ac.toFixed(2)}</Text>
-          <Text style={{ fontWeight: "700", marginTop: 4, textAlign: "center" }}>Estimate Total: ${estimatedTotal.toFixed(2)}</Text>
+          <Text style={{ marginBottom: 2, textAlign: "center" }}>
+            Additional Charge: ${ac.toFixed(2)}
+          </Text>
+          <Text
+            style={{ fontWeight: "700", marginTop: 4, textAlign: "center" }}
+          >
+            Estimate Total: ${estimatedTotal.toFixed(2)}
+          </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Step1: Get a picture of the job before work starts:</Text>
-          <Button title="Capture Arrival Photo" onPress={() => pickAndUpload("arrival")} disabled={awaitingAdditional} />
+          <Text style={styles.label}>
+            Step1: Get a picture of the job before work starts:
+          </Text>
+          <Button
+            title="Capture Arrival Photo"
+            onPress={() => pickAndUpload("arrival")}
+            disabled={awaitingAdditional}
+          />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.label}>Step2: (Optional) Additional Charge:</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={additionalCharge} onChangeText={setAdditionalCharge} placeholder="e.g. 50.00" />
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={additionalCharge}
+            onChangeText={setAdditionalCharge}
+            placeholder="e.g. 50.00"
+          />
           <Text style={styles.label}>Additional charge details:</Text>
-          <TextInput style={styles.input} value={additionalChargeReason} onChangeText={setAdditionalChargeReason} placeholder="Reason for additional charge" />
-          <Button title="Submit Additional Charge" onPress={handleUpdateCharge} disabled={awaitingAdditional} />
-          {awaitingAdditional && <Text style={styles.warn}>Awaiting homeowner payment…</Text>}
+          <TextInput
+            style={styles.input}
+            value={additionalChargeReason}
+            onChangeText={setAdditionalChargeReason}
+            placeholder="Reason for additional charge"
+          />
+          <Button
+            title="Submit Additional Charge"
+            onPress={handleUpdateCharge}
+            disabled={awaitingAdditional}
+          />
+          {awaitingAdditional && (
+            <Text style={styles.warn}>Awaiting homeowner payment…</Text>
+          )}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Step3: Get a picture of job when completed:</Text>
-          <Button title="Capture Completion Photo" onPress={() => pickAndUpload("completion")} disabled={awaitingAdditional} />
+          <Text style={styles.label}>
+            Step3: Get a picture of job when completed:
+          </Text>
+          <Button
+            title="Capture Completion Photo"
+            onPress={() => pickAndUpload("completion")}
+            disabled={awaitingAdditional}
+          />
         </View>
 
         <View style={styles.section}>
-          <Button title={cancelling ? "Cancelling…" : "Cancel Job"} color="red" onPress={handleCancelJob} disabled={cancelling} />
+          <Text style={styles.label}>
+            Step4: *Arrival & Completion Images are required for completion:
+          </Text>
+          <Button
+            title="Mark Job Completed"
+            onPress={handleFinalize}
+            disabled={!job.arrivalImage || !job.completionImage}
+          />
         </View>
-
         <View style={styles.section}>
-          <Text style={styles.label}>Step4: *Arrival & Completion Images are required for completion:</Text>
-          <Button title="Mark Job Completed" onPress={handleFinalize} disabled={!job.arrivalImage || !job.completionImage} />
+          <Button
+            style={styles.button}
+            title={cancelling ? "Cancelling…" : "Cancel Job"}
+            color="red"
+            onPress={handleCancelJob}
+            disabled={cancelling}
+          />
         </View>
       </View>
     </ScrollView>
@@ -237,15 +338,54 @@ export default function ProviderJobStatus() {
 
 const styles = StyleSheet.create({
   container: { padding: 24, backgroundColor: "#fff" },
-  containerLogo: { justifyContent: "center", alignItems: "center", marginVertical: 50 },
-  alert: { color: "red", textAlign: "center", marginBottom: 12, fontWeight: "bold", marginTop: 50 },
-  card: { backgroundColor: "#f2f2f2", padding: 16, borderRadius: 8, marginTop: 24 },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
+  button: {
+    backgroundColor: "#1976d2",
+    paddingVertical: 12,
+    borderRadius: 6,
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  containerLogo: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 50,
+    
+  },
+  alert: {
+    color: "red",
+    textAlign: "center",
+    marginBottom: 12,
+    fontWeight: "bold",
+    marginTop: 50,
+  },
+  card: {
+    backgroundColor: "#f2f2f2",
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 24,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
   section: { marginTop: 12 },
   label: { fontWeight: "600" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 8, marginVertical: 6 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 8,
+    marginVertical: 6,
+  },
   warn: { color: "orange", marginTop: 6 },
-  uploadedContainer: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  uploadedContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
   preview: { width: 80, height: 80, borderRadius: 4 },
   uploadedText: { marginLeft: 8, color: "green", fontWeight: "600" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },

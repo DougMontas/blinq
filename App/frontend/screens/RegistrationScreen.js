@@ -103,7 +103,7 @@ export default function RegistrationScreen() {
 
       // register
       const signupRes = await api.post("/auth/register", payload);
-      console.log("signupRes.data:", signupRes.data);
+      // console.log("signupRes.data:", signupRes.data);
 
       // get token (fallback to login if none)
       let token = signupRes.data.token || signupRes.data.jwt;

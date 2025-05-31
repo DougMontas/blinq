@@ -39,7 +39,7 @@ const io = new SocketIOServer(server, { cors: { origin: "*" } });
 io.on("connection", (socket) => {
   socket.on("joinUserRoom", ({ userId }) => {
     socket.join(userId);
-    console.log(`Socket ${socket.id} joined room for user ${userId}`);
+    // console.log(`Socket ${socket.id} joined room for user ${userId}`);
   });
 });
 

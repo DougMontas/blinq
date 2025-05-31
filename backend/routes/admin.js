@@ -21,7 +21,7 @@ router.get("/users", auth, async (req, res) => {
   try {
     const providers = await Users.find(
       { role: "serviceProvider" },
-      "_id name email role serviceType isActive serviceZipcode, billingTier"
+      "_id name email role serviceType isActive serviceZipcode billingTier"
     ).lean();
 
     res.json({ providers });
@@ -38,8 +38,8 @@ router.get("/admin/stats", async (req, res) => {
       Users.countDocuments({ role: "serviceProvider" }),
     ]);
 
-    console.log("customer count:", customerCount),
-      console.log("provider count", providerCount);
+    // console.log("customer count:", customerCount),
+    // console.log("provider count", providerCount);
 
     res.json({ totalCustomers: customerCount, totalProviders: providerCount });
   } catch (err) {
@@ -48,65 +48,68 @@ router.get("/admin/stats", async (req, res) => {
   }
 });
 
-// router.get("/users", auth, async (req, res) => {
-//   try {
-//     const users = await Users.find().lean();
-//     res.json(users);
-//   } catch (err) {
-//     console.error("GET /admin/users error:", err);
-//     res.status(500).json({ msg: "Server error fetching users." });
-//   }
-// });
-
-// router.get("/users", auth, async (req, res) => {
-//   try {
-//     const users = await Users.find(
-//       { role: { $in: ["customer", "serviceProvider"] } },
-//       "-password -location -portfolio"
-//     ).lean();
-//     res.json(users);
-//   } catch (err) {
-//     console.error("GET /admin/users error:", err);
-//     res.status(500).json({ msg: "Server error fetching users." });
-//   }
-// });
-
 router.get("/convenience-fees", auth, async (req, res) => {
   try {
+    const PRO_SHARE_RATE = 0.07; // Provider profit-sharing
+    const CUSTOMER_FEE_RATE = 0.07; // Customer markup
+    const TOTAL_FEE_RATE = PRO_SHARE_RATE + CUSTOMER_FEE_RATE;
+
     const pipeline = [
-      // only count jobs that have been paid
+      // Match paid jobs only
       { $match: { paymentStatus: "paid" } },
-      // compute month, year and the fee for each job
+
+      // Compute subtotal and any additional charge if paid
       {
         $project: {
           month: { $month: "$createdAt" },
           year: { $year: "$createdAt" },
-          convenienceFee: {
-            // round((base + adjustment + rush) * FEE_RATE, 2)
-            $round: [
-              {
-                $multiply: [
-                  { $add: ["$baseAmount", "$adjustmentAmount", "$rushFee"] },
-                  FEE_RATE,
-                ],
-              },
-              2,
+          baseTotal: {
+            $add: [
+              { $ifNull: ["$baseAmount", 0] },
+              { $ifNull: ["$adjustmentAmount", 0] },
+              { $ifNull: ["$rushFee", 0] },
             ],
+          },
+          extra: {
+            $cond: {
+              if: { $eq: ["$additionalChargePaid", true] },
+              then: { $ifNull: ["$additionalCharge", 0] },
+              else: 0,
+            },
           },
         },
       },
-      // group by month/year
+
+      // Calculate final total with extra
+      {
+        $addFields: {
+          totalBilled: { $add: ["$baseTotal", "$extra"] },
+        },
+      },
+
+      // Apply total 14% fee (7% customer + 7% provider)
+      {
+        $addFields: {
+          convenienceFee: {
+            $round: [{ $multiply: ["$totalBilled", TOTAL_FEE_RATE] }, 2],
+          },
+        },
+      },
+
+      // Group by month/year
       {
         $group: {
           _id: { month: "$month", year: "$year" },
           totalConvenienceFee: { $sum: "$convenienceFee" },
         },
       },
-      // sort chronologically
+
+      // Sort results
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ];
 
     const monthlyFees = await Job.aggregate(pipeline);
+
     const ytdTotal = monthlyFees.reduce(
       (sum, f) => sum + (f.totalConvenienceFee || 0),
       0
@@ -119,7 +122,6 @@ router.get("/convenience-fees", auth, async (req, res) => {
   }
 });
 
-// GET /api/admin/configuration
 router.get("/configuration", auth, async (req, res) => {
   try {
     const cfg = await Configuration.findOne().lean();
@@ -188,7 +190,8 @@ router.put("/provider/:providerId/active",
   }
 );
 
-router.put("/provider/:providerId/zipcodes",
+router.put(
+  "/provider/:providerId/zipcodes",
   auth,
   checkAdmin,
   async (req, res) => {

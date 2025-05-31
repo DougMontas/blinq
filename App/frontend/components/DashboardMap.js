@@ -21,12 +21,12 @@ export default function DashboardMap() {
   useEffect(() => {
     (async () => {
       try {
-        console.log("🔍 Requesting location permission...");
+        // console.log("🔍 Requesting location permission...");
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") return;
 
         const location = await Location.getCurrentPositionAsync({});
-        console.log("📍 Current location:", location.coords);
+        // console.log("📍 Current location:", location.coords);
 
         setRegion({
           latitude: location.coords.latitude,
@@ -35,9 +35,9 @@ export default function DashboardMap() {
           longitudeDelta: 0.5,
         });
 
-        console.log("🌐 Fetching providers from /users/providers/active...");
+        // console.log("🌐 Fetching providers from /users/providers/active...");
         const { data } = await api.get("/users/providers/active");
-        console.log("✅ Providers fetched:", data);
+        // console.log("✅ Providers fetched:", data);
         setProviders(data);
       } catch (err) {
         console.error("🚨 Error loading map or data:", err);

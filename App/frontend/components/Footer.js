@@ -16,6 +16,7 @@ const LINKS = [
     label: "Help",
     url: "mailto:support@blinqfix.com?subject=Need%20Help&body=Hi,%20I%20need%20assistance%20with...",
   },
+  {label: 'FAQ', url: "CustomerFAQScreen"}
 ];
 
 export default function Footer() {

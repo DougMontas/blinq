@@ -26,7 +26,7 @@ import ProviderMapDashboard from "../components/ProviderMapDashboard";
 import HandymanCategoryScreen from "./HandymanCategoryScreen";
 
 const { width } = Dimensions.get("window");
-const LOGO_SIZE = width * 0.25;
+const LOGO_SIZE = width * 0.55;
 
 /** tiny inline JWT parser—no external lib needed */
 /**
@@ -99,14 +99,14 @@ export default function LoginScreen() {
       const payload = parseJwt(data.token);
       const role = payload.role || "customer";
 
-      console.log("[Login] parsed JWT payload:", payload);
+      // console.log("[Login] parsed JWT payload:", payload);
 
       // 3) update context
       setRole(role);
 
       // 4) reset into correct dashboard
       const target = roleToScreen(role);
-      console.log(`[Login] routing role="${role}" → "${target}"`);
+      // console.log(`[Login] routing role="${role}" → "${target}"`);
       const action = { index: 0, routes: [{ name: target }] };
 
       if (navigationRef.isReady()) {

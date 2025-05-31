@@ -438,9 +438,6 @@
 //   updateBtnText: { color: "#fff", fontWeight: "600" },
 // });
 
-
-
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -466,6 +463,7 @@ export default function AdminDashboard() {
   const [zipCodesInput, setZipCodesInput] = useState("");
   const [zipSearch, setZipSearch] = useState("");
   const [zipProCount, setZipProCount] = useState(null);
+  const [serviceTypeSearch, setServiceTypeSearch] = useState("");
 
   const [feesData, setFeesData] = useState({ monthlyFees: [], ytdTotal: 0 });
   const [hardcodedEnabled, setHardcodedEnabled] = useState(false);
@@ -498,7 +496,9 @@ export default function AdminDashboard() {
         const res = await api.get("/admin/convenience-fees");
         const payload = res.data.data || res.data || {};
         setFeesData({
-          monthlyFees: Array.isArray(payload.monthlyFees) ? payload.monthlyFees : [],
+          monthlyFees: Array.isArray(payload.monthlyFees)
+            ? payload.monthlyFees
+            : [],
           ytdTotal: typeof payload.ytdTotal === "number" ? payload.ytdTotal : 0,
         });
       } catch (err) {
@@ -557,7 +557,9 @@ export default function AdminDashboard() {
         const res = await api.get(
           "/admin/users?role=serviceProvider&fields=_id,name,email,role,serviceType,isActive,billingTier,zipCodes"
         );
-        const list = Array.isArray(res.data.providers) ? res.data.providers : [];
+        const list = Array.isArray(res.data.providers)
+          ? res.data.providers
+          : [];
         setProviders(list);
       } catch (err) {
         console.error("Error fetching providers:", err);
@@ -573,7 +575,9 @@ export default function AdminDashboard() {
         isActive: newValue,
       });
       setProviders((prev) =>
-        prev.map((p) => (p._id === providerId ? { ...p, isActive: newValue } : p))
+        prev.map((p) =>
+          p._id === providerId ? { ...p, isActive: newValue } : p
+        )
       );
     } catch (err) {
       console.error("Error updating provider status:", err);
@@ -588,7 +592,10 @@ export default function AdminDashboard() {
 
   const updateZipCodes = async () => {
     if (!selectedProviderId) return;
-    const zips = zipCodesInput.split(",").map((z) => z.trim()).filter(Boolean);
+    const zips = zipCodesInput
+      .split(",")
+      .map((z) => z.trim())
+      .filter(Boolean);
     try {
       await api.put(`/admin/provider/${selectedProviderId}/zipcodes`, {
         zipCodes: zips,
@@ -602,44 +609,58 @@ export default function AdminDashboard() {
 
   const filteredProviders = providers.filter((p) => {
     const q = searchTerm.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q);
+    return (
+      p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)
+    );
   });
 
-  const handleZipSearch = () => {
-    const normalizedZip = zipSearch.trim();
-    const count = providers.filter((p) => {
-      if (p.billingTier !== "hybrid") return false;
-      const zips = p.serviceZipcode;
-      if (typeof zips === "string") {
-        return zips.trim() === normalizedZip;
+
+  const handleZipSearch = async () => {
+    try {
+      const res = await api.get("/admin/users?role=serviceProvider&fields=_id,billingTier,serviceZipcode,serviceType");
+      const allProviders = Array.isArray(res.data.providers) ? res.data.providers : [];
+  
+      const normalizedZip = zipSearch.trim();
+      const normalizedServiceType = serviceTypeSearch.trim().toLowerCase();
+      let count = 0;
+  
+      for (const p of allProviders) {
+        const isHybrid = p.billingTier === "hybrid";
+        const matchesService = (p.serviceType || "").toLowerCase() === normalizedServiceType;
+  
+        // console.log("p>>>>", JSON.stringify(p));
+        if (!isHybrid || !matchesService) continue;
+  
+        const z = p.serviceZipcode;
+        let zipMatch = false;
+  
+        if (typeof z === "string" || typeof z === "number") {
+          zipMatch = String(z).trim() === normalizedZip;
+        } else if (Array.isArray(z)) {
+          zipMatch = z.some((item) => String(item).trim() === normalizedZip);
+        }
+  
+        if (zipMatch) {
+          count++;
+          // console.log(`✅ Match: ${p.name} | ZIP: ${normalizedZip}`);
+        } else {
+          // console.log(`❌ No Match for ZIP: ${normalizedZip} in`, z);
+        }
       }
-      if (Array.isArray(zips)) {
-        return zips.some((z) => z.trim() === normalizedZip);
-      }
-      return false;
-    }).length;
-    setZipProCount(count);
+  
+      const available = Math.max(0, 7 - count);
+      // console.log("ZIP:", normalizedZip);
+      // console.log("Service Type:", normalizedServiceType);
+      // console.log("Hybrid Providers Found:", count);
+      // console.log("Available Slots:", available);
+  
+      setZipProCount(`${count} / 7 — ${available} slots available`);
+    } catch (err) {
+      console.error("Error during ZIP search:", err);
+      setZipProCount("Error fetching data");
+    }
   };
-
-  // const handleZipSearch = () => {
-  //   const count = providers.filter(
-  //     (p) =>
-  //       p.billingTier === "hybrid" &&
-  //       ((typeof p.serviceZipcode === "string" && p.serviceZipcode.trim() === zipSearch.trim()) ||
-  //         (Array.isArray(p.serviceZipcode) && p.serviceZipcode.includes(zipSearch.trim())))
-  //   ).length;
-  //   setZipProCount(count);
-  // };
-  // const handleZipSearch = () => {
-  //   const count = providers.filter(
-  //     (p) =>
-  //       p.billingTier === "hybrid" &&
-  //       Array.isArray(p.serviceZipcode) &&
-  //       p.serviceZipcode.includes(zipSearch.trim())
-  //   ).length;
-  //   setZipProCount(count);
-  // };
-
+  
   return (
     <ScrollView style={styles.container}>
       <LogoutButton />
@@ -665,9 +686,8 @@ export default function AdminDashboard() {
         {feesData.monthlyFees.length > 0 ? (
           feesData.monthlyFees.map((fee, idx) => (
             <Text key={idx}>
-              Month {fee._id.month}/{fee._id.year}: ${
-                (fee.totalConvenienceFee || 0).toFixed(2)
-              }
+              Month {fee._id.month}/{fee._id.year}: $
+              {(fee.totalConvenienceFee || 0).toFixed(2)}
             </Text>
           ))
         ) : (
@@ -754,8 +774,32 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         </View>
       )}
-
       <View style={styles.card}>
+        <Text style={styles.cardTitle}>Check ZIP Code Capacity</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter ZIP code"
+          value={zipSearch}
+          onChangeText={setZipSearch}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Service Type"
+          value={serviceTypeSearch}
+          onChangeText={setServiceTypeSearch}
+        />
+        <TouchableOpacity style={styles.updateBtn} onPress={handleZipSearch}>
+          <Text style={styles.updateBtnText}>
+            Search ZIP Code + Service Type
+          </Text>
+        </TouchableOpacity>
+        {zipProCount !== null && (
+          <Text style={{ marginTop: 10 }}>
+            Hybrid pros in {zipSearch} for {serviceTypeSearch}: {zipProCount}
+          </Text>
+        )}
+      </View>
+      {/* <View style={styles.card}>
         <Text style={styles.cardTitle}>ZIP Code Capacity</Text>
         <TextInput
           style={styles.input}
@@ -768,10 +812,20 @@ export default function AdminDashboard() {
         </TouchableOpacity>
         {zipProCount !== null && (
           <Text style={{ marginTop: 10 }}>
-            Hybrid providers: {zipProCount} / 7 — {zipProCount < 7 ? "Available" : "Full"}
+            Hybrid providers: {zipProCount} / 7 —{" "}
+            {zipProCount < 7 ? "Available" : "Full"}
           </Text>
         )}
-      </View>
+        {/* //new */}
+      {/* {zipProCount !== null && (
+          <Text style={{ marginTop: 10 }}>
+            Hybrid providers in {zipSearch}: {zipProCount.count} / 7 —{" "}
+            {zipProCount.available > 0
+              ? `${zipProCount.available} slots available`
+              : "Full"}
+          </Text>
+        )} */}
+      {/* </View> */}
     </ScrollView>
   );
 }

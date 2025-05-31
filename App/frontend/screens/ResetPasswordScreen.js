@@ -61,7 +61,7 @@ export default function ResetPasswordScreen() {
         email: formData.email.trim(),
         password: formData.password
       };
-      console.log("Reset payload:", payload);
+      // console.log("Reset payload:", payload);
 
       // Make the PUT request to your backend: /auth/reset-password/:token
       await api.put(`/auth/reset-password/${token}`, payload);

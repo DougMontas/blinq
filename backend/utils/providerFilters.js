@@ -9,9 +9,9 @@ export function getEligibleProviders(providers, tier, zip) {
       ? p.serviceZipcode.map((z) => z.toString().trim()).includes(zipNorm)
       : p.serviceZipcode?.toString().trim() === zipNorm;
 
-    console.log(
-      `🔍 ${p.name}: tier=${p.billingTier} (match=${tierMatch}), zip=${p.serviceZipcode} (match=${zipMatch})`
-    );
+     // console.log(
+    //   `🔍 ${p.name}: tier=${p.billingTier} (match=${tierMatch}), zip=${p.serviceZipcode} (match=${zipMatch})`
+    // );
 
     if (tierMatch && zipMatch) {
       results.push(p);

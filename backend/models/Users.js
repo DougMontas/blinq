@@ -15,7 +15,7 @@ const usersSchema = new mongoose.Schema(
     name: { type: String, required: true },
     businessName: { type: String },
     email: { type: String, required: true, unique: true },
-    address: { type: String, required: true },
+    address: { type: String, required: false },
     phoneNumber: { type: String, required: false },
 
     /* ---------- auth ---------- */
@@ -33,6 +33,10 @@ const usersSchema = new mongoose.Schema(
     proofOfInsurance: { type: String },
     independentContractorAgreement: { type: String },
     yearsExperience: { type: Number },
+    profilePicture: {
+      type: String, // base64-encoded string
+      default: "",
+    },
     trade: [
       {
         type: String,

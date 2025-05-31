@@ -14,7 +14,7 @@ export default function JobDetails({ job, onAccept }) {
 
     const timeout = setTimeout(() => {
       setElapsedReady(true);
-      console.log('phone button fired')
+      // console.log('phone button fired')
     }, delay);
 
     return () => clearTimeout(timeout);

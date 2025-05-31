@@ -25,7 +25,7 @@ router.post("/subscribe", auth, async (req, res) => {
     if (!user) return res.status(404).json({ msg: "User not found" });
     if (
       user.role !== "serviceProvider" ||
-      user.billingTier !== "subscription"
+      user.billingTier !== "hybrid"
     ) {
       return res.status(400).json({ msg: "User is not a subscription member" });
     }
