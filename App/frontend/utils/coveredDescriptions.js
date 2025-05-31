@@ -1,7 +1,4 @@
 // utils/coveredDescriptions.js
-// ——————————————————————————————————————————————————————————————
-// A simple ES module exporting your map of “service → description”
-
 const coveredDescriptions = {
   "Burst or Leaking Pipes":
     "Leak detection, up to 10ft pipe replacement (PEX/PVC/Copper), minor drywall cuts, fittings, clamps, sealants",

@@ -174,32 +174,36 @@ export default function AdminDashboard() {
     );
   });
 
-
   const handleZipSearch = async () => {
     try {
-      const res = await api.get("/admin/users?role=serviceProvider&fields=_id,billingTier,serviceZipcode,serviceType");
-      const allProviders = Array.isArray(res.data.providers) ? res.data.providers : [];
-  
+      const res = await api.get(
+        "/admin/users?role=serviceProvider&fields=_id,billingTier,serviceZipcode,serviceType"
+      );
+      const allProviders = Array.isArray(res.data.providers)
+        ? res.data.providers
+        : [];
+
       const normalizedZip = zipSearch.trim();
       const normalizedServiceType = serviceTypeSearch.trim().toLowerCase();
       let count = 0;
-  
+
       for (const p of allProviders) {
         const isHybrid = p.billingTier === "hybrid";
-        const matchesService = (p.serviceType || "").toLowerCase() === normalizedServiceType;
-  
+        const matchesService =
+          (p.serviceType || "").toLowerCase() === normalizedServiceType;
+
         // console.log("p>>>>", JSON.stringify(p));
         if (!isHybrid || !matchesService) continue;
-  
+
         const z = p.serviceZipcode;
         let zipMatch = false;
-  
+
         if (typeof z === "string" || typeof z === "number") {
           zipMatch = String(z).trim() === normalizedZip;
         } else if (Array.isArray(z)) {
           zipMatch = z.some((item) => String(item).trim() === normalizedZip);
         }
-  
+
         if (zipMatch) {
           count++;
           // console.log(`✅ Match: ${p.name} | ZIP: ${normalizedZip}`);
@@ -207,20 +211,20 @@ export default function AdminDashboard() {
           // console.log(`❌ No Match for ZIP: ${normalizedZip} in`, z);
         }
       }
-  
+
       const available = Math.max(0, 7 - count);
       // console.log("ZIP:", normalizedZip);
       // console.log("Service Type:", normalizedServiceType);
       // console.log("Hybrid Providers Found:", count);
       // console.log("Available Slots:", available);
-  
+
       setZipProCount(`${count} / 7 — ${available} slots available`);
     } catch (err) {
       console.error("Error during ZIP search:", err);
       setZipProCount("Error fetching data");
     }
   };
-  
+
   return (
     <ScrollView style={styles.container}>
       <LogoutButton />
@@ -359,33 +363,6 @@ export default function AdminDashboard() {
           </Text>
         )}
       </View>
-      {/* <View style={styles.card}>
-        <Text style={styles.cardTitle}>ZIP Code Capacity</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter ZIP code"
-          value={zipSearch}
-          onChangeText={setZipSearch}
-        />
-        <TouchableOpacity style={styles.updateBtn} onPress={handleZipSearch}>
-          <Text style={styles.updateBtnText}>Check Availability</Text>
-        </TouchableOpacity>
-        {zipProCount !== null && (
-          <Text style={{ marginTop: 10 }}>
-            Hybrid providers: {zipProCount} / 7 —{" "}
-            {zipProCount < 7 ? "Available" : "Full"}
-          </Text>
-        )}
-        {/* //new */}
-      {/* {zipProCount !== null && (
-          <Text style={{ marginTop: 10 }}>
-            Hybrid providers in {zipSearch}: {zipProCount.count} / 7 —{" "}
-            {zipProCount.available > 0
-              ? `${zipProCount.available} slots available`
-              : "Full"}
-          </Text>
-        )} */}
-      {/* </View> */}
     </ScrollView>
   );
 }

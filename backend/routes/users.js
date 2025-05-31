@@ -22,8 +22,6 @@ const upload = multer({
   },
 });
 
-
-
 // Encryption helper
 const algorithm = "aes-256-cbc";
 const encryptionKey = process.env.ENCRYPTION_KEY;
@@ -95,18 +93,6 @@ router.get("/me", auth, async (req, res) => {
   }
 });
 
-// router.get("/:id", auth, async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const user = await Users.findById(id).select("name businessName aboutMe profilePicture");
-//     if (!user) return res.status(404).json({ msg: "User not found" });
-//     res.json(user);
-//   } catch (err) {
-//     console.error("GET /users/:id error", err);
-//     res.status(400).json({ msg: "Invalid user ID" });
-//   }
-// });
-
 router.get("/:id", auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -124,8 +110,6 @@ router.get("/:id", auth, async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
-
-
 
 //fetching the users documents
 router.get("/me/documents", auth, async (req, res) => {
@@ -214,185 +198,15 @@ router.get("/providers/active", async (req, res) => {
   }
 });
 
-/**
- * PUT /api/users/profile
- * Updates profile text fields and file uploads
- */
-//working
-// router.put("/profile",
-//   auth,
-//   upload.fields([
-//     { name: "w9", maxCount: 1 },
-//     { name: "businessLicense", maxCount: 1 },
-//     { name: "proofOfInsurance", maxCount: 1 },
-//     { name: "independentContractorAgreement", maxCount: 1 },
-//   ]),
-//   async (req, res) => {
-//     try {
-//       const {
-//         aboutMe,
-//         yearsExperience,
-//         serviceType,
-//         serviceCost,
-//         address,
-//         zipcode,
-//         serviceZipcode,
-//         businessName,
-//       } = req.body;
-
-//       const user = await Users.findById(req.user.id);
-//       if (!user) return res.status(404).json({ msg: "User not found" });
-
-//       // track change for geocoding
-//       const oldAddress = user.address;
-//       if (aboutMe != null) user.aboutMe = aboutMe;
-//       if (yearsExperience != null) user.yearsExperience = yearsExperience;
-//       if (serviceType != null) user.serviceType = serviceType;
-//       if (serviceCost != null) user.serviceCost = serviceCost;
-//       if (address != null) user.address = address;
-//       if (zipcode != null) user.zipcode = zipcode;
-//       if (serviceZipcode != null) user.serviceZipcode = serviceZipcode;
-//       if (businessName != null) user.businessName = businessName;
-
-//       // handle uploads
-//       const files = req.files;
-//       if (files?.w9?.[0]) user.w9 = files.w9[0].buffer.toString("base64");
-//       if (files?.businessLicense?.[0])
-//         user.businessLicense =
-//           files.businessLicense[0].buffer.toString("base64");
-//       if (files?.proofOfInsurance?.[0])
-//         user.proofOfInsurance =
-//           files.proofOfInsurance[0].buffer.toString("base64");
-//       if (files?.independentContractorAgreement?.[0])
-//         user.independentContractorAgreement =
-//           files.independentContractorAgreement[0].buffer.toString("base64");
-
-//       // only re-geocode if address changed
-//       if (address && address !== oldAddress) {
-//         const geo = await geocoder.geocode(address);
-//         if (geo.length) {
-//           user.location = {
-//             type: "Point",
-//             coordinates: [geo[0].longitude, geo[0].latitude],
-//           };
-//         }
-//       }
-
-//       await user.save();
-//       res.json({ msg: "Profile updated", user });
-//     } catch (err) {
-//       console.error("PUT /profile error:", err);
-//       res.status(500).json({ msg: "Server error updating profile" });
-//     }
-//   }
-// );
-// router.put("/profile",
-//   auth,
-//   upload.fields([
-//     { name: "w9", maxCount: 1 },
-//     { name: "businessLicense", maxCount: 1 },
-//     { name: "proofOfInsurance", maxCount: 1 },
-//     { name: "independentContractorAgreement", maxCount: 1 },
-//     { name: "profilePicture", maxCount: 1 }, // ✅ Added support
-//   ]),
-//   async (req, res) => {
-//     try {
-//       const user = await Users.findById(req.user.id);
-//       if (!user) return res.status(404).json({ msg: "User not found" });
-
-//       const oldAddress = user.address;
-
-//       // ✅ Dynamically assign any non-null body fields
-//       Object.entries(req.body).forEach(([key, value]) => {
-//         if (value !== undefined && value !== null && value !== "") {
-//           user[key] = value;
-//         }
-//       });
-
-//       // ✅ Handle file uploads
-//       const files = req.files;
-//       if (files?.w9?.[0]) {
-//         user.w9 = files.w9[0].buffer.toString("base64");
-//       }
-//       if (files?.businessLicense?.[0]) {
-//         user.businessLicense = files.businessLicense[0].buffer.toString("base64");
-//       }
-//       if (files?.proofOfInsurance?.[0]) {
-//         user.proofOfInsurance = files.proofOfInsurance[0].buffer.toString("base64");
-//       }
-//       if (files?.independentContractorAgreement?.[0]) {
-//         user.independentContractorAgreement =
-//           files.independentContractorAgreement[0].buffer.toString("base64");
-//       }
-//       if (files?.profilePicture?.[0]) {
-//         user.profilePicture = files.profilePicture[0].buffer.toString("base64");
-//       }
-
-//       // ✅ Re-geocode only if address changed
-//       if (req.body.address && req.body.address !== oldAddress) {
-//         const geo = await geocoder.geocode(req.body.address);
-//         if (geo.length) {
-//           user.location = {
-//             type: "Point",
-//             coordinates: [geo[0].longitude, geo[0].latitude],
-//           };
-//         }
-//       }
-
-//       await user.save();
-//       res.json({ msg: "Profile updated", user });
-//     } catch (err) {
-//       console.error("PUT /profile error:", err);
-//       res.status(500).json({ msg: "Server error updating profile" });
-//     }
-//   }
-// );
-
-// router.put("/profile",
-//   auth,
-//   upload.fields([
-//     { name: "w9", maxCount: 1 },
-//     { name: "businessLicense", maxCount: 1 },
-//     { name: "proofOfInsurance", maxCount: 1 },
-//     { name: "independentContractorAgreement", maxCount: 1 },
-//     { name: "profilePicture", maxCount: 1 }, 
-//   ]),
-//   async (req, res) => {
-//     try {
-//       const user = await Users.findById(req.user.id);
-//       if (!user) return res.status(404).json({ msg: "User not found" });
-
-//       // Object.entries(req.body).forEach(([key, value]) => {
-//       //   if (value !== undefined) user[key] = value;
-//       // });
-//       Object.entries(req.body).forEach(([key, value]) => {
-//         if (value !== undefined && value !== "") user[key] = value;
-//       });
-      
-//       const files = req.files;
-//       if (files?.profilePicture?.[0]) {
-//         const buffer = files.profilePicture[0].buffer;
-//         const mime = files.profilePicture[0].mimetype || "image/jpeg";
-//         user.profilePicture = `data:${mime};base64,${buffer.toString("base64")}`;
-//       }
-
-//       await user.save();
-//       res.json({ msg: "Profile updated", user });
-//     } catch (err) {
-//       console.error("PUT /profile error:", err);
-//       res.status(500).json({ msg: "Server error updating profile" });
-//     }
-//   }
-// );
-
-router.put("/profile",
+router.put(
+  "/profile",
   auth,
   upload.fields([
     { name: "w9", maxCount: 1 },
     { name: "businessLicense", maxCount: 1 },
     { name: "proofOfInsurance", maxCount: 1 },
     { name: "independentContractorAgreement", maxCount: 1 },
-    { name: "profilePicture", maxCount: 1 }, 
+    { name: "profilePicture", maxCount: 1 },
   ]),
   async (req, res) => {
     try {
@@ -411,7 +225,9 @@ router.put("/profile",
 
       if (files?.profilePicture?.[0]) {
         const { buffer, mimetype } = files.profilePicture[0];
-        user.profilePicture = `data:${mimetype};base64,${buffer.toString("base64")}`;
+        user.profilePicture = `data:${mimetype};base64,${buffer.toString(
+          "base64"
+        )}`;
       }
 
       if (files?.w9?.[0]) {
@@ -419,15 +235,18 @@ router.put("/profile",
       }
 
       if (files?.businessLicense?.[0]) {
-        user.businessLicense = files.businessLicense[0].buffer.toString("base64");
+        user.businessLicense =
+          files.businessLicense[0].buffer.toString("base64");
       }
 
       if (files?.proofOfInsurance?.[0]) {
-        user.proofOfInsurance = files.proofOfInsurance[0].buffer.toString("base64");
+        user.proofOfInsurance =
+          files.proofOfInsurance[0].buffer.toString("base64");
       }
 
       if (files?.independentContractorAgreement?.[0]) {
-        user.independentContractorAgreement = files.independentContractorAgreement[0].buffer.toString("base64");
+        user.independentContractorAgreement =
+          files.independentContractorAgreement[0].buffer.toString("base64");
       }
 
       await user.save();
@@ -441,8 +260,6 @@ router.put("/profile",
     }
   }
 );
-
-
 
 /**
  * PUT /api/users/location

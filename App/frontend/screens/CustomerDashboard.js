@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../api/client";
 import socket from "../components/socket";
 import LogoutButton from "../components/LogoutButton";
-import ComingSoon from  '../assets/coming_soon.jpeg'
+import ComingSoon from "../assets/coming_soon.jpeg";
 
 const categories = [
   {
@@ -114,16 +114,16 @@ export default function CustomerDashboard() {
       <LogoutButton />
 
       <View style={styles.containerLogo}>
-            <Image
-              source={require("../assets/blinqfix_logo-new.jpeg")}
-              style={{
-                width: LOGO_SIZE,
-                height: LOGO_SIZE,
-                marginHorizontal: 120,
-              }}
-              resizeMode="contain"
-            />
-          </View>
+        <Image
+          source={require("../assets/blinqfix_logo-new.jpeg")}
+          style={{
+            width: LOGO_SIZE,
+            height: LOGO_SIZE,
+            marginHorizontal: 120,
+          }}
+          resizeMode="contain"
+        />
+      </View>
 
       <LinearGradient
         colors={["#1976d2", "#2f80ed"]}
@@ -132,7 +132,6 @@ export default function CustomerDashboard() {
         end={{ x: 1, y: 1 }}
       >
         <Text style={styles.heroText}>
-          
           {"\n"}
           Hi {firstName},{" "}
           <Text style={styles.heroSub}>how can we help today?</Text>
@@ -161,7 +160,7 @@ export default function CustomerDashboard() {
               source={
                 typeof img === "string" && img.startsWith("http")
                   ? { uri: img }
-                  : ''
+                  : ""
               }
               style={styles.cardImg}
             />
@@ -171,21 +170,6 @@ export default function CustomerDashboard() {
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* {activeJob && (
-        <>
-          <Text style={styles.sectionTitle}>Current Job</Text>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("CustomerJobStatus", { jobId: activeJob._id })
-            }
-          >
-            <Text style={{ color: "#1976d2", textAlign: "center" }}>
-              View Job Status
-            </Text>
-          </TouchableOpacity>
-        </>
-      )} */}
 
       <View style={{ height: 40 }} />
     </ScrollView>

@@ -383,7 +383,7 @@ router.put("/complete-payment/:jobId", auth, async (req, res) => {
     setTimeout(async () => {
       const latestJob = await Job.findById(job._id);
       if (latestJob.acceptedProvider || latestJob.status === "accepted") {
-        console.log("⏸️ Skipping phase 2 invite - job already accepted.");
+        // console.log("⏸️ Skipping phase 2 invite - job already accepted.");
         return;
       }
       invitePhaseTwo(job._id, req.io).catch((err) => {

@@ -17,7 +17,7 @@ const checkAdmin = (req, res, next) => {
 };
 
 router.get("/users", auth, async (req, res) => {
-  console.log("📥 Admin route hit: /admin/users");
+  // console.log("📥 Admin route hit: /admin/users");
   try {
     const providers = await Users.find(
       { role: "serviceProvider" },

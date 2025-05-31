@@ -6,7 +6,6 @@ import { auth } from "../middlewares/auth.js";
 const router = express.Router();
 
 // instantiate Stripe with your secret key
-// (make sure STRIPE_SECRET_KEY is set in your .env)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15", // or whatever version you're on
   timeout: 120000,

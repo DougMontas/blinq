@@ -8,7 +8,7 @@ export function auth(req, res, next) {
       req.headers["x-auth-token"] ||
       (req.headers["authorization"]?.split(" ")[1] ?? "");
 
-    console.log("🔐 Incoming token:", req.headers.authorization);
+    // console.log("🔐 Incoming token:", req.headers.authorization);
 
     if (!token) {
       console.log("AUTH MIDDLEWARE: No token found in headers.");
@@ -20,7 +20,7 @@ export function auth(req, res, next) {
 
     // 3. attach to req
     req.user = { id: decoded.id, role: decoded.role };
-    console.log("AUTH MIDDLEWARE: req.user =", req.user);
+    // console.log("AUTH MIDDLEWARE: req.user =", req.user);
 
     next();
   } catch (err) {
