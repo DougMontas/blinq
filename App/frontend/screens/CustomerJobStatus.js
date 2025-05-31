@@ -906,7 +906,6 @@
 //   },
 // });
 
-
 // import React, { useEffect, useState } from "react";
 // import {
 //   View,
@@ -1240,8 +1239,9 @@ export default function CustomerJobStatus() {
   const [confirming, setConfirming] = useState(false);
   const [providerInfo, setProviderInfo] = useState(null);
   const details = job?.details ?? {};
-  const description = details.issue ? getCoveredDescription(details.issue) : null;
-
+  const description = details.issue
+    ? getCoveredDescription(details.issue)
+    : null;
 
   useEffect(() => {
     if (job && job.status !== "completed") {
@@ -1276,7 +1276,7 @@ export default function CustomerJobStatus() {
         const { data } = await api.get(`/jobs/${jobId}?t=${Date.now()}`);
         if (!alive) return;
         setJob(data);
-        
+
         if (data.acceptedProvider && data.status === "accepted") {
           try {
             const res = await api.get(`/users/${data.acceptedProvider}`);
@@ -1287,13 +1287,12 @@ export default function CustomerJobStatus() {
               businessName: provider.businessName,
               aboutMe: provider.aboutMe,
               profilePictureUrl: provider.profilePicture || null,
+              averageRating: provider.averageRating ?? null,
             });
           } catch (err) {
             console.warn("Could not load provider info", err);
           }
         }
-        
-    
 
         if (data.status === "awaiting-additional-payment") {
           navigation.replace("PaymentScreen", { jobId });
@@ -1355,10 +1354,14 @@ export default function CustomerJobStatus() {
       <View style={styles.containerLogo}>
         <Image
           source={require("../assets/blinqfix_logo-new.jpeg")}
-          style={{ width: LOGO_SIZE, height: LOGO_SIZE,justifyContent: 'center',
-          alignItems: 'center', marginInline: "auto" }}
+          style={{
+            width: LOGO_SIZE,
+            height: LOGO_SIZE,
+            justifyContent: "center",
+            alignItems: "center",
+            marginInline: "auto",
+          }}
           resizeMode="contain"
-          
         />
       </View>
       <Text>{"\n"}</Text>
@@ -1371,12 +1374,25 @@ export default function CustomerJobStatus() {
           {providerInfo.profilePictureUrl && (
             <Image
               source={{ uri: providerInfo.profilePictureUrl }}
-              style={{ width: 160, height: 160, borderRadius: 100, alignSelf: "center" }}
+              style={{
+                width: 160,
+                height: 160,
+                borderRadius: 100,
+                alignSelf: "center",
+              }}
             />
           )}
-          <Text style={{ fontWeight: "bold", fontSize: 16 }}>{providerInfo.name}</Text>
+          <Text style={{ fontWeight: "bold", fontSize: 16 }}>
+            {providerInfo.name}
+          </Text>
           <Text>{providerInfo.businessName}</Text>
           <Text>{providerInfo.aboutMe}</Text>
+          <Text>
+            Rating:{" "}
+            {"★".repeat(Math.round(providerInfo.averageRating)) +
+              "★".repeat(5 - Math.round(providerInfo.averageRating))}{" "}
+            
+          </Text>
         </View>
       )}
 
@@ -1456,7 +1472,12 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
   pending: {
     padding: 12,
     backgroundColor: "#fff3e0",

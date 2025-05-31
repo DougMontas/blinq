@@ -56,72 +56,6 @@ function slimUser(user) {
   return rest;
 }
 
-// GET /users/:id - Fetch a specific user by ID
-// router.get("/:id", auth, async (req, res) => {
-//   try {
-//     const user = await Users.findById(req.params.id).select("name businessName aboutMe profilePicture");
-//     if (!user) return res.status(404).json({ msg: "User not found" });
-//     res.json(user);
-//   } catch (err) {
-//     console.error("GET /users/:id error", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// router.get("/users/:id", auth, async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const userId = id === "me" ? req.user.id : id;
-
-//     const user = await Users.findById(userId).select(
-//       "name email role aboutMe businessName profilePicture"
-//     );
-
-//     if (!user) return res.status(404).json({ msg: "User not found" });
-
-//     res.json(user);
-//   } catch (err) {
-//     console.error("GET /users/:id error", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// router.get("/:id", auth, async (req, res) => {
-//   try {
-//     const { id } = req.params;
-
-//     // Validate and prevent invalid ObjectId errors
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ msg: "Invalid user ID format" });
-//     }
-
-//     const user = await Users.findById(id).lean();
-//     if (!user) return res.status(404).json({ msg: "User not found" });
-
-//     res.json(user);
-//   } catch (err) {
-//     console.error("GET /users/:id error", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-
-
-
-// GET /users/:id - Fetch a specific user by ID
-// router.get("/:id", auth, async (req, res) => {
-//   try {
-//     const user = await Users.findById(req.params.id).select("name businessName aboutMe profilePicture");
-//     if (!user) return res.status(404).json({ msg: "User not found" });
-//     res.json(user);
-//   } catch (err) {
-//     console.error("GET /users/:id error", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-
-
 router.get("/me", auth, async (req, res) => {
   try {
     console.time("🔍 MongoDB user fetch");
@@ -179,7 +113,7 @@ router.get("/:id", auth, async (req, res) => {
     const userId = id === "me" ? req.user.id : id;
 
     const user = await Users.findById(userId).select(
-      "name email role aboutMe businessName profilePicture"
+      "name email role aboutMe businessName profilePicture averageRating"
     );
 
     if (!user) return res.status(404).json({ msg: "User not found" });
