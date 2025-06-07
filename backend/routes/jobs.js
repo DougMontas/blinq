@@ -316,25 +316,120 @@ router.get("/homeowner/active", auth, async (req, res) => {
 //   }
 // });
 
+//old
+// router.put("/complete-payment/:jobId", auth, async (req, res) => {
+//   const { jobId } = req.params;
+
+//   const CUSTOMER_FEE_RATE = 0.07;
+//   const PROVIDER_FEE_RATE = 0.07;
+
+//   try {
+//     const job = await Job.findById(jobId);
+//     if (!job) {
+//       return res.status(404).json({ msg: "Job not found" });
+//     }
+
+//     // ✅ Prevent further invitations if job already accepted or has an accepted provider
+//     if (job.status === "accepted" || job.acceptedProvider) {
+//       return res.status(400).json({ msg: "Job already accepted. No further invitations allowed." });
+//     }
+
+//     const isAdditionalOnly = job.status === "awaiting-additional-payment";
+
+//     const base = job.baseAmount || 0;
+//     const adjust = job.adjustmentAmount || 0;
+//     const rush = job.rushFee || 0;
+//     const extra = job.additionalCharge || 0;
+
+//     const subtotal = base + adjust + rush + extra;
+
+//     const customerFee = Math.round((subtotal * CUSTOMER_FEE_RATE + Number.EPSILON) * 100) / 100;
+//     const providerFee = Math.round((subtotal * PROVIDER_FEE_RATE + Number.EPSILON) * 100) / 100;
+//     const totalConvenienceFee = customerFee + providerFee;
+//     const paymentToProvider = subtotal - providerFee;
+
+//     job.customerFee = customerFee;
+//     job.providerFee = providerFee;
+//     job.convenienceFee = totalConvenienceFee;
+//     job.totalAmountPaid = subtotal + customerFee;
+//     job.paymentToProvider = paymentToProvider;
+//     job.paymentStatus = "paid";
+
+//     if (isAdditionalOnly) {
+//       job.status = "accepted";
+//       await job.save();
+//       return res.json(job);
+//     }
+
+//     if (job.status === "accepted") {
+//       await job.save();
+//       return res.json(job);
+//     }
+
+//     // ✅ Final safeguard: prevent invites if job is now accepted mid-way
+//     if (job.acceptedProvider || job.status === "accepted") {
+//       return res.status(400).json({ msg: "Job has already been accepted. No invitations sent." });
+//     }
+
+//     job.status = "invited";
+//     await job.save();
+
+//     const customer = await Users.findById(job.customer).lean();
+//     if (!customer) {
+//       return res.status(500).json({ msg: "Customer not found." });
+//     }
+
+//     await invitePhaseOne(job, customer, req.io);
+
+//     setTimeout(async () => {
+//       const latestJob = await Job.findById(job._id);
+//       if (latestJob.acceptedProvider || latestJob.status === "accepted") {
+//         // console.log("⏸️ Skipping phase 2 invite - job already accepted.");
+//         return;
+//       }
+//       invitePhaseTwo(job._id, req.io).catch((err) => {
+//         console.error("🔥 Phase 2 invite error:", err);
+//       });
+//     }, 15 * 60 * 1000);
+
+//     return res.json(job);
+//   } catch (err) {
+//     console.error("❌ PUT /complete-payment/:jobId error:", err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
 router.put("/complete-payment/:jobId", auth, async (req, res) => {
   const { jobId } = req.params;
+  const { paymentIntentId } = req.body || {};
 
   const CUSTOMER_FEE_RATE = 0.07;
   const PROVIDER_FEE_RATE = 0.07;
 
   try {
     const job = await Job.findById(jobId);
-    if (!job) {
-      return res.status(404).json({ msg: "Job not found" });
-    }
-
-    // ✅ Prevent further invitations if job already accepted or has an accepted provider
-    if (job.status === "accepted" || job.acceptedProvider) {
-      return res.status(400).json({ msg: "Job already accepted. No further invitations allowed." });
-    }
+    if (!job) return res.status(404).json({ msg: "Job not found" });
 
     const isAdditionalOnly = job.status === "awaiting-additional-payment";
 
+    // 🚫 Block only new invites when job already accepted (still allow extra‑charge payment)
+    if (!isAdditionalOnly && (job.status === "accepted" || job.acceptedProvider)) {
+      return res
+        .status(400)
+        .json({ msg: "Job already accepted. No further invitations allowed." });
+    }
+
+    // 🔒 Verify Stripe PaymentIntent if provided
+    let capturedCents = 0;
+    if (paymentIntentId) {
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (intent.status !== "succeeded") {
+        return res.status(400).json({ msg: "Payment not completed" });
+      }
+      capturedCents = intent.amount_received;
+    }
+
+    // 💰 Recalculate totals (includes any additionalCharge already set on Job)
     const base = job.baseAmount || 0;
     const adjust = job.adjustmentAmount || 0;
     const rush = job.rushFee || 0;
@@ -342,8 +437,8 @@ router.put("/complete-payment/:jobId", auth, async (req, res) => {
 
     const subtotal = base + adjust + rush + extra;
 
-    const customerFee = Math.round((subtotal * CUSTOMER_FEE_RATE + Number.EPSILON) * 100) / 100;
-    const providerFee = Math.round((subtotal * PROVIDER_FEE_RATE + Number.EPSILON) * 100) / 100;
+    const customerFee = +(subtotal * CUSTOMER_FEE_RATE).toFixed(2);
+    const providerFee = +(subtotal * PROVIDER_FEE_RATE).toFixed(2);
     const totalConvenienceFee = customerFee + providerFee;
     const paymentToProvider = subtotal - providerFee;
 
@@ -352,22 +447,33 @@ router.put("/complete-payment/:jobId", auth, async (req, res) => {
     job.convenienceFee = totalConvenienceFee;
     job.totalAmountPaid = subtotal + customerFee;
     job.paymentToProvider = paymentToProvider;
+
+    // 📝 Record new payment when additional‑only
+    if (isAdditionalOnly) {
+      job.paymentStatus = "paid";
+      job.status = "accepted"; // revert to accepted after payment
+
+      // 🔧 Ensure array exists before pushing
+      if (!Array.isArray(job.additionalPayments)) job.additionalPayments = [];
+
+      job.additionalPayments.push({
+        paymentIntentId,
+        amount: capturedCents || extra * 100, // cents
+        capturedAt: new Date(),
+      });
+
+      await job.save();
+      return res.json(job);
+    }
+
+    // ============== ORIGINAL INVITE LOGIC (unchanged) ==============
+
     job.paymentStatus = "paid";
 
-    if (isAdditionalOnly) {
-      job.status = "accepted";
-      await job.save();
-      return res.json(job);
-    }
-
-    if (job.status === "accepted") {
-      await job.save();
-      return res.json(job);
-    }
-
-    // ✅ Final safeguard: prevent invites if job is now accepted mid-way
+    // Final safeguard: prevent invites if job is now accepted mid‑way
     if (job.acceptedProvider || job.status === "accepted") {
-      return res.status(400).json({ msg: "Job has already been accepted. No invitations sent." });
+      await job.save();
+      return res.json(job);
     }
 
     job.status = "invited";
@@ -382,19 +488,16 @@ router.put("/complete-payment/:jobId", auth, async (req, res) => {
 
     setTimeout(async () => {
       const latestJob = await Job.findById(job._id);
-      if (latestJob.acceptedProvider || latestJob.status === "accepted") {
-        // console.log("⏸️ Skipping phase 2 invite - job already accepted.");
-        return;
-      }
+      if (latestJob.acceptedProvider || latestJob.status === "accepted") return;
       invitePhaseTwo(job._id, req.io).catch((err) => {
         console.error("🔥 Phase 2 invite error:", err);
       });
     }, 15 * 60 * 1000);
 
-    return res.json(job);
+    res.json(job);
   } catch (err) {
     console.error("❌ PUT /complete-payment/:jobId error:", err);
-    return res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
@@ -614,53 +717,87 @@ router.post("/payments/additional-charge-sheet", auth, async (req, res) => {
     return res.status(500).json({ msg: "Stripe error", error: err.message });
   }
 });
+//working
+// router.post("/payments/payment-sheet", async (req, res) => {
+//   // console.log("🔥 POST /payments/payment-sheet triggered");
+//   // console.log("🧾 Incoming body:", req.body);
+
+//   const { amount, currency, jobId } = req.body;
+//   if (!amount || !currency || !jobId) {
+//     // console.error("❌ Missing required fields:", { amount, currency, jobId });
+//     return res.status(400).json({ msg: "Missing required fields." });
+//   }
+
+//   try {
+//     const job = await Job.findById(jobId);
+//     if (!job) {
+//       console.error("❌ Job not found:", jobId);
+//       return res.status(404).json({ msg: "Job not found" });
+//     }
+
+//     const customer = await Users.findById(job.customer);
+//     if (!customer?.stripeCustomerId) {
+//       // console.error("❌ Missing stripeCustomerId for user:", job.customer);
+//       return res.status(400).json({ msg: "Missing stripe customer id" });
+//     }
+
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount,
+//       currency,
+//       customer: customer.stripeCustomerId,
+//       automatic_payment_methods: { enabled: true },
+//     });
+
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.stripeCustomerId },
+//       { apiVersion: "2022-11-15" }
+//     );
+
+//     // console.log("✅ Payment intent created:>>>", paymentIntent.id);
+
+//     return res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       ephemeralKey: ephemeralKey.secret,
+//       customer: customer.stripeCustomerId,
+//     });
+//   } catch (err) {
+//     console.error("🔥 Stripe payment-sheet error:", err);
+//     return res.status(500).json({ msg: "Stripe error", error: err.message });
+//   }
+// });
 
 router.post("/payments/payment-sheet", async (req, res) => {
-  // console.log("🔥 POST /payments/payment-sheet triggered");
-  // console.log("🧾 Incoming body:", req.body);
+  // const { amount, currency, jobId } = req.body;
 
-  const { amount, currency, jobId } = req.body;
-  if (!amount || !currency || !jobId) {
-    // console.error("❌ Missing required fields:", { amount, currency, jobId });
-    return res.status(400).json({ msg: "Missing required fields." });
+  const job = await Job.findById(jobId).populate("acceptedProvider");
+  if (!job || !job.acceptedProvider?.stripeAccountId) {
+    return res.status(400).json({ msg: "Invalid provider or job" });
   }
 
-  try {
-    const job = await Job.findById(jobId);
-    if (!job) {
-      console.error("❌ Job not found:", jobId);
-      return res.status(404).json({ msg: "Job not found" });
-    }
+  const customer = await stripe.customers.create({ email: req.user.email });
+  const ephemeralKey = await stripe.ephemeralKeys.create(
+    { customer: customer.id },
+    { apiVersion: "2023-08-16" }
+  );
 
-    const customer = await Users.findById(job.customer);
-    if (!customer?.stripeCustomerId) {
-      // console.error("❌ Missing stripeCustomerId for user:", job.customer);
-      return res.status(400).json({ msg: "Missing stripe customer id" });
-    }
+  const applicationFee = Math.round(amount * 0.07); // 7% platform fee
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency,
-      customer: customer.stripeCustomerId,
-      automatic_payment_methods: { enabled: true },
-    });
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount,
+    currency,
+    customer: customer.id,
+    automatic_payment_methods: { enabled: true },
+    application_fee_amount: applicationFee,
+    transfer_data: {
+      destination: job.acceptedProvider.stripeAccountId,
+    },
+  });
 
-    const ephemeralKey = await stripe.ephemeralKeys.create(
-      { customer: customer.stripeCustomerId },
-      { apiVersion: "2022-11-15" }
-    );
-
-    // console.log("✅ Payment intent created:>>>", paymentIntent.id);
-
-    return res.json({
-      paymentIntentClientSecret: paymentIntent.client_secret,
-      ephemeralKey: ephemeralKey.secret,
-      customer: customer.stripeCustomerId,
-    });
-  } catch (err) {
-    console.error("🔥 Stripe payment-sheet error:", err);
-    return res.status(500).json({ msg: "Stripe error", error: err.message });
-  }
+  res.json({
+    customer: customer.id,
+    ephemeralKey: ephemeralKey.secret,
+    paymentIntentClientSecret: paymentIntent.client_secret,
+  });
 });
 
 /**

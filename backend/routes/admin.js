@@ -189,49 +189,76 @@ router.put("/provider/:providerId/active",
     }
   }
 );
+//old
+// router.put("/provider/:providerId/zipcodes",
+//   auth,
+//   checkAdmin,
+//   async (req, res) => {
+//     const { providerId } = req.params;
+//     const { zipCodes } = req.body; // <-- grab the array your client is sending
 
-router.put(
-  "/provider/:providerId/zipcodes",
+//     if (!zipCodes) {
+//       return res.status(400).json({ msg: "`zipCodes` is required" });
+//     }
+//     if (!Array.isArray(zipCodes)) {
+//       return res
+//         .status(400)
+//         .json({ msg: "`zipCodes` must be an array of zip strings" });
+//     }
+
+//     try {
+//       const provider = await Users.findById(providerId);
+//       if (!provider) {
+//         return res.status(404).json({ msg: "Provider not found" });
+//       }
+//       if (provider.role !== "serviceProvider") {
+//         return res.status(400).json({ msg: "User is not a service provider" });
+//       }
+
+//       // 2) Overwrite with the new array
+//       provider.serviceZipcode = "";
+
+//       if (typeof provider.markModified === "function") {
+//         provider.markModified("serviceZipcode");
+//       }
+
+//       await provider.save();
+
+//       return res.json({
+//         msg: "Zip codes updated successfully",
+//         provider,
+//       });
+//     } catch (err) {
+//       console.error("Update provider zipCodes error:", err);
+//       return res.status(500).send("Server error");
+//     }
+//   }
+// );
+
+router.put("/provider/:providerId/zipcodes",
   auth,
   checkAdmin,
   async (req, res) => {
-    const { providerId } = req.params;
-    const { zipCodes } = req.body; // <-- grab the array your client is sending
-
-    if (!zipCodes) {
-      return res.status(400).json({ msg: "`zipCodes` is required" });
-    }
-    if (!Array.isArray(zipCodes)) {
-      return res
-        .status(400)
-        .json({ msg: "`zipCodes` must be an array of zip strings" });
-    }
-
     try {
+      const { providerId } = req.params;
+      const { zipCodes } = req.body;
+  
       const provider = await Users.findById(providerId);
-      if (!provider) {
-        return res.status(404).json({ msg: "Provider not found" });
+      if (!provider || provider.role !== "serviceProvider") {
+        return res.status(404).json({ msg: "Provider not found or invalid role" });
       }
-      if (provider.role !== "serviceProvider") {
-        return res.status(400).json({ msg: "User is not a service provider" });
-      }
-
-      // 2) Overwrite with the new array
-      provider.serviceZipcode = "";
-
-      if (typeof provider.markModified === "function") {
-        provider.markModified("serviceZipcode");
-      }
-
+  
+      const zipArray = Array.isArray(zipCodes)
+        ? zipCodes.map((z) => String(z).trim()).filter(Boolean)
+        : [String(zipCodes).trim()].filter(Boolean);
+  
+      provider.serviceZipcode = zipArray;
       await provider.save();
-
-      return res.json({
-        msg: "Zip codes updated successfully",
-        provider,
-      });
+  
+      return res.json({ msg: "Service ZIP codes updated successfully" });
     } catch (err) {
-      console.error("Update provider zipCodes error:", err);
-      return res.status(500).send("Server error");
+      console.error("PUT /admin/provider/:providerId/zipcodes error:", err);
+      return res.status(500).json({ msg: "Server error updating zip codes" });
     }
   }
 );
