@@ -1,7 +1,13 @@
 import React from "react";
-import { View, Button, Alert, Platform, PermissionsAndroid } from "react-native";
+import {
+  View,
+  Button,
+  Alert,
+  Platform,
+  PermissionsAndroid,
+} from "react-native";
 import RNFS from "react-native-fs";
-import IndependentContractor from '../assets/BlinqFix_Indepent_Contractor_Agreement'
+import IndependentContractor from "../assets/BlinqFix_Indepent_Contractor_Agreement";
 
 const DownloadContract = () => {
   const fileUrl = IndependentContractor;
@@ -15,14 +21,18 @@ const DownloadContract = () => {
           PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
           {
             title: "Download Permission",
-            message: "BlinqFix needs access to your storage to download the file.",
+            message:
+              "BlinqFix needs access to your storage to download the file.",
             buttonNeutral: "Ask Me Later",
             buttonNegative: "Cancel",
             buttonPositive: "OK",
           }
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert("Permission denied", "Cannot download without storage permission.");
+          Alert.alert(
+            "Permission denied",
+            "Cannot download without storage permission."
+          );
           return;
         }
       }
@@ -46,7 +56,10 @@ const DownloadContract = () => {
 
   return (
     <View style={{ marginTop: 20 }}>
-      <Button title="Download Independent Contractor Agreement" onPress={downloadFile} />
+      <Button
+        title="Download Independent Contractor Agreement"
+        onPress={downloadFile}
+      />
     </View>
   );
 };

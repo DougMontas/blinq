@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from "react-native";
 import api from "../api/client";
+import StarRating from "../components/StarRating";
 
 export default function ProviderStatsCard() {
   const [stats, setStats] = useState({
@@ -23,12 +24,14 @@ export default function ProviderStatsCard() {
     const fetchStats = async () => {
       try {
         const response = await api.get("/jobs/me/stats");
-        setStats(response.data || {
-          completedJobsCount: 0,
-          totalAmountPaid: 0,
-          averageRating: null,
-          reviews: [],
-        });
+        setStats(
+          response.data || {
+            completedJobsCount: 0,
+            totalAmountPaid: 0,
+            averageRating: null,
+            reviews: [],
+          }
+        );
       } catch (err) {
         console.error("Error fetching provider stats:", err);
         setError("Error fetching provider stats.");
@@ -66,12 +69,12 @@ export default function ProviderStatsCard() {
         })}
       </Text>
 
-      <Text style={styles.info}>
-        Average Rating:{" "}
-        {stats.averageRating
-          ? stats.averageRating.toFixed(2) + " / 5"
-          : "No ratings yet"}
-      </Text>
+      <Text style={styles.info}>Average Rating:</Text>
+      {stats.averageRating ? (
+        <StarRating rating={stats.averageRating} />
+      ) : (
+        <Text style={styles.info}>No ratings yet</Text>
+      )}
 
       <Text style={styles.note}>
         * Total earnings reflect full job payouts (excluding BlinqFix’s 7% fee)
@@ -80,19 +83,25 @@ export default function ProviderStatsCard() {
       {stats.reviews.length > 0 && (
         <View style={{ marginTop: 16 }}>
           <Text style={styles.subheader}>Customer Reviews</Text>
-          {stats.reviews.map((r, idx) => (
-            <View key={idx} style={styles.reviewBox}>
-              <Text style={styles.reviewText}>"{r.comment}"</Text>
-              {r.rating && (
-                <Text style={styles.reviewMeta}>Rating: {r.rating} / 5</Text>
-              )}
-              {r.date && (
-                <Text style={styles.reviewMeta}>
-                  Completed: {new Date(r.date).toLocaleDateString()}
-                </Text>
-              )}
-            </View>
-          ))}
+
+          {/* ✅ Sort reviews by most recent first */}
+          {[...stats.reviews]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map((r, idx) => (
+              <View key={idx} style={styles.reviewBox}>
+                <Text style={styles.reviewText}>"{r.comment}"</Text>
+                {r.rating && (
+                  <View style={{ marginTop: 4 }}>
+                    <StarRating rating={r.rating} />
+                  </View>
+                )}
+                {r.date && (
+                  <Text style={styles.reviewMeta}>
+                    Completed: {new Date(r.date).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+            ))}
         </View>
       )}
     </ScrollView>

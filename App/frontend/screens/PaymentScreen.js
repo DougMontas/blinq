@@ -35,10 +35,13 @@ export default function PaymentScreen() {
         setJob(jobData);
 
         const amountInCents = Math.round((jobData.estimatedTotal || 0) * 100);
-        const { data: sheetParams } = await api.post("/payments/payment-sheet", {
-          amount: amountInCents,
-          currency: "usd",
-        });
+        const { data: sheetParams } = await api.post(
+          "/payments/payment-sheet",
+          {
+            amount: amountInCents,
+            currency: "usd",
+          }
+        );
 
         const { error: initError } = await initPaymentSheet({
           merchantDisplayName: "BlinqFix",
@@ -64,14 +67,20 @@ export default function PaymentScreen() {
 
   const handlePay = async () => {
     if (!paymentReady) {
-      return Alert.alert("Payment not ready", "Please wait while we prepare your payment.");
+      return Alert.alert(
+        "Payment not ready",
+        "Please wait while we prepare your payment."
+      );
     }
 
     try {
       const { error } = await presentPaymentSheet();
       if (error) {
         console.error("\u274C presentPaymentSheet error:", error);
-        return Alert.alert("Payment Failed", error.message || "Unknown error occurred.");
+        return Alert.alert(
+          "Payment Failed",
+          error.message || "Unknown error occurred."
+        );
       }
 
       await api.put(`/jobs/complete-payment/${jobId}`);
@@ -89,7 +98,9 @@ export default function PaymentScreen() {
         enterDuration={800}
         holdDuration={400}
         exitDuration={800}
-        onAnimationEnd={() => navigation.replace("CustomerJobStatus", { jobId })}
+        onAnimationEnd={() =>
+          navigation.replace("CustomerJobStatus", { jobId })
+        }
       />
     );
   }
@@ -119,7 +130,9 @@ export default function PaymentScreen() {
 
             {job.additionalCharge > 0 && (
               <View style={styles.additionalCard}>
-                <Text style={styles.additionalCardTitle}>Additional Charge</Text>
+                <Text style={styles.additionalCardTitle}>
+                  Additional Charge
+                </Text>
                 <Text style={styles.additionalCardText}>
                   Amount: ${job.additionalCharge.toFixed(2)}
                 </Text>
@@ -132,7 +145,10 @@ export default function PaymentScreen() {
             )}
 
             <TouchableOpacity
-              style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
+              style={[
+                styles.payButton,
+                !paymentReady && { backgroundColor: "#ccc" },
+              ]}
               onPress={handlePay}
               disabled={!paymentReady}
             >

@@ -172,233 +172,6 @@ router.get("/homeowner/active", auth, async (req, res) => {
   }
 });
 
-//working
-// router.put("/complete-payment/:jobId", auth, async (req, res) => {
-//   const { jobId } = req.params;
-
-//   const CUSTOMER_FEE_RATE = 0.07;
-//   const PROVIDER_FEE_RATE = 0.07;
-
-//   try {
-//     const job = await Job.findById(jobId);
-//     if (!job) {
-//       return res.status(404).json({ msg: "Job not found" });
-//     }
-
-//     const isAdditionalOnly = job.status === "awaiting-additional-payment";
-
-//     const base = job.baseAmount || 0;
-//     const adjust = job.adjustmentAmount || 0;
-//     const rush = job.rushFee || 0;
-//     const extra = job.additionalCharge || 0;
-
-//     const subtotal = base + adjust + rush + extra;
-
-//     const customerFee = Math.round((subtotal * CUSTOMER_FEE_RATE + Number.EPSILON) * 100) / 100;
-//     const providerFee = Math.round((subtotal * PROVIDER_FEE_RATE + Number.EPSILON) * 100) / 100;
-//     const totalConvenienceFee = customerFee + providerFee;
-//     const paymentToProvider = subtotal - providerFee;
-
-//     // console.log("/complete-payment/:jobId", subtotal, paymentToProvider);
-//     // console.log("customerFee", customerFee);
-//     // console.log("providerFee", providerFee);
-
-//     job.customerFee = customerFee;
-//     job.providerFee = providerFee;
-//     job.convenienceFee = totalConvenienceFee;
-//     job.totalAmountPaid = subtotal + customerFee;
-//     job.paymentToProvider = paymentToProvider;
-//     job.paymentStatus = "paid";
-
-//     if (isAdditionalOnly) {
-//       job.status = "accepted";
-//       await job.save();
-//       return res.json(job);
-//     }
-
-//     if (job.status === "accepted") {
-//       await job.save();
-//       return res.json(job);
-//     }
-
-//     job.status = "invited";
-//     await job.save();
-
-//     const customer = await Users.findById(job.customer).lean();
-//     if (!customer) {
-//       return res.status(500).json({ msg: "Customer not found." });
-//     }
-
-//     await invitePhaseOne(job, customer, req.io);
-
-//     setTimeout(() => {
-//       invitePhaseTwo(job._id, req.io).catch((err) => {
-//         console.error("🔥 Phase 2 invite error:", err);
-//       });
-//     }, 15 * 60 * 1000);
-
-//     return res.json(job);
-//   } catch (err) {
-//     console.error("❌ PUT /complete-payment/:jobId error:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// router.put("/complete-payment/:jobId", auth, async (req, res) => {
-//   const { jobId } = req.params;
-
-//   const CUSTOMER_FEE_RATE = 0.07;
-//   const PROVIDER_FEE_RATE = 0.07;
-
-//   try {
-//     const job = await Job.findById(jobId);
-//     if (!job) {
-//       return res.status(404).json({ msg: "Job not found" });
-//     }
-
-//     // ✅ Prevent further invitations if job already accepted
-//     if (job.status === "accepted" || job.acceptedProvider) {
-//       return res.status(400).json({ msg: "Job already accepted. No further invitations allowed." });
-//     }
-
-//     const isAdditionalOnly = job.status === "awaiting-additional-payment";
-
-//     const base = job.baseAmount || 0;
-//     const adjust = job.adjustmentAmount || 0;
-//     const rush = job.rushFee || 0;
-//     const extra = job.additionalCharge || 0;
-
-//     const subtotal = base + adjust + rush + extra;
-
-//     const customerFee = Math.round((subtotal * CUSTOMER_FEE_RATE + Number.EPSILON) * 100) / 100;
-//     const providerFee = Math.round((subtotal * PROVIDER_FEE_RATE + Number.EPSILON) * 100) / 100;
-//     const totalConvenienceFee = customerFee + providerFee;
-//     const paymentToProvider = subtotal - providerFee;
-
-//     job.customerFee = customerFee;
-//     job.providerFee = providerFee;
-//     job.convenienceFee = totalConvenienceFee;
-//     job.totalAmountPaid = subtotal + customerFee;
-//     job.paymentToProvider = paymentToProvider;
-//     job.paymentStatus = "paid";
-
-//     if (isAdditionalOnly) {
-//       job.status = "accepted";
-//       await job.save();
-//       return res.json(job);
-//     }
-
-//     if (job.status === "accepted") {
-//       await job.save();
-//       return res.json(job);
-//     }
-
-//     job.status = "invited";
-//     await job.save();
-
-//     const customer = await Users.findById(job.customer).lean();
-//     if (!customer) {
-//       return res.status(500).json({ msg: "Customer not found." });
-//     }
-
-//     await invitePhaseOne(job, customer, req.io);
-
-//     setTimeout(() => {
-//       invitePhaseTwo(job._id, req.io).catch((err) => {
-//         console.error("🔥 Phase 2 invite error:", err);
-//       });
-//     }, 15 * 60 * 1000);
-
-//     return res.json(job);
-//   } catch (err) {
-//     console.error("❌ PUT /complete-payment/:jobId error:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-//old
-// router.put("/complete-payment/:jobId", auth, async (req, res) => {
-//   const { jobId } = req.params;
-
-//   const CUSTOMER_FEE_RATE = 0.07;
-//   const PROVIDER_FEE_RATE = 0.07;
-
-//   try {
-//     const job = await Job.findById(jobId);
-//     if (!job) {
-//       return res.status(404).json({ msg: "Job not found" });
-//     }
-
-//     // ✅ Prevent further invitations if job already accepted or has an accepted provider
-//     if (job.status === "accepted" || job.acceptedProvider) {
-//       return res.status(400).json({ msg: "Job already accepted. No further invitations allowed." });
-//     }
-
-//     const isAdditionalOnly = job.status === "awaiting-additional-payment";
-
-//     const base = job.baseAmount || 0;
-//     const adjust = job.adjustmentAmount || 0;
-//     const rush = job.rushFee || 0;
-//     const extra = job.additionalCharge || 0;
-
-//     const subtotal = base + adjust + rush + extra;
-
-//     const customerFee = Math.round((subtotal * CUSTOMER_FEE_RATE + Number.EPSILON) * 100) / 100;
-//     const providerFee = Math.round((subtotal * PROVIDER_FEE_RATE + Number.EPSILON) * 100) / 100;
-//     const totalConvenienceFee = customerFee + providerFee;
-//     const paymentToProvider = subtotal - providerFee;
-
-//     job.customerFee = customerFee;
-//     job.providerFee = providerFee;
-//     job.convenienceFee = totalConvenienceFee;
-//     job.totalAmountPaid = subtotal + customerFee;
-//     job.paymentToProvider = paymentToProvider;
-//     job.paymentStatus = "paid";
-
-//     if (isAdditionalOnly) {
-//       job.status = "accepted";
-//       await job.save();
-//       return res.json(job);
-//     }
-
-//     if (job.status === "accepted") {
-//       await job.save();
-//       return res.json(job);
-//     }
-
-//     // ✅ Final safeguard: prevent invites if job is now accepted mid-way
-//     if (job.acceptedProvider || job.status === "accepted") {
-//       return res.status(400).json({ msg: "Job has already been accepted. No invitations sent." });
-//     }
-
-//     job.status = "invited";
-//     await job.save();
-
-//     const customer = await Users.findById(job.customer).lean();
-//     if (!customer) {
-//       return res.status(500).json({ msg: "Customer not found." });
-//     }
-
-//     await invitePhaseOne(job, customer, req.io);
-
-//     setTimeout(async () => {
-//       const latestJob = await Job.findById(job._id);
-//       if (latestJob.acceptedProvider || latestJob.status === "accepted") {
-//         // console.log("⏸️ Skipping phase 2 invite - job already accepted.");
-//         return;
-//       }
-//       invitePhaseTwo(job._id, req.io).catch((err) => {
-//         console.error("🔥 Phase 2 invite error:", err);
-//       });
-//     }, 15 * 60 * 1000);
-
-//     return res.json(job);
-//   } catch (err) {
-//     console.error("❌ PUT /complete-payment/:jobId error:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
 router.put("/complete-payment/:jobId", auth, async (req, res) => {
   const { jobId } = req.params;
   const { paymentIntentId } = req.body || {};
@@ -413,7 +186,10 @@ router.put("/complete-payment/:jobId", auth, async (req, res) => {
     const isAdditionalOnly = job.status === "awaiting-additional-payment";
 
     // 🚫 Block only new invites when job already accepted (still allow extra‑charge payment)
-    if (!isAdditionalOnly && (job.status === "accepted" || job.acceptedProvider)) {
+    if (
+      !isAdditionalOnly &&
+      (job.status === "accepted" || job.acceptedProvider)
+    ) {
       return res
         .status(400)
         .json({ msg: "Job already accepted. No further invitations allowed." });
@@ -501,8 +277,6 @@ router.put("/complete-payment/:jobId", auth, async (req, res) => {
   }
 });
 
-
-
 router.put("/:jobId/additional-charge", auth, async (req, res) => {
   const { jobId } = req.params;
   const { additionalCharge, reason } = req.body;
@@ -511,7 +285,9 @@ router.put("/:jobId/additional-charge", auth, async (req, res) => {
   const PROVIDER_FEE_RATE = 0.07;
 
   if (typeof additionalCharge !== "number" || !reason) {
-    return res.status(400).json({ error: "Additional charge and reason are required." });
+    return res
+      .status(400)
+      .json({ error: "Additional charge and reason are required." });
   }
 
   try {
@@ -525,8 +301,10 @@ router.put("/:jobId/additional-charge", auth, async (req, res) => {
     job.additionalChargePaid = false;
 
     const subtotal = additionalCharge;
-    const customerFee = Math.round((subtotal * CUSTOMER_FEE_RATE + Number.EPSILON) * 100) / 100;
-    const providerFee = Math.round((subtotal * PROVIDER_FEE_RATE + Number.EPSILON) * 100) / 100;
+    const customerFee =
+      Math.round((subtotal * CUSTOMER_FEE_RATE + Number.EPSILON) * 100) / 100;
+    const providerFee =
+      Math.round((subtotal * PROVIDER_FEE_RATE + Number.EPSILON) * 100) / 100;
     const paymentToProvider = subtotal - providerFee;
 
     job.convenienceFee = customerFee;
@@ -542,7 +320,6 @@ router.put("/:jobId/additional-charge", auth, async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
-
 
 /**
  * GET /api/jobs/pending
@@ -584,7 +361,8 @@ router.get("/pending", auth, async (req, res) => {
 
 // ———————— MULTER UPLOAD CONFIG ————————
 
-router.post("/:jobId/upload/arrival",
+router.post(
+  "/:jobId/upload/arrival",
   auth,
   upload.single("image"),
   async (req, res) => {
@@ -612,7 +390,8 @@ router.post("/:jobId/upload/arrival",
 );
 
 // Completion photo
-router.post("/:jobId/upload/completion",
+router.post(
+  "/:jobId/upload/completion",
   auth,
   upload.single("image"),
   async (req, res) => {
@@ -657,7 +436,6 @@ router.put("/jobs/:id/complete-additional", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 router.put("/:id/pay-additional", async (req, res) => {
   try {
@@ -717,55 +495,6 @@ router.post("/payments/additional-charge-sheet", auth, async (req, res) => {
     return res.status(500).json({ msg: "Stripe error", error: err.message });
   }
 });
-//working
-// router.post("/payments/payment-sheet", async (req, res) => {
-//   // console.log("🔥 POST /payments/payment-sheet triggered");
-//   // console.log("🧾 Incoming body:", req.body);
-
-//   const { amount, currency, jobId } = req.body;
-//   if (!amount || !currency || !jobId) {
-//     // console.error("❌ Missing required fields:", { amount, currency, jobId });
-//     return res.status(400).json({ msg: "Missing required fields." });
-//   }
-
-//   try {
-//     const job = await Job.findById(jobId);
-//     if (!job) {
-//       console.error("❌ Job not found:", jobId);
-//       return res.status(404).json({ msg: "Job not found" });
-//     }
-
-//     const customer = await Users.findById(job.customer);
-//     if (!customer?.stripeCustomerId) {
-//       // console.error("❌ Missing stripeCustomerId for user:", job.customer);
-//       return res.status(400).json({ msg: "Missing stripe customer id" });
-//     }
-
-//     const paymentIntent = await stripe.paymentIntents.create({
-//       amount,
-//       currency,
-//       customer: customer.stripeCustomerId,
-//       automatic_payment_methods: { enabled: true },
-//     });
-
-//     const ephemeralKey = await stripe.ephemeralKeys.create(
-//       { customer: customer.stripeCustomerId },
-//       { apiVersion: "2022-11-15" }
-//     );
-
-//     // console.log("✅ Payment intent created:>>>", paymentIntent.id);
-
-//     return res.json({
-//       paymentIntentClientSecret: paymentIntent.client_secret,
-//       ephemeralKey: ephemeralKey.secret,
-//       customer: customer.stripeCustomerId,
-//     });
-//   } catch (err) {
-//     console.error("🔥 Stripe payment-sheet error:", err);
-//     return res.status(500).json({ msg: "Stripe error", error: err.message });
-//   }
-// });
-
 router.post("/payments/payment-sheet", async (req, res) => {
   // const { amount, currency, jobId } = req.body;
 
@@ -856,14 +585,41 @@ router.put("/:jobId/complete/provider", auth, async (req, res) => {
 });
 
 router.put("/:jobId/complete/customer", auth, async (req, res) => {
-  const job = await Job.findById(req.params.jobId);
-  if (!job) return res.status(404).json({ msg: "Job not found." });
+  try {
+    const job = await Job.findById(req.params.jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found." });
 
-  job.customerCompleted = true;
-  job.status = "completed";
-  await job.save();
+    job.customerCompleted = true;
+    job.status = "completed";
+    await job.save();
 
-  return res.json(job);
+    // ✅ Recalculate and update provider rating after job is completed
+    const providerId = job.acceptedProvider;
+    if (providerId) {
+      const completedJobs = await Job.find({
+        acceptedProvider: providerId,
+        status: "completed",
+        rating: { $exists: true },
+      });
+
+      const totalRating = completedJobs.reduce(
+        (sum, job) => sum + job.rating,
+        0
+      );
+      const averageRating =
+        completedJobs.length > 0 ? totalRating / completedJobs.length : 0;
+
+      await Users.findByIdAndUpdate(providerId, {
+        averageRating: averageRating.toFixed(2),
+        reviewCount: completedJobs.length,
+      });
+    }
+
+    return res.json(job);
+  } catch (err) {
+    console.error("Error completing job:", err);
+    return res.status(500).json({ msg: "Server error completing job." });
+  }
 });
 
 router.put("/:id/rate", async (req, res) => {
@@ -888,67 +644,100 @@ router.put("/:id/rate", async (req, res) => {
   }
 });
 
-/**
- * GET /api/jobs/me/stats
- * Returns how many jobs this provider has completed, and their total earnings.
- */
-
-
 router.get("/me/stats", auth, async (req, res) => {
   try {
-    const jobs = await Job.find({
-      serviceProvider: req.user._id,
-      status: "completed",
-      paymentStatus: "paid",
-    });
+    const providerIdStr = String(
+      (req.user && (req.user._id || req.user.id)) || ""
+    );
+    if (!providerIdStr) {
+      return res
+        .status(400)
+        .json({ msg: "Provider ID not found in auth token" });
+    }
 
-    let grossTotal = 0;
-    let completedJobsCount = 0;
-    let totalRating = 0;
-    let reviewCount = 0;
-    
-    const reviews = [];
+    const pipeline = [
+      {
+        $match: {
+          status: "completed",
+          paymentStatus: { $in: ["paid", "succeeded"] },
+          $expr: {
+            $or: [
+              { $eq: [{ $toString: "$serviceProvider" }, providerIdStr] },
+              { $eq: [{ $toString: "$acceptedProvider" }, providerIdStr] },
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          subtotal: {
+            $add: [
+              { $ifNull: ["$baseAmount", 0] },
+              { $ifNull: ["$adjustmentAmount", 0] },
+              { $ifNull: ["$rushFee", 0] },
+              { $ifNull: ["$additionalCharge", 0] },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          completedJobsCount: { $sum: 1 },
+          grossTotal: { $sum: { $multiply: ["$subtotal", 0.93] } },
+          ratings: { $push: "$rating" },
+          reviews: {
+            $push: {
+              $cond: [
+                {
+                  $or: [
+                    { $gt: ["$rating", null] },
+                    { $ifNull: ["$comments", false] },
+                  ],
+                },
+                {
+                  rating: "$rating",
+                  comment: "$comments",
+                  date: "$completedAt",
+                },
+                "$$REMOVE",
+              ],
+            },
+          },
+        },
+      },
+    ];
 
-    jobs.forEach((job) => {
-      const base = job.baseAmount || 0;
-      const adjust = job.adjustmentAmount || 0;
-      const rush = job.rushFee || 0;
-      const extra = job.additionalCharge || 0;
+    const [stats] = await Job.aggregate(pipeline);
 
-      const subtotal = base + adjust + rush + extra;
-      const providerShare = subtotal * 0.93; // Provider keeps 93% (7% fee retained by platform)
+    if (!stats) {
+      return res.json({
+        completedJobsCount: 0,
+        totalAmountPaid: 0,
+        averageRating: null,
+        reviews: [],
+      });
+    }
 
-      grossTotal += providerShare;
-      completedJobsCount++;
-
-      if (typeof job.rating === "number") {
-        totalRating += job.rating;
-        reviewCount++;
-      }
-
-      if (job.comments) {
-        reviews.push({
-          rating: job.rating || null,
-          comment: job.comments,
-          date: job.completedAt,
-        });
-      }
-    });
-
-    const averageRating = reviewCount > 0 ? (totalRating / reviewCount) : null;
+    const validRatings = stats.ratings.filter(
+      (r) => typeof r === "number" && !isNaN(r)
+    );
+    const totalRating = validRatings.reduce((sum, r) => sum + r, 0);
+    const averageRating = validRatings.length
+      ? totalRating / validRatings.length
+      : null;
 
     res.json({
-      completedJobsCount,
-      totalAmountPaid: parseFloat(grossTotal.toFixed(2)),
+      completedJobsCount: stats.completedJobsCount,
+      totalAmountPaid: +stats.grossTotal.toFixed(2),
       averageRating,
-      reviews,
+      reviews: stats.reviews,
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Error generating provider stats." });
   }
 });
-
 
 /**
  * PUT /api/jobs/:jobId/deny

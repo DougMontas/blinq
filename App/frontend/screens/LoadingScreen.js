@@ -7,11 +7,11 @@ export default function LoadingScreen({
   animationOnly = false,
   onAnimationEnd,
   enterDuration = 1200,
-  holdDuration  =  1200,
-  exitDuration  =  1200,
+  holdDuration = 1200,
+  exitDuration = 1200,
 }) {
   const navigation = useNavigation();
-  const scale   = useRef(new Animated.Value(0.5)).current;
+  const scale = useRef(new Animated.Value(0.5)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -48,7 +48,16 @@ export default function LoadingScreen({
         navigation.replace("Login");
       }
     });
-  }, [animationOnly, enterDuration, exitDuration, holdDuration, navigation, onAnimationEnd, opacity, scale]);
+  }, [
+    animationOnly,
+    enterDuration,
+    exitDuration,
+    holdDuration,
+    navigation,
+    onAnimationEnd,
+    opacity,
+    scale,
+  ]);
 
   const { width } = Dimensions.get("window");
   const LOGO_SIZE = width * 0.55;
@@ -68,5 +77,10 @@ export default function LoadingScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

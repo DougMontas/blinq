@@ -1615,7 +1615,6 @@
 //   linkText: { color: "#1976d2", fontWeight: "600", textDecorationLine: "underline" }
 // });
 
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -1660,6 +1659,8 @@ export default function RegistrationScreen() {
     password: "",
     address: "",
     phoneNumber: "",
+    ssnLast4: "",
+    dob: "", // Expect input as YYYY-MM-DD
     zipcode: "",
     role: "customer",
     serviceType: "00000",
@@ -1686,7 +1687,8 @@ export default function RegistrationScreen() {
           role: value,
           serviceType:
             value === "serviceProvider" ? prev.serviceType || SERVICES[0] : "",
-          billingTier: value === "serviceProvider" ? prev.billingTier || BILLING[0] : "",
+          billingTier:
+            value === "serviceProvider" ? prev.billingTier || BILLING[0] : "",
         };
       }
       return { ...prev, [field]: value };
@@ -1730,8 +1732,14 @@ export default function RegistrationScreen() {
         });
         token = loginRes.data.token || loginRes.data.jwt;
         if (loginRes.data.refreshToken) {
-          await AsyncStorage.setItem("refreshToken", loginRes.data.refreshToken);
-          console.log("RefreshToken (from login fallback):", loginRes.data.refreshToken);
+          await AsyncStorage.setItem(
+            "refreshToken",
+            loginRes.data.refreshToken
+          );
+          console.log(
+            "RefreshToken (from login fallback):",
+            loginRes.data.refreshToken
+          );
         }
       }
 
@@ -1742,7 +1750,10 @@ export default function RegistrationScreen() {
         await AsyncStorage.setItem("refreshToken", refreshToken);
         console.log("RefreshToken (from register):", refreshToken);
       }
-      await AsyncStorage.setItem("userName", signupRes.data.name || formData.name);
+      await AsyncStorage.setItem(
+        "userName",
+        signupRes.data.name || formData.name
+      );
 
       if (formData.role === "customer") {
         Alert.alert("Success", "Signed up! Please log in.");
@@ -1756,7 +1767,10 @@ export default function RegistrationScreen() {
           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
           Linking.openURL(stripeUrl);
         } else {
-          navigation.reset({ index: 0, routes: [{ name: "ServiceProviderDashboard" }] });
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "ServiceProviderDashboard" }],
+          });
         }
       }
     } catch (err) {
@@ -1768,37 +1782,73 @@ export default function RegistrationScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, marginBottom: '2rem' }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ padding: 16, marginBottom: "2rem" }}
+    >
       <Text style={styles.title}>Signup</Text>
 
       <Text style={styles.label}>Full Name</Text>
-      <TextInput style={styles.input} value={formData.name} onChangeText={(val) => onChange("name", val)} />
+      <TextInput
+        style={styles.input}
+        value={formData.name}
+        onChangeText={(val) => onChange("name", val)}
+      />
 
       <Text style={styles.label}>Email</Text>
-      <TextInput style={styles.input} keyboardType="email-address" value={formData.email} onChangeText={(val) => onChange("email", val)} />
+      <TextInput
+        style={styles.input}
+        keyboardType="email-address"
+        value={formData.email}
+        onChangeText={(val) => onChange("email", val)}
+      />
 
       <Text style={styles.label}>Password</Text>
-      <TextInput style={styles.input} secureTextEntry value={formData.password} onChangeText={(val) => onChange("password", val)} />
+      <TextInput
+        style={styles.input}
+        secureTextEntry
+        value={formData.password}
+        onChangeText={(val) => onChange("password", val)}
+      />
 
       <Text style={styles.label}>Property Address</Text>
-      <TextInput style={styles.input} value={formData.address} onChangeText={(val) => onChange("address", val)} />
+      <TextInput
+        style={styles.input}
+        value={formData.address}
+        onChangeText={(val) => onChange("address", val)}
+      />
 
       <Text style={styles.label}>Phone Number</Text>
-      <TextInput style={styles.input} keyboardType="phone-pad" value={formData.phoneNumber} onChangeText={(val) => onChange("phoneNumber", val)} />
+      <TextInput
+        style={styles.input}
+        keyboardType="phone-pad"
+        value={formData.phoneNumber}
+        onChangeText={(val) => onChange("phoneNumber", val)}
+      />
 
       <Text style={styles.label}>Zipcode</Text>
-      <TextInput style={styles.input} value={formData.zipcode} onChangeText={(val) => onChange("zipcode", val)} />
+      <TextInput
+        style={styles.input}
+        value={formData.zipcode}
+        onChangeText={(val) => onChange("zipcode", val)}
+      />
 
       <Text style={styles.label}>Select Role</Text>
       <View style={styles.selectRow}>
         <TouchableOpacity
-          style={[styles.selectOption, formData.role === "serviceProvider" && styles.selectOptionSelected]}
+          style={[
+            styles.selectOption,
+            formData.role === "serviceProvider" && styles.selectOptionSelected,
+          ]}
           onPress={() => onChange("role", "serviceProvider")}
         >
           <Text style={styles.selectOptionText}>Earn with BlinqFix</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.selectOption, formData.role === "customer" && styles.selectOptionSelected]}
+          style={[
+            styles.selectOption,
+            formData.role === "customer" && styles.selectOptionSelected,
+          ]}
           onPress={() => onChange("role", "customer")}
         >
           <Text style={styles.selectOptionText}>Book a BlinqFix Job</Text>
@@ -1807,15 +1857,38 @@ export default function RegistrationScreen() {
 
       {formData.role === "serviceProvider" && (
         <>
-          <Text style={styles.label}>Select Billing Tier</Text>
+          <Text style={styles.label}>Date of Birth (YYYY-MM-DD)</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.dob}
+            onChangeText={(val) => onChange("dob", val)}
+            placeholder="1980-12-31"
+          />
+
+          <Text style={styles.label}>Last 4 of SSN</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.ssnLast4}
+            onChangeText={(val) => onChange("ssnLast4", val)}
+            placeholder="1234"
+            keyboardType="numeric"
+            maxLength={4}
+          />
+
+          <Text style={styles.label}>Select Subscription</Text>
           <View style={styles.selectRow}>
             {BILLING.map((tier) => (
               <TouchableOpacity
                 key={tier}
-                style={[styles.selectOptionSmall, formData.billingTier === tier && styles.selectOptionSelected]}
+                style={[
+                  styles.selectOptionSmall,
+                  formData.billingTier === tier && styles.selectOptionSelected,
+                ]}
                 onPress={() => onChange("billingTier", tier)}
               >
-                <Text style={styles.selectOptionText}>{tier === "hybrid" ? "Hybrid ($49/mo + 7%)" : "Profit Sharing (7%)"}</Text>
+                <Text style={styles.selectOptionText}>
+                  {tier === "hybrid" ? "BlinqFix Gold" : "BlinqFix Go (Free)"}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -1825,7 +1898,10 @@ export default function RegistrationScreen() {
             {SERVICES.map((svc) => (
               <TouchableOpacity
                 key={svc}
-                style={[styles.selectOptionSmall, formData.serviceType === svc && styles.selectOptionSelected]}
+                style={[
+                  styles.selectOptionSmall,
+                  formData.serviceType === svc && styles.selectOptionSelected,
+                ]}
                 onPress={() => onChange("serviceType", svc)}
               >
                 <Text style={styles.selectOptionText}>{svc}</Text>
@@ -1835,13 +1911,24 @@ export default function RegistrationScreen() {
         </>
       )}
 
-      <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={loading}>
-        <Text style={styles.submitBtnText}>{loading ? "Signing Up…" : "Sign Up"}</Text>
+      <TouchableOpacity
+        style={styles.submitBtn}
+        onPress={onSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.submitBtnText}>
+          {loading ? "Signing Up…" : "Sign Up"}
+        </Text>
       </TouchableOpacity>
 
       <Text style={styles.footerText}>
-        Already have an account?{' '}
-        <Text style={styles.linkText} onPress={() => navigation.navigate("Login")}>Login</Text>
+        Already have an account?{" "}
+        <Text
+          style={styles.linkText}
+          onPress={() => navigation.navigate("Login")}
+        >
+          Login
+        </Text>
       </Text>
     </ScrollView>
   );
@@ -1849,7 +1936,12 @@ export default function RegistrationScreen() {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: "#fff", marginVertical: 25 },
-  title: { fontSize: 24, fontWeight: "bold", marginVertical: 26, textAlign: "center" },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginVertical: 26,
+    textAlign: "center",
+  },
   label: { fontSize: 16, marginTop: 12, marginBottom: 4 },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 10 },
   selectRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
@@ -1859,19 +1951,19 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     backgroundColor: "#eee",
     borderRadius: 6,
-    alignItems: "center"
+    alignItems: "center",
   },
   selectOptionSmall: {
     padding: 8,
     marginRight: 8,
     marginBottom: 8,
     backgroundColor: "#eee",
-    borderRadius: 6
+    borderRadius: 6,
   },
   selectOptionSelected: {
     backgroundColor: "#a6e1fa",
     borderColor: "#1976d2",
-    borderWidth: 1
+    borderWidth: 1,
   },
   selectOptionText: { fontSize: 14 },
   submitBtn: {
@@ -1879,9 +1971,13 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#1976d2",
     borderRadius: 6,
-    alignItems: "center"
+    alignItems: "center",
   },
   submitBtnText: { color: "#fff", fontWeight: "600" },
-  footerText: { marginTop: 16, textAlign: "center", marginBottom: '-2rem' },
-  linkText: { color: "#1976d2", fontWeight: "600", textDecorationLine: "underline" }
+  footerText: { marginTop: 16, textAlign: "center", marginBottom: "-2rem" },
+  linkText: {
+    color: "#1976d2",
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
 });

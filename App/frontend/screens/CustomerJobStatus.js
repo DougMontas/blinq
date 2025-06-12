@@ -16,6 +16,7 @@ import api from "../api/client";
 import serviceMatrix, { getCoveredDescription } from "../utils/serviceMatrix";
 import BackButton from "../components/BackButton";
 import { saveSession } from "../utils/sessionManager";
+import StarRating from "../components/StarRating";
 
 const { width } = Dimensions.get("window");
 const LOGO_SIZE = width * 0.55;
@@ -177,12 +178,15 @@ export default function CustomerJobStatus() {
           </Text>
           <Text>{providerInfo.businessName}</Text>
           <Text>{providerInfo.aboutMe}</Text>
-          <Text>
+          <View style={{ alignItems: "center", marginVertical: 8 }}>
+            <StarRating rating={providerInfo.averageRating} size={22} />
+          </View>
+          {/* <Text>
             Rating:{" "}
             {"★".repeat(Math.round(providerInfo.averageRating)) +
               "★".repeat(5 - Math.round(providerInfo.averageRating))}{" "}
             
-          </Text>
+          </Text> */}
         </View>
       )}
 

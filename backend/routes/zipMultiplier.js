@@ -10,10 +10,10 @@ router.post("/zip-multiplier", async (req, res) => {
 
   const zipPrefix = zip.toString().substring(0, 2);
   const multiplierMap = {
-    "33": 1.25,
-    "90": 1.4,
-    "10": 0.9,
-    "60": 1.1,
+    33: 1.25,
+    90: 1.4,
+    10: 0.9,
+    60: 1.1,
   };
 
   const multiplier = multiplierMap[zipPrefix] ?? 1.0;

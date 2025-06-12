@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
-import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+} from "react-native";
 import api from "../api/client";
 
 export default function JobRouteMap({ jobId }) {
@@ -37,8 +43,10 @@ export default function JobRouteMap({ jobId }) {
     })();
   }, [jobId]);
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} size="large" />;
-  if (!providerLocation || !customerLocation) return <Text>Unable to load locations.</Text>;
+  if (loading)
+    return <ActivityIndicator style={{ marginTop: 40 }} size="large" />;
+  if (!providerLocation || !customerLocation)
+    return <Text>Unable to load locations.</Text>;
 
   return (
     <View style={styles.container}>
@@ -52,7 +60,11 @@ export default function JobRouteMap({ jobId }) {
         }}
       >
         <Marker coordinate={providerLocation} pinColor="blue" title="You" />
-        <Marker coordinate={customerLocation} pinColor="green" title="Customer" />
+        <Marker
+          coordinate={customerLocation}
+          pinColor="green"
+          title="Customer"
+        />
         <Polyline
           coordinates={[providerLocation, customerLocation]}
           strokeColor="#1976d2"

@@ -77,7 +77,13 @@ export async function invitePhaseOne(job, maybeAllProviders, io) {
       invitationExpiresAt: expiresAt,
       clickable: false,
     });
-    inviteTasks.push(sendTeaserInvite(p, job));
+
+    // Blur address before sending teaser invite
+    const redactedJob = {
+      ...job.toObject(),
+      address: "[Address Hidden]",
+    };
+    inviteTasks.push(sendTeaserInvite(p, redactedJob));
   }
 
   for (const p of hybrid) {

@@ -7,7 +7,10 @@ export function useCountdown(expiryTime) {
   useEffect(() => {
     if (!expiryTime) return;
     const interval = setInterval(() => {
-      const remaining = Math.max(0, Math.floor((new Date(expiryTime) - Date.now()) / 1000));
+      const remaining = Math.max(
+        0,
+        Math.floor((new Date(expiryTime) - Date.now()) / 1000)
+      );
       setSecondsLeft(remaining);
     }, 1000);
     return () => clearInterval(interval);

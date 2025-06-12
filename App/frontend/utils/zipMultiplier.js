@@ -1,13 +1,14 @@
-import axios from 'axios';
+import axios from "axios";
 
 export async function fetchZipMultiplier(zip) {
-  const API_URL = 'https://zylalabs.com/api/226/cities+cost+of+living+and+average+prices+api/3775/cost+of+living+by+city+v2';
+  const API_URL =
+    "https://zylalabs.com/api/226/cities+cost+of+living+and+average+prices+api/3775/cost+of+living+by+city+v2";
 
   // Mapping of ZIP codes to city names
   const zipToCityMap = {
-    '33101': 'Miami',
-    '10001': 'New York',
-    '90001': 'Los Angeles',
+    33101: "Miami",
+    10001: "New York",
+    90001: "Los Angeles",
     // Add more mappings as needed
   };
 
@@ -20,7 +21,7 @@ export async function fetchZipMultiplier(zip) {
   try {
     const response = await axios.get(API_URL, {
       params: {
-        country: 'USA',
+        country: "USA",
         city: city,
       },
       headers: {
@@ -40,7 +41,10 @@ export async function fetchZipMultiplier(zip) {
     const multiplier = Math.max(0.8, Math.min(1.5, costIndex / 100));
     return multiplier;
   } catch (error) {
-    console.error('Cost index API error:', error?.response?.data || error.message);
+    console.error(
+      "Cost index API error:",
+      error?.response?.data || error.message
+    );
     return 1.0;
   }
 }

@@ -55,6 +55,17 @@ const usersSchema = new mongoose.Schema(
     serviceType: { type: String },
     portfolio: [{ type: String }],
     zipcode: [{ type: String }],
+    ssnLast4: {
+      type: String,
+      minlength: 4,
+      maxlength: 4,
+      match: /^\d{4}$/, // must be four digits
+    },
+    dob: {
+      type: Date,
+    },
+    averageRating: { type: Number, default: null },
+    reviewCount: { type: Number, default: 0 },
 
     /* at least one zip when provider */
     serviceZipcode: {

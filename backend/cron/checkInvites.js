@@ -12,8 +12,16 @@ export async function runPhaseTwoInvites() {
 
   for (const job of expired) {
     const providers = await getAllProviders();
-    const hybrid = getEligibleProviders(providers, "hybrid", job.serviceZipcode);
-    const profit = getEligibleProviders(providers, "profit_sharing", job.serviceZipcode);
+    const hybrid = getEligibleProviders(
+      providers,
+      "hybrid",
+      job.serviceZipcode
+    );
+    const profit = getEligibleProviders(
+      providers,
+      "profit_sharing",
+      job.serviceZipcode
+    );
 
     for (const p of [...hybrid, ...profit]) {
       await sendInAppInvite(p, job);

@@ -14,71 +14,16 @@ const stripe = StripePackage(process.env.STRIPE_SECRET_KEY, {
 
 const router = express.Router();
 
-/**
- * POST /api/billing/subscribe
- * Subscribes a provider to a monthly plan via Stripe.
- */
-//working
-// router.post("/subscribe", auth, async (req, res) => {
-//   try {
-//     const { paymentMethodId } = req.body;
-//     const user = await Users.findById(req.user.id);
-//     if (!user) return res.status(404).json({ msg: "User not found" });
-//     if (
-//       user.role !== "serviceProvider" ||
-//       user.billingTier !== "hybrid"
-//     ) {
-//       return res.status(400).json({ msg: "User is not a subscription member" });
-//     }
-
-//     // Create or reuse Stripe customer
-//     let customerId = user.stripeCustomerId;
-//     if (!customerId) {
-//       const customer = await stripe.customers.create({
-//         email: user.email,
-//         name: user.name,
-//       });
-//       customerId = customer.id;
-//       user.stripeCustomerId = customerId;
-//     }
-
-//     // Attach payment method & set default
-//     await stripe.paymentMethods.attach(paymentMethodId, {
-//       customer: customerId,
-//     });
-//     await stripe.customers.update(customerId, {
-//       invoice_settings: { default_payment_method: paymentMethodId },
-//     });
-
-//     // Create subscription
-//     const subscription = await stripe.subscriptions.create({
-//       customer: customerId,
-//       items: [{ price: process.env.STRIPE_PLAN_ID }],
-//       expand: ["latest_invoice.payment_intent"],
-//     });
-
-//     user.subscriptionId = subscription.id;
-//     await user.save();
-
-//     res.json({ subscription });
-//   } catch (error) {
-//     console.error("Error in subscription endpoint:", error);
-//     res
-//       .status(500)
-//       .json({ msg: "Subscription creation failed", error: error.message });
-//   }
-// });
-
-//testing
-// Add this route in routes/stripeRoutes.js
-router.post('/subscribe', auth, async (req, res) => {
+router.post("/subscribe", auth, async (req, res) => {
   try {
     const provider = req.user;
-    if (provider.tier !== 'hybrid')
-      return res.status(400).json({ msg: 'Provider is not in hybrid tier.' });
+    if (provider.tier !== "hybrid")
+      return res.status(400).json({ msg: "Provider is not in hybrid tier." });
 
     if (!provider.stripeAccountId)
-      return res.status(400).json({ msg: 'Provider has no Stripe account yet.' });
+      return res
+        .status(400)
+        .json({ msg: "Provider has no Stripe account yet." });
 
     const { paymentMethodId } = req.body;
 
@@ -88,13 +33,17 @@ router.post('/subscribe', auth, async (req, res) => {
         email: provider.email,
         name: provider.businessName || provider.name,
         payment_method: paymentMethodId,
+        dob: provider.dob,
+        ssnLast4: provider.ssnLast4,
         invoice_settings: { default_payment_method: paymentMethodId },
       });
       customerId = customer.id;
       provider.stripeCustomerId = customerId;
       await provider.save();
     } else {
-      await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+      await stripe.paymentMethods.attach(paymentMethodId, {
+        customer: customerId,
+      });
       await stripe.customers.update(customerId, {
         invoice_settings: { default_payment_method: paymentMethodId },
       });
@@ -102,7 +51,7 @@ router.post('/subscribe', auth, async (req, res) => {
 
     const subs = await stripe.subscriptions.list({
       customer: customerId,
-      status: 'all',
+      status: "all",
       limit: 1,
     });
     if (!subs.data.length) {
@@ -115,8 +64,8 @@ router.post('/subscribe', auth, async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('Subscribe error', err);
-    res.status(500).json({ msg: 'Failed to start hybrid subscription.' });
+    console.error("Subscribe error", err);
+    res.status(500).json({ msg: "Failed to start hybrid subscription." });
   }
 });
 

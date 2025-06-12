@@ -5,7 +5,6 @@
     "scheme": "blinqfix",
     "version": "0.0.1",
 
-
     "android": {
       "newArchEnabled": true,
       "jsEngine": "hermes"
@@ -16,7 +15,7 @@
     },
 
     "extra": {
-      "apiUrl": "http://172.20.10.9:8888"  // Just keep this single key
+      "apiUrl": "http://192.168.0.47:8888" // Just keep this single key
     },
 
     "platforms": ["ios", "android", "web"],

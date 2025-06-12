@@ -134,7 +134,10 @@ export default function EmergencyForm() {
       if (val === "Other") {
         const txt = (otherAnswers[q.id] || "").trim();
         if (!txt) {
-          return Alert.alert("Info", `Specify your 'Other' answer for: ${q.question}`);
+          return Alert.alert(
+            "Info",
+            `Specify your 'Other' answer for: ${q.question}`
+          );
         }
         finalAns[q.question] = txt;
       } else if (val) {
@@ -182,7 +185,10 @@ export default function EmergencyForm() {
   }, [selectedService]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 36 }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ padding: 36 }}
+    >
       <BackButton />
       <Text style={styles.title}>{category} Request Form</Text>
 
@@ -273,12 +279,15 @@ export default function EmergencyForm() {
       {selectedService && (
         <HoverableCard style={styles.summary}>
           <Text style={styles.summaryTitle}>Price Summary</Text>
-          <Text style={styles.summaryLine}>Subtotal: ${subtotal.toFixed(2)}</Text>
+          <Text style={styles.summaryLine}>
+            Subtotal: ${subtotal.toFixed(2)}
+          </Text>
           <Text style={styles.fee}>
             BlinqFix fee ({(FEE_RATE * 100).toFixed(0)}%): ${convFee.toFixed(2)}
           </Text>
           <Text style={styles.summaryLine}>
-            <Text style={{ fontWeight: "700" }}>Estimated Total:</Text> ${grandTotal.toFixed(2)}
+            <Text style={{ fontWeight: "700" }}>Estimated Total:</Text> $
+            {grandTotal.toFixed(2)}
           </Text>
           <Text style={styles.sectionTitle}>What’s Covered:</Text>
           <Text style={styles.descriptionText}>{description}</Text>
@@ -286,10 +295,18 @@ export default function EmergencyForm() {
       )}
 
       <View style={styles.actionRow}>
-        <HoverableCard style={[styles.btn, styles.btnPrimary]} onPress={handleSubmit}>
-          <Text style={styles.btnText}>{submitting ? "Processing…" : "Pay & Book"}</Text>
+        <HoverableCard
+          style={[styles.btn, styles.btnPrimary]}
+          onPress={handleSubmit}
+        >
+          <Text style={styles.btnText}>
+            {submitting ? "Processing…" : "Pay & Book"}
+          </Text>
         </HoverableCard>
-        <HoverableCard style={[styles.btn, styles.btnSecondary]} onPress={cancelEstimate}>
+        <HoverableCard
+          style={[styles.btn, styles.btnSecondary]}
+          onPress={cancelEstimate}
+        >
           <Text style={styles.btnText}>Cancel Estimate</Text>
         </HoverableCard>
       </View>
@@ -299,7 +316,12 @@ export default function EmergencyForm() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", marginVertical: 52 },
-  title: { fontSize: 24, fontWeight: "bold", marginVertical: 12, textAlign: "center" },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginVertical: 12,
+    textAlign: "center",
+  },
   label: { fontSize: 16, fontWeight: "600", marginBottom: 6 },
   input: {
     borderWidth: 1,
@@ -352,6 +374,11 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: "#1976d2" },
   btnSecondary: { backgroundColor: "#aaa" },
   btnText: { color: "#fff", fontWeight: "bold" },
-  sectionTitle: { fontWeight: "bold", marginTop: 20, fontSize: 18, textAlign: "center" },
+  sectionTitle: {
+    fontWeight: "bold",
+    marginTop: 20,
+    fontSize: 18,
+    textAlign: "center",
+  },
   descriptionText: { color: "red", fontSize: 16, textAlign: "center" },
 });

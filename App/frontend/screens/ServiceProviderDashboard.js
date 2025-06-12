@@ -21,9 +21,8 @@ import api from "../api/client";
 import LogoutButton from "../components/LogoutButton";
 import ProviderStatsCard from "../components/ProviderStatsCard";
 import JobDetails from "../components/JobDetails";
-import { Platform } from "react-native"
+import { Platform } from "react-native";
 import FooterPro from "../components/FooterPro";
-
 
 const SOCKET_HOST =
   Platform.OS === "android" ? "http://10.0.2.2:8888" : "http://localhost:8888";
@@ -46,7 +45,8 @@ export default function ServiceProviderDashboard() {
 
   // Fetch user
   useEffect(() => {
-    api.get("/users/me")
+    api
+      .get("/users/me")
       .then((res) => {
         const u = res.data?.user ?? res.data;
         if (!u?.role) return;
@@ -71,7 +71,9 @@ export default function ServiceProviderDashboard() {
       const zip = encodeURIComponent(user.serviceZipcode || user.zipcode || "");
       try {
         const { data } = await api.get(
-          `/jobs/pending?serviceType=${encodeURIComponent(user.serviceType)}&serviceZipcode=${zip}`
+          `/jobs/pending?serviceType=${encodeURIComponent(
+            user.serviceType
+          )}&serviceZipcode=${zip}`
         );
         if (mounted) setJobInvitations(data || []);
       } catch (err) {
@@ -83,21 +85,25 @@ export default function ServiceProviderDashboard() {
       }
     };
     fetchInvites();
-    return () => { mounted = false };
+    return () => {
+      mounted = false;
+    };
   }, [user]);
 
   // Fetch full job details
   useEffect(() => {
     const fetchDetails = async () => {
       const result = {};
-      await Promise.all(jobInvitations.map(async (job) => {
-        try {
-          const res = await api.get(`/jobs/${job._id}`);
-          result[job._id] = res.data;
-        } catch (err) {
-          console.error("Error loading job detail:", err);
-        }
-      }));
+      await Promise.all(
+        jobInvitations.map(async (job) => {
+          try {
+            const res = await api.get(`/jobs/${job._id}`);
+            result[job._id] = res.data;
+          } catch (err) {
+            console.error("Error loading job detail:", err);
+          }
+        })
+      );
       setJobDetails(result);
     };
     if (jobInvitations.length) fetchDetails();
@@ -143,11 +149,14 @@ export default function ServiceProviderDashboard() {
     };
   }, [user, navigation]);
 
-  const onInvitationAccepted = useCallback((job) => {
-    setActiveJob(job);
-    setJobInvitations((prev) => prev.filter((j) => j._id !== job._id));
-    navigation.navigate("ProviderJobStatus", { jobId: job._id });
-  }, [navigation]);
+  const onInvitationAccepted = useCallback(
+    (job) => {
+      setActiveJob(job);
+      setJobInvitations((prev) => prev.filter((j) => j._id !== job._id));
+      navigation.navigate("ProviderJobStatus", { jobId: job._id });
+    },
+    [navigation]
+  );
 
   const onInvitationDenied = useCallback((jobId) => {
     setJobInvitations((prev) => prev.filter((j) => j._id !== jobId));
@@ -155,26 +164,30 @@ export default function ServiceProviderDashboard() {
 
   const rawName = useMemo(() => {
     if (!user) return "";
-    return user.name || [user.firstName, user.lastName].filter(Boolean).join(" ");
+    return (
+      user.name || [user.firstName, user.lastName].filter(Boolean).join(" ")
+    );
   }, [user]);
   const firstName = rawName.split(" ")[0] || "Provider";
 
   return (
     <ScrollView style={styles.container}>
       <LogoutButton />
-      
+
       <View style={styles.containerLogo}>
-            <Image
-              source={require("../assets/blinqfix_logo-new.jpeg")}
-              style={[
-                { width: LOGO_SIZE, height: LOGO_SIZE, marginHorizontal: 120},
-              ]}
-              resizeMode="contain"
-            />
-          </View>
-          
-          <Text>{"\n"}</Text>
-      <Text style={styles.title}>{user ? `Welcome, ${firstName}` : "Loading..."}</Text>
+        <Image
+          source={require("../assets/blinqfix_logo-new.jpeg")}
+          style={[
+            { width: LOGO_SIZE, height: LOGO_SIZE, marginHorizontal: 120 },
+          ]}
+          resizeMode="contain"
+        />
+      </View>
+
+      <Text>{"\n"}</Text>
+      <Text style={styles.title}>
+        {user ? `Welcome, ${firstName}` : "Loading..."}
+      </Text>
       <TouchableOpacity
         style={styles.profileBtn}
         onPress={() => navigation.navigate("ProviderProfile")}
@@ -266,4 +279,3 @@ const styles = StyleSheet.create({
   },
   inviteBtnText: { color: "#fff", fontWeight: "600" },
 });
-

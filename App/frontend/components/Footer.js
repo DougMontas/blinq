@@ -11,12 +11,12 @@ import { useNavigation } from "@react-navigation/native";
 
 const LINKS = [
   { label: "Terms & Conditions", url: "TermsAndConditions" },
-  { label: "Privacy Policy",     url: "PrivacyPolicy" },
+  { label: "Privacy Policy", url: "PrivacyPolicy" },
   {
     label: "Help",
     url: "mailto:support@blinqfix.com?subject=Need%20Help&body=Hi,%20I%20need%20assistance%20with...",
   },
-  {label: 'FAQ', url: "CustomerFAQScreen"}
+  { label: "FAQ", url: "CustomerFAQScreen" },
 ];
 
 export default function Footer() {
@@ -43,7 +43,6 @@ export default function Footer() {
 
   return (
     <View style={styles.footer}>
-      
       {LINKS.map((l) => (
         <TouchableOpacity
           key={l.url}
@@ -53,9 +52,7 @@ export default function Footer() {
           <Text style={styles.linkText}>{l.label}</Text>
         </TouchableOpacity>
       ))}
-      <Text style={styles.copy}>
-        © {new Date().getFullYear()} BlinqFix
-      </Text>
+      <Text style={styles.copy}>© {new Date().getFullYear()} BlinqFix</Text>
     </View>
   );
 }

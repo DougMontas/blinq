@@ -162,7 +162,8 @@ router.get("/jobs", auth, async (req, res) => {
   }
 });
 
-router.put("/provider/:providerId/active",
+router.put(
+  "/provider/:providerId/active",
   auth,
   checkAdmin,
   async (req, res) => {
@@ -235,26 +236,29 @@ router.put("/provider/:providerId/active",
 //   }
 // );
 
-router.put("/provider/:providerId/zipcodes",
+router.put(
+  "/provider/:providerId/zipcodes",
   auth,
   checkAdmin,
   async (req, res) => {
     try {
       const { providerId } = req.params;
       const { zipCodes } = req.body;
-  
+
       const provider = await Users.findById(providerId);
       if (!provider || provider.role !== "serviceProvider") {
-        return res.status(404).json({ msg: "Provider not found or invalid role" });
+        return res
+          .status(404)
+          .json({ msg: "Provider not found or invalid role" });
       }
-  
+
       const zipArray = Array.isArray(zipCodes)
         ? zipCodes.map((z) => String(z).trim()).filter(Boolean)
         : [String(zipCodes).trim()].filter(Boolean);
-  
+
       provider.serviceZipcode = zipArray;
       await provider.save();
-  
+
       return res.json({ msg: "Service ZIP codes updated successfully" });
     } catch (err) {
       console.error("PUT /admin/provider/:providerId/zipcodes error:", err);

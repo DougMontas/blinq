@@ -23,7 +23,9 @@ export function useJobPolling({
 
       if (data.status === "completed") {
         onComplete?.();
-        navigation.navigate(forProvider ? "ServiceProviderDashboard" : "CustomerDashboard");
+        navigation.navigate(
+          forProvider ? "ServiceProviderDashboard" : "CustomerDashboard"
+        );
       }
 
       if (

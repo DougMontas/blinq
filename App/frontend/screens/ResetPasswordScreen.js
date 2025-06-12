@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import api from "../api/client"; // your axios instance
@@ -24,7 +24,7 @@ export default function ResetPasswordScreen() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -59,7 +59,7 @@ export default function ResetPasswordScreen() {
       // prepare payload
       const payload = {
         email: formData.email.trim(),
-        password: formData.password
+        password: formData.password,
       };
       // console.log("Reset payload:", payload);
 
@@ -70,7 +70,7 @@ export default function ResetPasswordScreen() {
       // Navigate back to login or home
       navigation.reset({
         index: 0,
-        routes: [{ name: "Login" }] // or your main route
+        routes: [{ name: "Login" }], // or your main route
       });
     } catch (err) {
       console.error("Reset password error:", err.response?.data || err);
@@ -113,7 +113,11 @@ export default function ResetPasswordScreen() {
         value={formData.confirmPassword}
       />
 
-      <TouchableOpacity style={styles.btn} onPress={onSubmit} disabled={loading}>
+      <TouchableOpacity
+        style={styles.btn}
+        onPress={onSubmit}
+        disabled={loading}
+      >
         <Text style={styles.btnText}>
           {loading ? "Resetting..." : "Reset Password"}
         </Text>
@@ -125,34 +129,34 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: "#fff"
+    backgroundColor: "#fff",
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginVertical: 16,
-    textAlign: "center"
+    textAlign: "center",
   },
   label: {
     fontSize: 16,
     marginTop: 12,
-    marginBottom: 4
+    marginBottom: 4,
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 6,
     padding: 10,
-    marginBottom: 16
+    marginBottom: 16,
   },
   btn: {
     padding: 16,
     borderRadius: 6,
     backgroundColor: "#1976d2",
-    alignItems: "center"
+    alignItems: "center",
   },
   btnText: {
     color: "#fff",
-    fontWeight: "600"
-  }
+    fontWeight: "600",
+  },
 });
