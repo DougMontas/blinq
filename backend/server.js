@@ -21,6 +21,7 @@ import imagesRoutes from "./routes/images.js";
 import zipMultiplierRoute from "./routes/zipMultiplier.js";
 import providers from "./routes/providers.js";
 import stripe from "./routes/stripe.js";
+import mapsRoutes from "./routes/maps.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,12 +88,12 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/routes", providers);
-
 // Public routes
 app.use("/api/auth", authRoutes);
 app.use("/api/routes/providers", providers);
 
 // Protected routes
+app.use("/api/maps", mapsRoutes);
 app.use("/api/users", auth, userRoutes);
 app.use("/api/jobs", auth, jobRoutes);
 app.use("/api/admin", auth, adminRoutes);

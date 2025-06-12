@@ -17,6 +17,7 @@ import serviceMatrix, { getCoveredDescription } from "../utils/serviceMatrix";
 import BackButton from "../components/BackButton";
 import { saveSession } from "../utils/sessionManager";
 import StarRating from "../components/StarRating";
+import ProviderMap from "../components/ProviderMap";
 
 const { width } = Dimensions.get("window");
 const LOGO_SIZE = width * 0.55;
@@ -181,12 +182,6 @@ export default function CustomerJobStatus() {
           <View style={{ alignItems: "center", marginVertical: 8 }}>
             <StarRating rating={providerInfo.averageRating} size={22} />
           </View>
-          {/* <Text>
-            Rating:{" "}
-            {"★".repeat(Math.round(providerInfo.averageRating)) +
-              "★".repeat(5 - Math.round(providerInfo.averageRating))}{" "}
-            
-          </Text> */}
         </View>
       )}
 
@@ -205,6 +200,10 @@ export default function CustomerJobStatus() {
               <Text style={styles.descriptionText}>{description}</Text>
             </>
           )}
+
+          {/* <ProviderMap customerCoords={{ latitude: 25.7617, longitude: -80.1918 }} /> */}
+          {/* <ProviderMap /> */}
+          {/* <ProviderMap customerAddress={job.address} /> */}
         </View>
       )}
 
@@ -254,6 +253,7 @@ export default function CustomerJobStatus() {
           </TouchableOpacity>
         </View>
       )}
+      <ProviderMap customerAddress={job.address} />
     </ScrollView>
   );
 }

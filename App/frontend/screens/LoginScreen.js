@@ -142,6 +142,7 @@ export default function LoginScreen() {
             resizeMode="contain"
           />
         </View>
+
         <Text>{"\n"}</Text>
         <Text style={styles.heroText}>
           BlinqFix{"\n"}
@@ -153,6 +154,9 @@ export default function LoginScreen() {
         </Text>
       </LinearGradient>
 
+      {/* <ProviderMap customerCoords={{ latitude: 25.7617, longitude: -80.1918 }} />
+      <ProviderMap /> */}
+      
       {/* Login Form */}
       <View style={styles.formSection}>
         <View style={styles.formBox}>

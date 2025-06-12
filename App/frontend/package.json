@@ -13,6 +13,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
     "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-community/geolocation": "^3.4.0",
     "@react-native-picker/picker": "^2.11.0",
     "@react-navigation/native": "^7.1.6",
     "@react-navigation/native-stack": "^7.3.10",
@@ -20,8 +21,10 @@
     "@stripe/stripe-js": "^7.3.0",
     "@stripe/stripe-react-native": "^0.38.6",
     "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
     "expo": "~52.0.46",
     "expo-av": "~15.0.2",
+    "expo-dev-client": "~5.0.20",
     "expo-document-picker": "^13.1.5",
     "expo-image-manipulator": "~13.0.6",
     "expo-image-picker": "~16.0.6",
@@ -35,11 +38,11 @@
     "react": "18.3.1",
     "react-dom": "^18.3.1",
     "react-native": "0.76.9",
-    "react-native-maps": "1.18.0",
     "react-native-maps-directions": "^1.9.0",
     "react-native-web": "~0.19.13",
     "react-native-webview": "^13.13.5",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "react-native-maps": "1.18.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
