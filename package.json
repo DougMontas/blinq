@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "cocoapods": "^0.0.0"
+    "cocoapods": "^0.0.0",
+    "expo": "53.0.11"
   }
 }
