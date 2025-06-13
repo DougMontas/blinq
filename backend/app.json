@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "44b8f0d9-c353-4514-b283-a252a15bbff6"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.doug30.blinqfixbackend",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}
