@@ -33,6 +33,7 @@ import WebViewScreen from "./screens/WebViewScreen";
 import PrivacyPolicy from "./screens/PrivacyPolicy";
 import ServiceProFaqScreen from "./screens/ServiceProFaqScreen";
 import CustomerFAQScreen from "./screens/CustomerFAQScreen";
+import ProviderMapDashboard from "./components/ProviderMapDashboard"
 
 import { saveSession, loadSession, clearSession } from "./utils/sessionManager";
 

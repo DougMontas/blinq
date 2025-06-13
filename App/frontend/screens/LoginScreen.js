@@ -156,6 +156,7 @@ export default function LoginScreen() {
 
       {/* <ProviderMap customerCoords={{ latitude: 25.7617, longitude: -80.1918 }} />
       <ProviderMap /> */}
+      {/* <ProviderMapDashboard /> */}
       
       {/* Login Form */}
       <View style={styles.formSection}>

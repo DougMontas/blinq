@@ -93,6 +93,33 @@ router.get("/me", auth, async (req, res) => {
   }
 });
 
+// ✅ Add this BEFORE the '/:id' route
+router.get("/active-providers", async (req, res) => {
+  try {
+    const activeProviders = await Users.find({
+      role: "serviceProvider",
+      isOnline: true, // or whatever field you use
+      location: { $exists: true }, // ensure location data exists
+    }).select("name serviceType location");
+
+    res.json(
+      activeProviders.map((pro) => ({
+        id: pro._id,
+        name: pro.name,
+        category: pro.serviceType,
+        coords: {
+          latitude: pro.location?.coordinates?.[1],
+          longitude: pro.location?.coordinates?.[0],
+        },
+      }))
+    );
+  } catch (err) {
+    console.error("Failed to fetch active providers:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 router.get("/:id", auth, async (req, res) => {
   try {
     const { id } = req.params;

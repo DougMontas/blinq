@@ -1551,7 +1551,7 @@ export default function TestMap() {
   return (
     <View style={{ flex: 1 }}>
       <MapView
-        style={{ width: '100%', height }}
+        style={{ width: '100%', height: '100%'}}
         initialRegion={{
           latitude: 25.54641940992723,
           longitude: -80.5271684547003,

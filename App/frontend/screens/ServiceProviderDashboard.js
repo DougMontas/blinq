@@ -23,6 +23,7 @@ import ProviderStatsCard from "../components/ProviderStatsCard";
 import JobDetails from "../components/JobDetails";
 import { Platform } from "react-native";
 import FooterPro from "../components/FooterPro";
+import ProviderMapDashboard from "../components/ProviderMapDashboard";
 
 const SOCKET_HOST =
   Platform.OS === "android" ? "http://10.0.2.2:8888" : "http://localhost:8888";
@@ -242,6 +243,9 @@ export default function ServiceProviderDashboard() {
           Active job: {activeJob._id} (navigated to ProviderJobStatus)
         </Text>
       )}
+      
+      <ProviderMapDashboard />
+
       <FooterPro />
     </ScrollView>
   );
