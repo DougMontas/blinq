@@ -79,14 +79,13 @@
 //   },
 // };
 
-
 // app.config.js
 import "dotenv/config";
 
 export default {
   expo: {
     /* ───────── General ───────── */
-    name: "BlinqFix",                   // capitalized display name
+    name: "BlinqFix", // capitalized display name
     slug: "blinqfix",
     version: "1.0.0",
     scheme: "blinqfix",
@@ -94,17 +93,26 @@ export default {
     /* ───────── Extra (env-driven) ───────── */
     extra: {
       /** production URL first, fallback to local dev */
-      apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://blinqfix-server.onrender.com",
+      apiUrl:
+        process.env.EXPO_PUBLIC_API_URL ||
+        "https://blinqfix-server.onrender.com",
       stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+
+      eas: {
+        projectId: "05911a90-207f-46d5-802a-05f6b45fd4ce",
+      },
     },
 
     /* ───────── iOS settings ───────── */
     ios: {
-      bundleIdentifier: "com.doug30.blinqfixbackend",   // ← must match Apple App ID
-      buildNumber: "1",                       // added per snippet
+      bundleIdentifier: "com.doug30.blinqfixbackend", // ← must match Apple App ID
+      buildNumber: "1", // added per snippet
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+      },
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
       },
     },
 
@@ -119,6 +127,6 @@ export default {
     },
 
     /* ───────── Plugins, etc. ───────── */
-    plugins: ["expo-location"],               // keep your existing plugins
+    plugins: ["expo-location"], // keep your existing plugins
   },
 };
