@@ -89,7 +89,7 @@ export default {
     slug: "blinqfix",
     version: "1.0.0",
     scheme: "blinqfix",
-
+ 
     /* ───────── Extra (env-driven) ───────── */
     extra: {
       /** production URL first, fallback to local dev */
