@@ -1,0 +1,7 @@
+** BUILD FAILED **
+
+
+The following build commands failed:
+	PhaseScriptExecution [CP]\ Check\ Pods\ Manifest.lock /Users/douglasmontas/Library/Developer/Xcode/DerivedData/BlinqFix-cnbimagptnfnsvebhxdscygssjlt/Build/Intermediates.noindex/BlinqFix.build/Debug-iphonesimulator/BlinqFix.build/Script-08A4A3CD28434E44B6B9DE2E.sh (in target 'BlinqFix' from project 'BlinqFix')
+	Building project BlinqFix with scheme BlinqFix and configuration Debug
+(2 failures)
