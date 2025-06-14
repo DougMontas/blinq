@@ -4,14 +4,12 @@
   "type": "module",
   "private": true,
   "main": "node_modules/expo/AppEntry.js",
-
   "scripts": {
     "start": "npx expo start",
     "android": "npx expo start --android",
     "ios": "npx expo start --ios",
     "web": "npx expo start --web"
   },
-
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
     "@react-native-async-storage/async-storage": "2.1.2",
@@ -32,7 +30,7 @@
     "expo-image-picker": "~16.1.4",
     "expo-linear-gradient": "^14.0.2",
     "expo-linking": "^7.1.4",
-    "expo-location": "~18.1.5",
+    "expo-location": "18.1.5",
     "expo-sharing": "^13.1.5",
     "expo-status-bar": "~2.2.3",
     "jwt-decode": "^4.0.0",
@@ -46,16 +44,17 @@
     "react-native-webview": "13.13.5",
     "socket.io-client": "^4.8.1"
   },
-
   "devDependencies": {
     "@babel/core": "^7.20.0"
   },
-
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
         "listUnknownPackages": false,
-        "exclude": ["jwt-decode", "react-native-maps-directions"]
+        "exclude": [
+          "jwt-decode",
+          "react-native-maps-directions"
+        ]
       }
     }
   }
