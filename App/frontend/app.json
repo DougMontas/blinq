@@ -10,7 +10,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "2"
+      "buildNumber": "25"
     },
     "android": {
       "package": "com.doug30.blinqfix.app"
