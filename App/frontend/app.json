@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "74c9a122-e86e-4bee-96e0-967d0c64b97a"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.doug30.blinqfix.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "2"
+    },
+    "android": {
+      "package": "com.doug30.blinqfix.app"
+    }
+  }
+}
