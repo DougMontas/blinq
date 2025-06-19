@@ -5,7 +5,12 @@
   },
   "build": {
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://blinqfix.onrender.com",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51Ng6UcBiV1fI7a4VWZpXmmZfKlgHCZ91qUaY6g0LhbltGVu1pgSWh8r38FqMAiGTlJS9IDNvDQLlzMWInMeZzgQy00jR1lDjmX",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyB9kPNUThmUjr1g52phL9Yz69wdx6ny5Wo"
+      }
     }
   },
   "submit": {

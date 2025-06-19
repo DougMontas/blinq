@@ -9,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwtDecode from "jwt-decode";
 import Constants from "expo-constants";
 import { StripeProvider } from "@stripe/stripe-react-native";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Screens
 import LoadingScreen from "./screens/LoadingScreen";
@@ -78,6 +79,7 @@ export default function App() {
   if (!initialRoute) return null;
 
   return (
+    <SafeAreaProvider>
     <AuthContext.Provider value={{ role, setRole }}>
       <StripeProvider
         publishableKey={stripeKey}
@@ -152,5 +154,6 @@ export default function App() {
         </NavigationContainer>
       </StripeProvider>
     </AuthContext.Provider>
+    </SafeAreaProvider>
   );
 }

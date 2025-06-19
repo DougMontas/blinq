@@ -42,7 +42,7 @@ export default function CustomerJobStatus() {
   }, [job]);
 
   useEffect(() => {
-    const socket = io(api.defaults.baseURL.replace(/\/api$/, ""), {
+    const socket = io(api.defaults.baseURL?.replace(/\/api$/, "") || "", {
       transports: ["websocket"],
     });
     socket.emit("join", jobId);

@@ -35,17 +35,17 @@ const categories = [
     name: "Electrician",
     img: "https://th.bing.com/th/id/OIP.8RNv4Bpl3-Czqtnqzq8FWwHaE8",
   },
-  {
-    name: "Locksmith",
-    img: "https://th.bing.com/th/id/OIP.VzCe1wLwtG2F6CHjLgS-uQHaE7",
-  },
-  {
-    name: "Cleaning",
-    img: "https://media.istockphoto.com/id/1365606525/photo/shot-of-a-bucket-of-cleaning-supplies.jpg",
-  },
+  // {
+  //   name: "Locksmith",
+  //   img: "https://th.bing.com/th/id/OIP.VzCe1wLwtG2F6CHjLgS-uQHaE7",
+  // },
+  // {
+  //   name: "Cleaning",
+  //   img: "https://media.istockphoto.com/id/1365606525/photo/shot-of-a-bucket-of-cleaning-supplies.jpg",
+  // },
   {
     name: "Handyman",
-    img: "https://th.bing.com/th/id/OIP.Y7MggUQCuqmu0R27lITgEAHaKf",
+    img: "https://imgs.search.brave.com/Eu2EwhIULj4LyBzlme4IwxTKn3xSibta_OUu-2oN5Vo/rs:fit:500:0:0:0/g:ce/aHR0cHM6Ly90aHVt/YnMuZHJlYW1zdGlt/ZS5jb20vYi9idWls/ZGVyLWhhbmR5bWFu/LWNvbnN0cnVjdGlv/bi10b29scy1ob3Vz/ZS1yZW5vdmF0aW9u/LWJhY2tncm91bmQt/ODk4NTUyMDQuanBn",
   },
 ];
 
