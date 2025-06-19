@@ -30,8 +30,21 @@ dotenv.config();
 await connectDB();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "*", // or ['https://blinqfix.onrender.com']
+  credentials: true
+}));
 app.use(express.json());
+
+// ✅ Health check endpoint
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: Date.now() });
+});
+
+app.post("/api/auth/test", (req, res) => {
+  console.log("Test endpoint hit", req.body);
+  res.json({ ok: true });
+});
 
 // HTTP server and socket.io
 const server = http.createServer(app);
@@ -106,7 +119,9 @@ app.use("/api/files", auth, filesRoutes);
 app.use("/api/images", auth, imagesRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-const PORT = process.env.PORT || 8888;
+const PORT = process.env.PORT || 10000;
+const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`;
+
 server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+  console.log(`✅ Server running on ${PUBLIC_URL}`);
 });
