@@ -253,7 +253,7 @@ export default function CustomerJobStatus() {
           </TouchableOpacity>
         </View>
       )}
-      <ProviderMap customerAddress={job.address} />
+      {/* <ProviderMap customerAddress={job.address} /> */}
     </ScrollView>
   );
 }

@@ -37,6 +37,7 @@ import CustomerFAQScreen from "./screens/CustomerFAQScreen";
 import ProviderMapDashboard from "./components/ProviderMapDashboard"
 
 import { saveSession, loadSession, clearSession } from "./utils/sessionManager";
+import DeleteAccountScreen from "./screens/DeleteAccountScreen";
 
 export const navigationRef = createNavigationContainerRef();
 const AuthContext = createContext();
@@ -47,6 +48,19 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const [initialRoute, setInitialRoute] = useState(null);
   const [role, setRole] = useState(null);
+  
+  // useEffect(() => {
+  //   const sendPushToken = async () => {
+  //     const token = await registerForPushNotificationsAsync();
+  //     if (token) {
+  //       await api.post("/users/push-token", { expoPushToken: token });
+  //     }
+  //   };
+  
+  //   if (userIsAuthenticated) {
+  //     sendPushToken();
+  //   }
+  // }, [userIsAuthenticated]);
 
   useEffect(() => {
     (async () => {
@@ -143,6 +157,10 @@ export default function App() {
             <Stack.Screen
               name="CustomerFAQScreen"
               component={CustomerFAQScreen}
+            />
+            <Stack.Screen
+              name="DeleteAccountScreen"
+              component={DeleteAccountScreen}
             />
             <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
             <Stack.Screen

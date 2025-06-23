@@ -119,8 +119,10 @@ app.use("/api/files", auth, filesRoutes);
 app.use("/api/images", auth, imagesRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-const PORT = process.env.PORT || 10000;
-const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`;
+const PORT = 8888;
+const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`
+// const PORT = process.env.PORT || 10000;
+// const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`
 
 server.listen(PORT, () => {
   console.log(`✅ Server running on ${PUBLIC_URL}`);

@@ -8,7 +8,7 @@ const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
 });
-const baseUrl = process.env.FRONTEND_BASE_URL || "https://1234abcd.ngrok.io";
+const baseUrl = process.env.FRONTEND_BASE_URL;
 
 router.get("/onboard", auth, async (req, res) => {
   try {

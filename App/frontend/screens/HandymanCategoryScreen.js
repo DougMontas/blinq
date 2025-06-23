@@ -126,7 +126,7 @@ export default function HandymanCategoryScreen() {
               style={{
                 width: LOGO_SIZE,
                 height: LOGO_SIZE,
-                marginHorizontal: 120,
+                marginHorizontal: 'auto',
               }}
               resizeMode="contain"
             />
@@ -185,7 +185,7 @@ export default function HandymanCategoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 50 },
+  container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 70 },
   containerLogo: {},
   centered: {
     flex: 1,

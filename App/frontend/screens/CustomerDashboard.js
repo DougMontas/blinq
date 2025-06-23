@@ -17,6 +17,7 @@ import api from "../api/client";
 import socket from "../components/socket";
 import LogoutButton from "../components/LogoutButton";
 import ComingSoon from "../assets/coming_soon.jpeg";
+import DeleteAccountButton from "../components/DeleteAccountButton";
 
 const categories = [
   {
@@ -123,6 +124,7 @@ export default function CustomerDashboard() {
           }}
           resizeMode="contain"
         />
+        <Text style={styles.sectionTitle1}>Customer Dashboard</Text>
       </View>
 
       <LinearGradient
@@ -132,6 +134,7 @@ export default function CustomerDashboard() {
         end={{ x: 1, y: 1 }}
       >
         <Text style={styles.heroText}>
+        
           {"\n"}
           Hi {firstName},{" "}
           <Text style={styles.heroSub}>how can we help today?</Text>
@@ -143,6 +146,7 @@ export default function CustomerDashboard() {
         </TouchableOpacity>
       </LinearGradient>
 
+      
       <Text style={styles.sectionTitle}>Choose a service</Text>
       <View style={styles.cardsWrap}>
         {categories.map(({ name, img }) => (
@@ -155,7 +159,7 @@ export default function CustomerDashboard() {
                 : navigation.navigate("EmergencyForm", { category: name })
             }
           >
-            {/* <Image source={{ uri: img }} style={styles.cardImg} /> */}
+            
             <Image
               source={
                 typeof img === "string" && img.startsWith("http")
@@ -170,8 +174,8 @@ export default function CustomerDashboard() {
           </TouchableOpacity>
         ))}
       </View>
-
-      <View style={{ height: 40 }} />
+      <DeleteAccountButton />
+      <View style={{ height: 40, marginVertical: 50 }} />
     </ScrollView>
   );
 }
@@ -213,6 +217,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     fontStyle: "italic",
+  },
+  sectionTitle1: {
+    color: "black",
+    textAlign: "center",
+    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 20,

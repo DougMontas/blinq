@@ -40,7 +40,8 @@ export default {
     },
     extra: {
       apiUrl:
-        process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
+      `http://localhost:8888`,
+        // process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
       stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
       eas: {

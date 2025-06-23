@@ -183,6 +183,7 @@ export default function ServiceProviderDashboard() {
           ]}
           resizeMode="contain"
         />
+        <Text style={styles.sectionTitle1}>Service Pro Dashboard</Text>
       </View>
 
       <Text>{"\n"}</Text>
@@ -193,7 +194,7 @@ export default function ServiceProviderDashboard() {
         style={styles.profileBtn}
         onPress={() => navigation.navigate("ProviderProfile")}
       >
-        <Text style={styles.profileBtnText}>Complete Your Profile</Text>
+        <Text style={styles.profileBtnText}>Complete / Update Your Profile</Text>
       </TouchableOpacity>
       <ProviderStatsCard />
 
@@ -244,7 +245,7 @@ export default function ServiceProviderDashboard() {
         </Text>
       )}
       
-      <ProviderMapDashboard />
+      {/* <ProviderMapDashboard /> */}
 
       <FooterPro />
     </ScrollView>
@@ -258,6 +259,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 8 },
+  sectionTitle1: {
+    color: "black",
+    textAlign: "center",
+    fontSize: 14,
+  },
   subtitle: { marginTop: 20, fontSize: 18, fontWeight: "600" },
   profileBtn: {
     marginTop: 12,

@@ -22,10 +22,36 @@ const LINKS = [
 export default function Footer() {
   const navigation = useNavigation();
 
+  // const handlePress = async (url) => {
+  //   try {
+  //     // If it's an external link (http, https, or mailto)
+  //     if (url.startsWith("http") || url.startsWith("mailto:")) {
+  //       const supported = await Linking.canOpenURL(url);
+  //       if (supported) {
+  //         await Linking.openURL(url);
+  //       } else {
+  //         Alert.alert("Error", "Cannot open the link.");
+  //       }
+  //     } else {
+  //       // It's a route name for internal navigation
+  //       navigation.navigate(url);
+  //     }
+  //   } catch (e) {
+  //     console.error("Error handling link:", url, e);
+  //   }
+  // };
+
   const handlePress = async (url) => {
     try {
-      // If it's an external link (http, https, or mailto)
-      if (url.startsWith("http") || url.startsWith("mailto:")) {
+      if (url.startsWith("mailto:")) {
+        // Ensure mailto is supported
+        const supported = await Linking.canOpenURL(url);
+        if (!supported) {
+          Alert.alert("Error", "No email client available.");
+          return;
+        }
+        await Linking.openURL(url);
+      } else if (url.startsWith("http")) {
         const supported = await Linking.canOpenURL(url);
         if (supported) {
           await Linking.openURL(url);
@@ -33,14 +59,14 @@ export default function Footer() {
           Alert.alert("Error", "Cannot open the link.");
         }
       } else {
-        // It's a route name for internal navigation
         navigation.navigate(url);
       }
     } catch (e) {
-      console.error("Error handling link:", url, e);
+      console.error("Linking error:", e);
+      Alert.alert("Error", "Something went wrong.");
     }
   };
-
+  
   return (
     <View style={styles.footer}>
       {LINKS.map((l) => (

@@ -4,9 +4,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto"; // for reset tokens
 import Users from "../models/Users.js";
+import sendEmail from "../utils/sendEmail.js";
 
 const router = express.Router();
-const baseUrl = process.env.FRONTEND_BASE_URL || "https://1234abcd.ngrok.io";
+const baseUrl = process.env.FRONTEND_BASE_URL;
 
 router.post("/register", async (req, res) => {
   try {
@@ -103,12 +104,16 @@ router.post("/register", async (req, res) => {
       const stripe = await import("stripe").then((m) => m.default);
       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
+      const baseUrl =
+        process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com"; // Use HTTPS!
+
       const accountLink = await stripeInstance.accountLinks.create({
         account: newUser.stripeAccountId,
         refresh_url: `${baseUrl}/stripe/onboarding-failed`,
         return_url: `${baseUrl}/stripe/onboarding-success`,
         type: "account_onboarding",
       });
+
 
       return res.json({
         token,
@@ -133,6 +138,11 @@ router.post("/login", async (req, res) => {
     if (!user || !user.password) {
       return res.status(401).json({ msg: "Invalid credentials" });
     }
+
+    if (user.isDeleted)
+      return res
+        .status(403)
+        .json({ msg: "Account has been deleted or does not exist" });
 
     // 2. Compare password
     const match = await bcrypt.compare(password, user.password);
@@ -169,26 +179,58 @@ router.post("/login", async (req, res) => {
 /**
  * POST /api/auth/request-reset
  */
-router.post("/request-reset", async (req, res) => {
+// router.post("/request-reset", async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     const user = await Users.findOne({ email });
+//     if (!user) {
+//       return res.status(400).json({ msg: "No user with that email" });
+//     }
+//     const resetToken = crypto.randomBytes(32).toString("hex");
+//     const expiry = Date.now() + 60 * 60 * 1000; // 1h
+//     user.resetPasswordToken = resetToken;
+//     user.resetPasswordExp = expiry;
+//     await user.save();
+//     // In a real app: email the link containing resetToken
+//     return res.json({ msg: "Reset token set. Email user with this token." });
+//   } catch (err) {
+//     console.error("requestReset error:", err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+router.post("/request-password-reset", async (req, res) => {
   try {
     const { email } = req.body;
     const user = await Users.findOne({ email });
+
     if (!user) {
-      return res.status(400).json({ msg: "No user with that email" });
+      return res
+        .status(200)
+        .json({ msg: "If the email is valid, a reset link was sent." });
     }
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    const expiry = Date.now() + 60 * 60 * 1000; // 1h
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExp = expiry;
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = token;
+    user.resetPasswordExp = Date.now() + 3600000; // 1 hour
     await user.save();
-    // In a real app: email the link containing resetToken
-    return res.json({ msg: "Reset token set. Email user with this token." });
+
+    const resetUrl = `https://yourfrontend.com/reset-password/${token}`;
+    const message = `To reset your password, click here: ${resetUrl}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: "Password Reset",
+      text: message,
+    });
+
+    res.json({ msg: "Password reset link sent." });
   } catch (err) {
-    console.error("requestReset error:", err);
-    return res.status(500).json({ msg: "Server error" });
+    console.error("Reset request error:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
-
 /**
  * PUT /api/auth/reset-password/:token
  */

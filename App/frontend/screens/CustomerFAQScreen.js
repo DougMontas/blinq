@@ -1,9 +1,11 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
+import BackButton from "../components/BackButton";
 
 export default function CustomerFAQScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <BackButton />
       <Text style={styles.header}>BlinqFix Customer FAQ</Text>
 
       <Text style={styles.sectionTitle}>General</Text>
@@ -110,6 +112,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: "#fff",
+    marginVertical: 50,
   },
   header: {
     fontSize: 28,

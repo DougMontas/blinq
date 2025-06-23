@@ -119,6 +119,21 @@ router.get("/active-providers", async (req, res) => {
   }
 });
 
+router.get("/invitation-stats", auth, async (req, res) => {
+  try {
+    const providerId = req.user._id;
+
+    const sentCount = await Job.countDocuments({ invitedProviders: providerId });
+    const acceptedCount = await Job.countDocuments({ acceptedProvider: providerId });
+
+    res.json({ sent: sentCount, accepted: acceptedCount });
+  } catch (err) {
+    console.error("Error fetching invitation stats:", err);
+    res.status(500).json({ msg: "Failed to fetch invitation statistics." });
+  }
+});
+
+
 
 router.get("/:id", auth, async (req, res) => {
   try {
@@ -310,6 +325,134 @@ router.put("/location", auth, async (req, res) => {
   } catch (err) {
     console.error("PUT /location error:", err);
     res.status(500).json({ msg: "Server error updating location" });
+  }
+});
+
+// DELETE /users/:id
+// router.delete("/delete", auth, async (req, res) => {
+//   try {
+//     const user = await Users.findByIdAndUpdate(
+//       req.user._id,
+//       { isDeleted: true, isActive: false },
+//       { new: true }
+//       );
+//       console.log('user>>>:', user),
+//       // await user.save()
+//     // if (!updatedUser) {
+//     //   return res.status(404).json({ msg: "User not found" });
+//     // }
+
+//     res.json({ msg: "Account successfully marked as deleted" });
+//   } catch (err) {
+//     console.error("❌ Delete user error", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// router.delete("/delete", auth, async (req, res) => {
+//   console.log("✅ req.user in delete route:", req.user); // <== debug
+//   try {
+//     if (!req.user) {
+//       return res.status(401).json({ msg: "Unauthorized: User not found in request" });
+//     }
+
+//     const updatedUser = await Users.findByIdAndUpdate(
+//       req.user._id,
+//       { isDeleted: true, isActive: false },
+//       { new: true }
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ msg: "User not found" });
+//     }
+//     console.log("updatedUser::::", updatedUser);
+//     res.json({ msg: "Account successfully marked as deleted" });
+//   } catch (err) {
+//     console.error("❌ Delete user error", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+  
+// });
+
+// router.delete("/delete", auth, async (req, res) => {
+//   console.log("✅ req.user in delete route:", req.user);
+
+//   try {
+//     const userId = req.user._id || req.user.id;
+
+//     const updatedUser = await Users.findByIdAndUpdate(
+//       userId,
+//       { isDeleted: true, isActive: false },
+//       { new: true }
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ msg: "User not found" });
+//     }
+
+//     res.json({ msg: "Account successfully marked as deleted" });
+//   } catch (err) {
+//     console.error("❌ Delete user error", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+router.post("/push-token", auth, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id);
+    user.expoPushToken = req.body.expoPushToken;
+    await user.save();
+    res.json({ msg: "Push token saved." });
+  } catch (err) {
+    console.error("Error saving push token:", err);
+    res.status(500).json({ msg: "Failed to save push token." });
+  }
+});
+
+// router.get("/invitation-stats", auth, async (req, res) => {
+//   try {
+//     const providerId = req.user._id || req.user.id
+
+//     // Total invitations sent to this provider
+//     const sentCount = await Job.countDocuments({ invitedProviders: providerId });
+
+//     // Invitations that were accepted by this provider
+//     const acceptedCount = await Job.countDocuments({ acceptedProvider: providerId });
+
+//     res.json({
+//       sent: sentCount,
+//       accepted: acceptedCount,
+//     });
+//   } catch (err) {
+//     console.error("Error fetching invitation stats:", err);
+//     res.status(500).json({ msg: "Failed to fetch invitation statistics." });
+//   }
+// });
+
+
+router.delete("/delete", auth, async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { reason } = req.body;
+    const updatedUser = await Users.findByIdAndUpdate(
+      userId,
+      {
+        isDeleted: true,
+        isActive: false,
+        deleteReason: reason || "",
+        deletedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    res.json({ msg: "Account successfully marked as deleted" });
+  } catch (err) {
+    console.error("❌ Delete user error", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 

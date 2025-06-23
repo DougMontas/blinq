@@ -80,6 +80,17 @@ const usersSchema = new mongoose.Schema(
 
     /* ---------- misc flags ---------- */
     isActive: { type: Boolean, default: false },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deleteReason: {
+      type: String,
+      default: "",
+    },
+    deletedAt: {
+      type: Date,
+    },
 
     /* ---------- geo ----------- */
     location: {
