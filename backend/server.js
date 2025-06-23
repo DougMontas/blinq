@@ -22,6 +22,7 @@ import zipMultiplierRoute from "./routes/zipMultiplier.js";
 import providers from "./routes/providers.js";
 import stripe from "./routes/stripe.js";
 import mapsRoutes from "./routes/maps.js";
+import userStatsRoutes from "./routes/userStats.js"
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,6 +109,7 @@ app.use("/api/routes/providers", providers);
 // Protected routes
 app.use("/api/maps", mapsRoutes);
 app.use("/api/users", auth, userRoutes);
+app.use("/api/userStats", auth, userStatsRoutes);
 app.use("/api/jobs", auth, jobRoutes);
 app.use("/api/admin", auth, adminRoutes);
 app.use("/api/billing", auth, billingRoutes);
@@ -119,10 +121,10 @@ app.use("/api/files", auth, filesRoutes);
 app.use("/api/images", auth, imagesRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-const PORT = 8888;
-const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`
-// const PORT = process.env.PORT || 10000;
+// const PORT = 8888;
 // const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`
+const PORT = process.env.PORT || 10000;
+const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`
 
 server.listen(PORT, () => {
   console.log(`✅ Server running on ${PUBLIC_URL}`);

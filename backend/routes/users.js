@@ -119,23 +119,29 @@ router.get("/active-providers", async (req, res) => {
   }
 });
 
-router.get("/invitation-stats", auth, async (req, res) => {
-  try {
-    const providerId = req.user._id;
+// router.get("/invitation-stats", auth, async (req, res) => {
+//   try {
+//     const providerId = req.user._id || req.user.id;
 
-    const sentCount = await Job.countDocuments({ invitedProviders: providerId });
-    const acceptedCount = await Job.countDocuments({ acceptedProvider: providerId });
+//     const sentCount = await Job.countDocuments({ invitedProviders: providerId });
+//     const acceptedCount = await Job.countDocuments({ acceptedProvider: providerId });
 
-    res.json({ sent: sentCount, accepted: acceptedCount });
-  } catch (err) {
-    console.error("Error fetching invitation stats:", err);
-    res.status(500).json({ msg: "Failed to fetch invitation statistics." });
-  }
-});
+//     res.json({ sent: sentCount, accepted: acceptedCount });
+//   } catch (err) {
+//     console.error("Error fetching invitation stats:", err);
+//     res.status(500).json({ msg: "Failed to fetch invitation statistics." });
+//   }
+// });
+
+// router.use("/:id", (req, res, next) => {
+//   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(req.params.id);
+//   if (!isValidObjectId) return next("route"); // skip to next matching route (like /invitation-stats)
+//   next(); // allow through to /:id route
+// });
 
 
 
-router.get("/:id", auth, async (req, res) => {
+router.get("/:id([0-9a-fA-F]{24})", auth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = id === "me" ? req.user.id : id;
