@@ -496,7 +496,7 @@ export default function ProviderStatsCard() {
     const fetchStats = async () => {
       try {
         const statsResponse = await api.get("/jobs/me/stats");
-        const inviteResponse = await api.get("/users/invitation-stats");
+        const inviteResponse = await api.get("/api/userStats/invitation-stats");
 
         setStats({
           completedJobsCount: statsResponse.data.completedJobsCount || 0,
