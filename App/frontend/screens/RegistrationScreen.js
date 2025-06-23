@@ -2661,8 +2661,45 @@ export default function RegistrationScreen() {
           <Text style={styles.selectOptionText}>Book a BlinqFix Job</Text>
         </TouchableOpacity>
       </View>
+      {formData.role === "serviceProvider" && (
+        <>
+          <Text style={styles.label}>Date of Birth (YYYY-MM-DD)</Text>
+          <TextInput style={styles.input} value={formData.dob} onChangeText={(val) => onChange("dob", val)} placeholder="1980-12-31" />
 
-      {/* The rest of your screen continues unchanged... */}
+          <Text style={styles.label}>Last 4 of SSN</Text>
+          <TextInput style={styles.input} value={formData.ssnLast4} onChangeText={(val) => onChange("ssnLast4", val)} placeholder="1234" keyboardType="numeric" maxLength={4} />
+
+          <Text style={styles.label}>Select Subscription</Text>
+          <View style={styles.selectRow}>
+            {BILLING.map((tier) => (
+              <TouchableOpacity key={tier} style={[styles.selectOptionSmall, formData.billingTier === tier && styles.selectOptionSelected]} onPress={() => onChange("billingTier", tier)}>
+                <Text style={styles.selectOptionText}>{tier === "hybrid" ? "BlinqFix Gold" : "BlinqFix Go (Free)"}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Select Service Type</Text>
+          <View style={styles.selectRow}>
+            {SERVICES.map((svc) => (
+              <TouchableOpacity key={svc} style={[styles.selectOptionSmall, formData.serviceType === svc && styles.selectOptionSelected]} onPress={() => onChange("serviceType", svc)}>
+                <Text style={styles.selectOptionText}>{svc}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+
+      <TouchableOpacity style={styles.submitBtn} onPress={onSubmit} disabled={loading}>
+        <Text style={styles.submitBtnText}>{loading ? "Signing Up…" : "Sign Up"}</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.footerText}>
+        Already have an account?{' '}
+        <Text style={styles.linkText} onPress={() => navigation.navigate("Login")}>
+          Login
+        </Text>
+      </Text>
+      
     </ScrollView>
   );
 }
