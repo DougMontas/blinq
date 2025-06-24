@@ -861,7 +861,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
     backgroundColor: "#fff",
-    marginTop: 40,
   },
   containerLogo: {},
   heroWrapper: {

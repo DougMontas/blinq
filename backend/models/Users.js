@@ -91,6 +91,10 @@ const usersSchema = new mongoose.Schema(
     deletedAt: {
       type: Date,
     },
+    acceptedICA: {
+      type: Boolean,
+      default: false,
+    },
 
     /* ---------- geo ----------- */
     location: {

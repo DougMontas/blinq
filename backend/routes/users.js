@@ -246,6 +246,69 @@ router.get("/providers/active", async (req, res) => {
   }
 });
 
+// router.put(
+//   "/profile",
+//   auth,
+//   upload.fields([
+//     { name: "w9", maxCount: 1 },
+//     { name: "businessLicense", maxCount: 1 },
+//     { name: "proofOfInsurance", maxCount: 1 },
+//     { name: "independentContractorAgreement", maxCount: 1 },
+//     { name: "profilePicture", maxCount: 1 },
+//   ]),
+//   async (req, res) => {
+//     try {
+//       const user = await Users.findById(req.user.id);
+//       if (!user) return res.status(404).json({ msg: "User not found" });
+
+//       // ✅ Merge text fields (avoid empty overwrites)
+//       for (const [key, value] of Object.entries(req.body)) {
+//         if (value !== undefined && value !== "") {
+//           user[key] = value;
+//         }
+//       }
+
+//       // ✅ Save file uploads
+//       const files = req.files;
+
+//       if (files?.profilePicture?.[0]) {
+//         const { buffer, mimetype } = files.profilePicture[0];
+//         user.profilePicture = `data:${mimetype};base64,${buffer.toString(
+//           "base64"
+//         )}`;
+//       }
+
+//       if (files?.w9?.[0]) {
+//         user.w9 = files.w9[0].buffer.toString("base64");
+//       }
+
+//       if (files?.businessLicense?.[0]) {
+//         user.businessLicense =
+//           files.businessLicense[0].buffer.toString("base64");
+//       }
+
+//       if (files?.proofOfInsurance?.[0]) {
+//         user.proofOfInsurance =
+//           files.proofOfInsurance[0].buffer.toString("base64");
+//       }
+
+//       if (files?.independentContractorAgreement?.[0]) {
+//         user.independentContractorAgreement =
+//           files.independentContractorAgreement[0].buffer.toString("base64");
+//       }
+
+//       await user.save();
+//       res.json({ msg: "Profile updated", user });
+//     } catch (err) {
+//       console.error("PUT /profile error:", err);
+//       if (err instanceof multer.MulterError) {
+//         return res.status(400).json({ msg: `MulterError: ${err.message}` });
+//       }
+//       res.status(500).json({ msg: "Server error updating profile" });
+//     }
+//   }
+// );
+
 router.put(
   "/profile",
   auth,
@@ -261,10 +324,15 @@ router.put(
       const user = await Users.findById(req.user.id);
       if (!user) return res.status(404).json({ msg: "User not found" });
 
-      // ✅ Merge text fields (avoid empty overwrites)
+      // ✅ Update text fields
       for (const [key, value] of Object.entries(req.body)) {
         if (value !== undefined && value !== "") {
-          user[key] = value;
+          // ✅ Special handling for acceptedICA boolean
+          if (key === "acceptedICA") {
+            user.acceptedICA = value === "true";
+          } else {
+            user[key] = value;
+          }
         }
       }
 
@@ -273,9 +341,7 @@ router.put(
 
       if (files?.profilePicture?.[0]) {
         const { buffer, mimetype } = files.profilePicture[0];
-        user.profilePicture = `data:${mimetype};base64,${buffer.toString(
-          "base64"
-        )}`;
+        user.profilePicture = `data:${mimetype};base64,${buffer.toString("base64")}`;
       }
 
       if (files?.w9?.[0]) {
@@ -283,18 +349,15 @@ router.put(
       }
 
       if (files?.businessLicense?.[0]) {
-        user.businessLicense =
-          files.businessLicense[0].buffer.toString("base64");
+        user.businessLicense = files.businessLicense[0].buffer.toString("base64");
       }
 
       if (files?.proofOfInsurance?.[0]) {
-        user.proofOfInsurance =
-          files.proofOfInsurance[0].buffer.toString("base64");
+        user.proofOfInsurance = files.proofOfInsurance[0].buffer.toString("base64");
       }
 
       if (files?.independentContractorAgreement?.[0]) {
-        user.independentContractorAgreement =
-          files.independentContractorAgreement[0].buffer.toString("base64");
+        user.independentContractorAgreement = files.independentContractorAgreement[0].buffer.toString("base64");
       }
 
       await user.save();
@@ -308,6 +371,7 @@ router.put(
     }
   }
 );
+
 
 /**
  * PUT /api/users/location
