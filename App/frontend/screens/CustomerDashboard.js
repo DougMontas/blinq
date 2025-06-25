@@ -18,6 +18,7 @@ import socket from "../components/socket";
 import LogoutButton from "../components/LogoutButton";
 import ComingSoon from "../assets/coming_soon.jpeg";
 import DeleteAccountButton from "../components/DeleteAccountButton";
+import Footer from "../components/Footer";
 
 const categories = [
   {
@@ -124,7 +125,7 @@ export default function CustomerDashboard() {
           }}
           resizeMode="contain"
         />
-        <Text style={styles.sectionTitle1}>Customer Dashboard</Text>
+        <Text style={styles.sectionTitle1}>Dashboard</Text>
       </View>
 
       <LinearGradient
@@ -174,6 +175,7 @@ export default function CustomerDashboard() {
           </TouchableOpacity>
         ))}
       </View>
+      <Footer />
       <DeleteAccountButton />
       <View style={{ height: 40, marginVertical: 50 }} />
     </ScrollView>
@@ -181,7 +183,7 @@ export default function CustomerDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 50 },
+  container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 0 },
   containerLogo: {},
   centered: {
     flex: 1,
@@ -221,7 +223,8 @@ const styles = StyleSheet.create({
   sectionTitle1: {
     color: "black",
     textAlign: "center",
-    fontSize: 14,
+    fontSize: 24,
+    fontWeight: 700
   },
   sectionTitle: {
     fontSize: 20,

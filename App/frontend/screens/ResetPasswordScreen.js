@@ -163,121 +163,223 @@
 // });
 
 // screens/ResetPasswordScreen.js
+// import React, { useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   Alert,
+//   StyleSheet,
+//   KeyboardAvoidingView,
+//   Platform,
+//   SafeAreaView,
+// } from "react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import api from "../api/client";
+// import BackButton from "../components/BackButton";
+
+// export default function ResetPasswordScreen() {
+//   const navigation = useNavigation();
+//   const [email, setEmail] = useState("");
+//   const [loading, setLoading] = useState(false);
+
+//   const onSubmit = async () => {
+//     if (!email.trim()) {
+//       Alert.alert("Error", "Please enter your email address.");
+//       return;
+//     }
+
+//     try {
+//       setLoading(true);
+
+//       await api.post("/auth/request-password-reset", { email });
+
+//       Alert.alert(
+//         "Email Sent",
+//         "If the email you entered is associated with an account, a reset link has been sent."
+//       );
+
+//       navigation.goBack();
+//     } catch (err) {
+//       const msg = err.response?.data?.msg || "Failed to request password reset";
+//       Alert.alert("Error", msg);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <SafeAreaView style={styles.container}>
+//       <View style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           behavior={Platform.OS === "ios" ? "padding" : undefined}
+//           style={{ flex: 1 }}
+//         >
+//           <BackButton />
+//           <Text style={styles.title}>Forgot Password?</Text>
+//           <Text style={styles.instructions}>
+//             Enter your email and we’ll send you a link to reset your password.
+//           </Text>
+
+//           <Text style={styles.label}>Email Address</Text>
+//           <TextInput
+//             style={styles.input}
+//             keyboardType="email-address"
+//             autoCapitalize="none"
+//             value={email}
+//             onChangeText={setEmail}
+//           />
+
+//           <TouchableOpacity style={styles.btn} onPress={onSubmit} disabled={loading}>
+//             <Text style={styles.btnText}>{loading ? "Sending..." : "Send Reset Link"}</Text>
+//           </TouchableOpacity>
+//         </KeyboardAvoidingView>
+//       </View>
+//     </SafeAreaView>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     backgroundColor: "#fff",
+//     padding: 16,
+//   },
+//   title: {
+//     fontSize: 24,
+//     fontWeight: "bold",
+//     marginVertical: 16,
+//     textAlign: "center",
+//   },
+//   instructions: {
+//     fontSize: 14,
+//     textAlign: "center",
+//     marginBottom: 24,
+//     color: "#555",
+//   },
+//   label: {
+//     fontSize: 16,
+//     marginBottom: 8,
+//   },
+//   input: {
+//     borderWidth: 1,
+//     borderColor: "#ccc",
+//     borderRadius: 6,
+//     padding: 10,
+//     marginBottom: 24,
+//   },
+//   btn: {
+//     padding: 16,
+//     borderRadius: 6,
+//     backgroundColor: "#1976d2",
+//     alignItems: "center",
+//   },
+//   btnText: {
+//     color: "#fff",
+//     fontWeight: "600",
+//     fontSize: 16,
+//   },
+// });
+
+// screens/ResetPasswordScreen.js (React Native - App)
 import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
+  StyleSheet,
   TouchableOpacity,
   Alert,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import api from "../api/client";
-import BackButton from "../components/BackButton";
 
 export default function ResetPasswordScreen() {
-  const navigation = useNavigation();
-  const [email, setEmail] = useState("");
+  const route = useRoute();
+  const nav = useNavigation();
+  const { token } = route.params;
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = async () => {
-    if (!email.trim()) {
-      Alert.alert("Error", "Please enter your email address.");
-      return;
+  const handleReset = async () => {
+    if (password !== confirmPassword) {
+      return Alert.alert("Error", "Passwords do not match.");
     }
-
+    if (password.length < 6) {
+      return Alert.alert("Error", "Password must be at least 6 characters.");
+    }
     try {
       setLoading(true);
-
-      await api.post("/auth/request-password-reset", { email });
-
-      Alert.alert(
-        "Email Sent",
-        "If the email you entered is associated with an account, a reset link has been sent."
-      );
-
-      navigation.goBack();
+      await api.post(`/reset-password/${token}`, { password });
+      Alert.alert("Success", "Password has been reset.", [
+        { text: "OK", onPress: () => nav.navigate("LoginScreen") }
+      ]);
     } catch (err) {
-      const msg = err.response?.data?.msg || "Failed to request password reset";
-      Alert.alert("Error", msg);
+      console.error("Reset error:", err.response?.data || err);
+      Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={{ flex: 1 }}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ flex: 1 }}
-        >
-          <BackButton />
-          <Text style={styles.title}>Forgot Password?</Text>
-          <Text style={styles.instructions}>
-            Enter your email and we’ll send you a link to reset your password.
-          </Text>
-
-          <Text style={styles.label}>Email Address</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <TouchableOpacity style={styles.btn} onPress={onSubmit} disabled={loading}>
-            <Text style={styles.btnText}>{loading ? "Sending..." : "Send Reset Link"}</Text>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </View>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Reset Your Password</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="New Password"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirm Password"
+        secureTextEntry
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+      />
+      <TouchableOpacity style={styles.button} onPress={handleReset} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Reset Password</Text>}
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    padding: 24,
     flex: 1,
+    justifyContent: "center",
     backgroundColor: "#fff",
-    padding: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginVertical: 16,
-    textAlign: "center",
-  },
-  instructions: {
-    fontSize: 14,
     textAlign: "center",
     marginBottom: 24,
-    color: "#555",
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 6,
-    padding: 10,
-    marginBottom: 24,
+    padding: 12,
+    marginBottom: 12,
   },
-  btn: {
-    padding: 16,
-    borderRadius: 6,
+  button: {
     backgroundColor: "#1976d2",
+    paddingVertical: 14,
+    borderRadius: 6,
     alignItems: "center",
   },
-  btnText: {
+  buttonText: {
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "bold",
     fontSize: 16,
   },
 });
+

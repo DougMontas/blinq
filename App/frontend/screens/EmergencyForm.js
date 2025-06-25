@@ -315,7 +315,7 @@ export default function EmergencyForm() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", marginVertical: 52 },
+  container: { flex: 1, backgroundColor: "#fff", marginVertical: 0 },
   title: {
     fontSize: 24,
     fontWeight: "bold",

@@ -8,7 +8,7 @@ const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
 });
-const baseUrl = process.env.FRONTEND_BASE_URL;
+const baseUrl = process.env.FRONTEND_BASE_URL || "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success"
 
 router.get("/onboard", auth, async (req, res) => {
   try {

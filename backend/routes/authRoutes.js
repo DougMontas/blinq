@@ -199,25 +199,82 @@ router.post("/login", async (req, res) => {
 //   }
 // });
 
+// router.post("/request-password-reset", async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     const user = await Users.findOne({ email });
+
+//     if (!user) {
+//       return res
+//         .status(200)
+//         .json({ msg: "If the email is valid, a reset link was sent." });
+//     }
+
+//     // Generate secure token
+//     const token = crypto.randomBytes(32).toString("hex");
+//     user.resetPasswordToken = token;
+//     user.resetPasswordExp = Date.now() + 3600000; // 1 hour
+//     await user.save();
+
+//     const resetUrl = `https://yourfrontend.com/reset-password/${token}`;
+//     const message = `To reset your password, click here: ${resetUrl}`;
+
+//     await sendEmail({
+//       to: user.email,
+//       subject: "Password Reset",
+//       text: message,
+//     });
+
+//     res.json({ msg: "Password reset link sent." });
+//   } catch (err) {
+//     console.error("Reset request error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+// /**
+//  * PUT /api/auth/reset-password/:token
+//  */
+// router.put("/reset-password/:token", async (req, res) => {
+//   try {
+//     const { token } = req.params;
+//     const { email, password } = req.body;
+//     const user = await Users.findOne({
+//       email,
+//       resetPasswordToken: token,
+//       resetPasswordExp: { $gt: Date.now() },
+//     }).select("+password");
+//     if (!user) {
+//       return res.status(400).json({ msg: "Invalid or expired reset token" });
+//     }
+//     // Hash new password and clear reset fields
+//     user.password = await bcrypt.hash(password, 10);
+//     user.resetPasswordToken = undefined;
+//     user.resetPasswordExp = undefined;
+//     await user.save();
+//     return res.json({ msg: "Password reset successfully" });
+//   } catch (err) {
+//     console.error("Reset password error:", err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// POST /request-password-reset
 router.post("/request-password-reset", async (req, res) => {
   try {
     const { email } = req.body;
     const user = await Users.findOne({ email });
 
     if (!user) {
-      return res
-        .status(200)
-        .json({ msg: "If the email is valid, a reset link was sent." });
+      return res.status(200).json({ msg: "If the email is valid, a reset link was sent." });
     }
 
-    // Generate secure token
     const token = crypto.randomBytes(32).toString("hex");
     user.resetPasswordToken = token;
     user.resetPasswordExp = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const resetUrl = `https://yourfrontend.com/reset-password/${token}`;
-    const message = `To reset your password, click here: ${resetUrl}`;
+    const resetUrl = `https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/reset-password/${token}`;
+    const message = `To reset your password, tap here: ${resetUrl}`;
 
     await sendEmail({
       to: user.email,
@@ -231,30 +288,32 @@ router.post("/request-password-reset", async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
-/**
- * PUT /api/auth/reset-password/:token
- */
-router.put("/reset-password/:token", async (req, res) => {
+
+// POST /reset-password/:token
+router.post("/reset-password/:token", async (req, res) => {
   try {
     const { token } = req.params;
-    const { email, password } = req.body;
+    const { password } = req.body;
+
     const user = await Users.findOne({
-      email,
       resetPasswordToken: token,
       resetPasswordExp: { $gt: Date.now() },
-    }).select("+password");
+    });
+
     if (!user) {
-      return res.status(400).json({ msg: "Invalid or expired reset token" });
+      return res.status(400).json({ msg: "Invalid or expired reset token." });
     }
-    // Hash new password and clear reset fields
-    user.password = await bcrypt.hash(password, 10);
+
+    const hashed = await bcrypt.hash(password, 12);
+    user.password = hashed;
     user.resetPasswordToken = undefined;
     user.resetPasswordExp = undefined;
+
     await user.save();
-    return res.json({ msg: "Password reset successfully" });
+    res.json({ msg: "Password has been reset successfully." });
   } catch (err) {
-    console.error("Reset password error:", err);
-    return res.status(500).json({ msg: "Server error" });
+    console.error("Reset error:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
