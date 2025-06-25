@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 24,
     backgroundColor: "#fff",
-    marginTop: 50,
+    marginTop: 0,
   },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: {

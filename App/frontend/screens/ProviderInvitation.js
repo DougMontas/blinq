@@ -217,6 +217,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 6,
     alignItems: "center",
+    marginBottom: 16,
   },
   declineButton: {
     backgroundColor: "#d32f2f",
