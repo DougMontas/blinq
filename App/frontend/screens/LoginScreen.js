@@ -1120,6 +1120,88 @@ export default function LoginScreen() {
     }
   };
   
+  // const onSubmit = async () => {
+  //   try {
+  //     console.log("➡️ Attempting login for:", form.email);
+  //     const { data } = await api.post("/auth/login", form, {
+  //       headers: { "Content-Type": "application/json" },
+  //     });
+  
+  //     if (!data?.token) throw new Error("Token missing from response");
+  
+  //     // Force wait for storage to complete
+  //     await AsyncStorage.setItem("token", data.token);
+  //     if (data.refreshToken) {
+  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+  //     }
+  
+  //     console.log("✅ Tokens saved to AsyncStorage");
+  
+  //     const payload = parseJwt(data.token);
+  //     const role = payload.role || "customer";
+  //     setRole(role);
+  
+  //     const target = roleToScreen(role);
+  //     const action = { index: 0, routes: [{ name: target }] };
+  
+  //     if (navigationRef.isReady()) {
+  //       navigationRef.reset(action);
+  //     } else {
+  //       navigation.reset(action);
+  //     }
+  //   } catch (err) {
+  //     console.error("❌ Login error:", err.message);
+  //     console.log("❌ Full error:", err.response?.data || err);
+  //     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+  //     Alert.alert("Error", msg);
+  //   }
+  // };
+  
+  // const onSubmit = async () => {
+  //   try {
+  //     console.log("➡️ Attempting login for:", form.email);
+  
+  //     const { data } = await api.post("/auth/login", form, {
+  //       headers: { "Content-Type": "application/json" },
+  //     });
+  
+  //     if (!data?.token) throw new Error("Token missing from response");
+  
+  //     await AsyncStorage.setItem("token", data.token);
+  //     if (data.refreshToken) {
+  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+  //     }
+  
+  //     console.log("✅ Tokens saved to AsyncStorage");
+  
+  //     const payload = parseJwt(data.token);
+  //     const role = payload.role || "customer";
+  //     setRole(role);
+  
+  //     const target = roleToScreen(role);
+  //     const action = { index: 0, routes: [{ name: target }] };
+  
+  //     if (navigationRef.isReady()) {
+  //       navigationRef.reset(action);
+  //     } else {
+  //       navigation.reset(action);
+  //     }
+  //   } catch (err) {
+  //     console.error("❌ Login error:", err.message);
+  //     console.log("❌ Full error:", err.response?.data || err);
+  
+  //     if (err.message === "Network Error") {
+  //       Alert.alert("Network Error", "Please check your internet connection or verify the server URL.");
+  //     } else {
+  //       const msg =
+  //         err.response?.data?.msg ||
+  //         err.message ||
+  //         "Login failed – check credentials.";
+  //       Alert.alert("Error", msg);
+  //     }
+  //   }
+  // };
+  
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

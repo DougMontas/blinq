@@ -31,10 +31,17 @@ dotenv.config();
 await connectDB();
 
 const app = express();
+
 app.use(cors({
-  origin: "*", // or ['https://blinqfix.onrender.com']
-  credentials: true
+  origin: [
+    "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
+    "https://blinqfix.onrender.com",
+    "blinqfix://"
+  ],
+  credentials: true,
 }));
+
+app.options("*", cors());
 app.use(express.json());
 
 // ✅ Health check endpoint

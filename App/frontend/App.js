@@ -225,17 +225,17 @@ export const useAuth = () => useContext(AuthContext);
 const Stack = createNativeStackNavigator();
 
 // ✅ Deep Linking Config
-// const linking = {
-//   prefixes: [
-//     "blinqfix://",
-//     "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
-//   ],
-//   config: {
-//     screens: {
-//       ResetPasswordScreen: "reset-password/:token",
-//     },
-//   },
-// };
+const linking = {
+  prefixes: [
+    "blinqfix://",
+    "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
+  ],
+  config: {
+    screens: {
+      ResetPasswordScreen: "reset-password/:token",
+    },
+  },
+};
 
 export default function App() {
   const [initialRoute, setInitialRoute] = useState(null);
@@ -279,8 +279,8 @@ export default function App() {
           urlScheme="blinqfix"
           merchantIdentifier="merchant.com.blinqfix"
         >
-          {/* <NavigationContainer ref={navigationRef} linking={linking}> */}
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef} linking={linking}>
+          {/* <NavigationContainer> */}
             <Stack.Navigator
               initialRouteName={initialRoute}
               screenOptions={{ headerShown: false }}
