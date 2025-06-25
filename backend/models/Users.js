@@ -131,9 +131,9 @@ const usersSchema = new mongoose.Schema(
 
 /* -------- compound indexes -------- */
 // usersSchema.index({ email: 1 });
-usersSchema.index({ location: "2dsphere" });
-usersSchema.index({ role: 1, isActive: 1 });
 
+usersSchema.index({ role: 1, isActive: 1 });
+usersSchema.index({ location: "2dsphere" });
 /* -------- virtuals -------- */
 usersSchema.virtual("firstName").get(function () {
   return this.name?.split(" ")[0] || "";

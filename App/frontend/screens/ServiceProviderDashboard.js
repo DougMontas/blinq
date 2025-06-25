@@ -318,7 +318,7 @@ import JobDetails from "../components/JobDetails";
 import FooterPro from "../components/FooterPro";
 import DeleteAccountButton from "../components/DeleteAccountButton";
 
-const SOCKET_HOST = Platform.OS === "android" ? "http://10.0.2.2:8888" : "http://localhost:8888";
+const SOCKET_HOST = "https://blinqfix.onrender.com"
 const socket = io(SOCKET_HOST, {
   transports: ["websocket"],
   withCredentials: true,

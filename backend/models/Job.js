@@ -105,8 +105,16 @@ const jobSchema = new Schema(
     invitationPhase: { type: Number, default: 1 },
     invitationExpiresAt: { type: Date },
   },
+
   { timestamps: true }
 );
+
+jobSchema.add({
+  location: {
+    type: { type: String, enum: ["Point"], default: "Point" },
+    coordinates: { type: [Number], required: true }, // [lng, lat]
+  },
+}),
 
 /* helpful indexes */
 jobSchema.index({ customer: 1, status: 1 });
