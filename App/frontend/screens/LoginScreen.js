@@ -636,7 +636,7 @@
 //   cardLabel: { fontSize: 18, fontWeight: "600" },
 // });
 
-// // screens/LoginScreen.js
+// screens/LoginScreen.js
 // import React, { useState, useEffect } from "react";
 // import {
 //   ScrollView,
@@ -987,6 +987,8 @@ export default function LoginScreen() {
 
   useEffect(() => {
     (async () => {
+      console.log("📡 Full Login URL:", api.defaults.baseURL + "/auth/login");
+
       try {
         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
         if (locStatus !== "granted") {
@@ -1028,38 +1030,39 @@ export default function LoginScreen() {
 
   const onChange = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
-  // const onSubmit = async () => {
-  //   try {
-  //     console.log("➡️ Attempting login for:", form.email);
-  //     const { data } = await api.post("/auth/login", form, {
-  //       headers: {
-  //         "Content-Type": "application/json"
-  //       }
-  //     });
-  //     console.log("✅ Login response:", data);
+  const onSubmit = async () => {
+    try {
+      console.log("➡️ Attempting login for:", form.email);
+      console.log("📡 Full Login URL:", api.defaults.baseURL + "/auth/login");
+  
+      const { data } = await api.post("/auth/login", form, {
+        headers: { "Content-Type": "application/json" },
+      });
+  
+      console.log("✅ Login response:", data);
 
-  //     if (!data?.token) throw new Error("Token missing from response");
-  //     await AsyncStorage.setItem("token", data.token);
-  //     if (data.refreshToken) {
-  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
-  //     }
-  //     const payload = parseJwt(data.token);
-  //     const role = payload.role || "customer";
-  //     setRole(role);
-  //     const target = roleToScreen(role);
-  //     const action = { index: 0, routes: [{ name: target }] };
-  //     if (navigationRef.isReady()) {
-  //       navigationRef.reset(action);
-  //     } else {
-  //       navigation.reset(action);
-  //     }
-  //   } catch (err) {
-  //     console.error("❌ Login error:", err.message);
-  //     console.log("❌ Full error:", err.response?.data || err);
-  //     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
-  //     Alert.alert("Error", msg);
-  //   }
-  // };
+      if (!data?.token) throw new Error("Token missing from response");
+      await AsyncStorage.setItem("token", data.token);
+      if (data.refreshToken) {
+        await AsyncStorage.setItem("refreshToken", data.refreshToken);
+      }
+      const payload = parseJwt(data.token);
+      const role = payload.role || "customer";
+      setRole(role);
+      const target = roleToScreen(role);
+      const action = { index: 0, routes: [{ name: target }] };
+      if (navigationRef.isReady()) {
+        navigationRef.reset(action);
+      } else {
+        navigation.reset(action);
+      }
+    } catch (err) {
+      console.error("❌ Login error:", err.message);
+      console.log("❌ Full error:", err.response?.data || err);
+      const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+      Alert.alert("Error", msg);
+    }
+  };
 
   // const onSubmit = async () => {
   //   try {
@@ -1247,66 +1250,127 @@ export default function LoginScreen() {
   //   }
   // };
   
-  const onSubmit = async () => {
-    try {
-      console.log("➡️ Attempting login for:", form.email);
+  // const onSubmit = async () => {
+  //   try {
+  //     console.log("➡️ Attempting login for:", form.email);
   
-      const response = await api.post("/auth/login", form, {
-        headers: { "Content-Type": "application/json" },
-        timeout: 10000, // 10s timeout to catch slow/stuck requests
-      });
+  //     const response = await api.post("/auth/login", form, {
+  //       headers: { "Content-Type": "application/json" },
+  //       timeout: 60000, // 10s timeout to catch slow/stuck requests
+  //     });
   
-      console.log("✅ Login API success:", response?.data);
+  //     console.log("✅ Login API success:", response?.data);
   
-      const { token, refreshToken } = response.data;
+  //     const { token, refreshToken } = response.data;
   
-      if (!token) {
-        console.error("❌ Missing token in response");
-        throw new Error("Token missing from response");
-      }
+  //     if (!token) {
+  //       console.error("❌ Missing token in response");
+  //       throw new Error("Token missing from response");
+  //     }
   
-      // Clear old tokens first to avoid race conditions
-      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+  //     // Clear old tokens first to avoid race conditions
+  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
   
-      // Save new tokens
-      await AsyncStorage.setItem("token", token);
-      if (refreshToken) {
-        await AsyncStorage.setItem("refreshToken", refreshToken);
-      }
+  //     // Save new tokens
+  //     await AsyncStorage.setItem("token", token);
+  //     if (refreshToken) {
+  //       await AsyncStorage.setItem("refreshToken", refreshToken);
+  //     }
   
-      console.log("🔐 Tokens saved. Parsing role...");
+  //     console.log("🔐 Tokens saved. Parsing role...");
   
-      const payload = parseJwt(token);
-      const role = payload?.role || "customer";
-      setRole(role);
+  //     const payload = parseJwt(token);
+  //     const role = payload?.role || "customer";
+  //     setRole(role);
   
-      const target = roleToScreen(role);
-      const action = { index: 0, routes: [{ name: target }] };
+  //     const target = roleToScreen(role);
+  //     const action = { index: 0, routes: [{ name: target }] };
   
-      if (navigationRef.isReady()) {
-        console.log("🔁 Resetting navigation via ref");
-        navigationRef.reset(action);
-      } else {
-        console.log("🔁 Resetting navigation via navigation");
-        navigation.reset(action);
-      }
+  //     if (navigationRef.isReady()) {
+  //       console.log("🔁 Resetting navigation via ref");
+  //       navigationRef.reset(action);
+  //     } else {
+  //       console.log("🔁 Resetting navigation via navigation");
+  //       navigation.reset(action);
+  //     }
   
-    } catch (err) {
-      console.error("❌ Login error:", err.message);
-      console.log("❌ Full error:", err.response?.data || err);
+  //   } catch (err) {
+  //     console.error("❌ Login error:", err.message);
+  //     console.log("❌ Full error:", err.response?.data || err);
   
-      // Fallback cleanup and reroute to Login if token fails
-      await AsyncStorage.multiRemove(["token", "refreshToken"]);
-      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  //     // Fallback cleanup and reroute to Login if token fails
+  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
+  //     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   
-      const msg =
-        err.response?.data?.msg ||
-        (err.message.includes("Network") ? "Network error: Please check your internet or certificate settings." : err.message) ||
-        "Login failed – check credentials.";
-      Alert.alert("Error", msg);
-    }
-  };
+  //     const msg =
+  //       err.response?.data?.msg ||
+  //       (err.message.includes("Network") ? "Network error: Please check your internet or certificate settings." : err.message) ||
+  //       "Login failed – check credentials.";
+  //     Alert.alert("Error", msg);
+  //   }
+  // };
   
+  // const onSubmit = async () => {
+  //   try {
+  //     console.log("➡️ Attempting login for:", form.email);
+  
+  //     const response = await api.post("/auth/login", form, {
+  //       headers: { "Content-Type": "application/json" },
+  //       timeout: 60000,
+  //     });
+  
+  //     console.log("✅ Login API success:", response?.data);
+  
+  //     const { token, refreshToken } = response.data;
+  
+  //     if (!token) {
+  //       console.error("❌ Missing token in response");
+  //       throw new Error("Token missing from response");
+  //     }
+  
+  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
+  //     await AsyncStorage.setItem("token", token);
+  //     if (refreshToken) {
+  //       await AsyncStorage.setItem("refreshToken", refreshToken);
+  //     }
+  
+  //     console.log("🔐 Tokens saved. Parsing role...");
+  
+  //     const payload = parseJwt(token);
+  //     const role = payload?.role || "customer";
+  //     setRole(role);
+  
+  //     const target = roleToScreen(role);
+  //     const action = { index: 0, routes: [{ name: target }] };
+  
+  //     if (navigationRef.isReady()) {
+  //       console.log("🔁 Resetting navigation via ref");
+  //       navigationRef.reset(action);
+  //     } else {
+  //       console.log("🔁 Resetting navigation via navigation");
+  //       navigation.reset(action);
+  //     }
+  
+  //   } catch (err) {
+  //     console.error("❌ Login error:", err.message);
+  //     console.log("❌ Full error:", err);
+  
+  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
+  //     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  
+  //     let msg;
+  //     if (err?.response?.data?.msg) {
+  //       msg = err.response.data.msg;
+  //     } else if (err?.message?.includes("Network")) {
+  //       msg = "Network error: Please check your internet or certificate settings.";
+  //     } else {
+  //       msg = err.message || "Login failed – check credentials.";
+  //     }
+  
+  //     Alert.alert("Error", msg);
+  //   }
+  // };
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

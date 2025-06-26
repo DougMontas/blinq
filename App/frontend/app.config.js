@@ -82,16 +82,25 @@ export default {
       ],
       buildNumber: "28",
       infoPlist: {
-        NSCameraUsageDescription:
-          "Allow BlinqFix to use your camera to upload job photos.",
-        NSLocationWhenInUseUsageDescription:
-          "Allow location to match you with nearby service providers.",
-        NSPhotoLibraryUsageDescription:
-          "Needed to attach photos to your service requests.",
-        NSMicrophoneUsageDescription:
-          "Optional voice messages for providers.",
-        ITSAppUsesNonExemptEncryption: false
-      }
+        NSCameraUsageDescription: "Allow BlinqFix to use your camera to upload job photos.",
+        NSLocationWhenInUseUsageDescription: "Allow location to match you with nearby service providers.",
+        NSPhotoLibraryUsageDescription: "Needed to attach photos to your service requests.",
+        NSMicrophoneUsageDescription: "Optional voice messages for providers.",
+        ITSAppUsesNonExemptEncryption: false,
+    
+        // ✅ Persist ATS exception here:
+        NSAppTransportSecurity: {
+          NSAllowsArbitraryLoads: false,
+          NSExceptionDomains: {
+            "blinqfix.onrender.com": {
+              NSIncludesSubdomains: true,
+              NSExceptionAllowsInsecureHTTPLoads: false,
+              NSExceptionRequiresForwardSecrecy: false,
+              NSTemporaryExceptionMinimumTLSVersion: "TLSv1.2",
+            },
+          },
+        },
+      },
     },
     android: {
       package: "com.doug30.blinqfix.app",
