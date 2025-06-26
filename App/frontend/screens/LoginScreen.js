@@ -1061,65 +1061,110 @@ export default function LoginScreen() {
   //   }
   // };
 
-  const onSubmit = async () => {
-    try {
-      console.log("\u2B05\uFE0F Attempting login for:", form.email);
+  // const onSubmit = async () => {
+  //   try {
+  //     console.log("\u2B05\uFE0F Attempting login for:", form.email);
   
-      const { data } = await api.post("/auth/login", form, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+  //     const { data } = await api.post("/auth/login", form, {
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //     });
   
-      console.log("\u2705 Login response:", data);
-      console.log("\ud83d\udd10 Raw Token:", data.token);
+  //     console.log("\u2705 Login response:", data);
+  //     console.log("\ud83d\udd10 Raw Token:", data.token);
   
-      if (!data?.token) throw new Error("Token missing from response");
+  //     if (!data?.token) throw new Error("Token missing from response");
   
-      await AsyncStorage.setItem("token", data.token);
-      if (data.refreshToken) {
-        await AsyncStorage.setItem("refreshToken", data.refreshToken);
-      }
+  //     await AsyncStorage.setItem("token", data.token);
+  //     if (data.refreshToken) {
+  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+  //     }
   
-      let payload;
-      try {
-        payload = parseJwt(data.token);
-      } catch (parseErr) {
-        throw new Error("Invalid token format");
-      }
+  //     let payload;
+  //     try {
+  //       payload = parseJwt(data.token);
+  //     } catch (parseErr) {
+  //       throw new Error("Invalid token format");
+  //     }
   
-      const role = payload.role || "customer";
-      setRole(role);
-      const target = roleToScreen(role);
-      const action = { index: 0, routes: [{ name: target }] };
+  //     const role = payload.role || "customer";
+  //     setRole(role);
+  //     const target = roleToScreen(role);
+  //     const action = { index: 0, routes: [{ name: target }] };
   
-      if (navigationRef.isReady()) {
-        navigationRef.reset(action);
-      } else {
-        navigation.reset(action);
-      }
+  //     if (navigationRef.isReady()) {
+  //       navigationRef.reset(action);
+  //     } else {
+  //       navigation.reset(action);
+  //     }
   
-    } catch (err) {
-      const isNetworkError = err.message === "Network Error";
-      if (isNetworkError) {
-        console.warn("\ud83d\udd52 Network issue detected. Retrying in 3 seconds...");
-        Alert.alert("Waking up server", "Please wait a few seconds...");
-        setTimeout(() => onSubmit(), 3000);
-        return;
-      }
+  //   } catch (err) {
+  //     const isNetworkError = err.message === "Network Error";
+  //     if (isNetworkError) {
+  //       console.warn("\ud83d\udd52 Network issue detected. Retrying in 3 seconds...");
+  //       Alert.alert("Waking up server", "Please wait a few seconds...");
+  //       setTimeout(() => onSubmit(), 3000);
+  //       return;
+  //     }
   
-      await AsyncStorage.removeItem("token");
-      await AsyncStorage.removeItem("refreshToken");
+  //     await AsyncStorage.removeItem("token");
+  //     await AsyncStorage.removeItem("refreshToken");
   
-      console.error("\u274C Login error:", err.message);
-      console.log("\u274C Full error:", err.response?.data || err);
+  //     console.error("\u274C Login error:", err.message);
+  //     console.log("\u274C Full error:", err.response?.data || err);
   
-      const msg =
-        err.response?.data?.msg || err.message || "Login failed – check credentials.";
-      Alert.alert("Error", msg);
-    }
-  };
+  //     const msg =
+  //       err.response?.data?.msg || err.message || "Login failed – check credentials.";
+  //     Alert.alert("Error", msg);
+  //   }
+  // };
+  // const onSubmit = async () => {
+  //   try {
+  //     console.log("➡️ Attempting login for:", form.email);
   
+  //     const response = await api.post("/auth/login", form, {
+  //       headers: { "Content-Type": "application/json" }
+  //     });
+  
+  //     console.log("✅ Login API success:", response?.data);
+  
+  //     const { token, refreshToken } = response.data;
+  
+  //     if (!token) {
+  //       console.error("❌ Missing token in response");
+  //       throw new Error("Token missing from response");
+  //     }
+  
+  //     await AsyncStorage.setItem("token", token);
+  //     if (refreshToken) {
+  //       await AsyncStorage.setItem("refreshToken", refreshToken);
+  //     }
+  
+  //     console.log("🔐 Tokens saved. Parsing role...");
+  
+  //     const payload = parseJwt(token);
+  //     const role = payload.role || "customer";
+  //     setRole(role);
+  
+  //     const target = roleToScreen(role);
+  //     const action = { index: 0, routes: [{ name: target }] };
+  
+  //     if (navigationRef.isReady()) {
+  //       navigationRef.reset(action);
+  //     } else {
+  //       navigation.reset(action);
+  //     }
+  
+  //   } catch (err) {
+  //     console.error("❌ Login error:", err.message);
+  //     console.log("❌ Full error:", err.response?.data || err);
+  //     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+  //     Alert.alert("Error", msg);
+  //   }
+  // };
+  
+
   // const onSubmit = async () => {
   //   try {
   //     console.log("➡️ Attempting login for:", form.email);
@@ -1201,6 +1246,66 @@ export default function LoginScreen() {
   //     }
   //   }
   // };
+  
+  const onSubmit = async () => {
+    try {
+      console.log("➡️ Attempting login for:", form.email);
+  
+      const response = await api.post("/auth/login", form, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000, // 10s timeout to catch slow/stuck requests
+      });
+  
+      console.log("✅ Login API success:", response?.data);
+  
+      const { token, refreshToken } = response.data;
+  
+      if (!token) {
+        console.error("❌ Missing token in response");
+        throw new Error("Token missing from response");
+      }
+  
+      // Clear old tokens first to avoid race conditions
+      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+  
+      // Save new tokens
+      await AsyncStorage.setItem("token", token);
+      if (refreshToken) {
+        await AsyncStorage.setItem("refreshToken", refreshToken);
+      }
+  
+      console.log("🔐 Tokens saved. Parsing role...");
+  
+      const payload = parseJwt(token);
+      const role = payload?.role || "customer";
+      setRole(role);
+  
+      const target = roleToScreen(role);
+      const action = { index: 0, routes: [{ name: target }] };
+  
+      if (navigationRef.isReady()) {
+        console.log("🔁 Resetting navigation via ref");
+        navigationRef.reset(action);
+      } else {
+        console.log("🔁 Resetting navigation via navigation");
+        navigation.reset(action);
+      }
+  
+    } catch (err) {
+      console.error("❌ Login error:", err.message);
+      console.log("❌ Full error:", err.response?.data || err);
+  
+      // Fallback cleanup and reroute to Login if token fails
+      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  
+      const msg =
+        err.response?.data?.msg ||
+        (err.message.includes("Network") ? "Network error: Please check your internet or certificate settings." : err.message) ||
+        "Login failed – check credentials.";
+      Alert.alert("Error", msg);
+    }
+  };
   
 
   return (

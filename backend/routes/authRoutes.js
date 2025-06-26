@@ -176,6 +176,42 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// router.post("/login", async (req, res) => {
+//   console.log("📥 Received login request:", req.body);
+
+//   try {
+//     const { email, password } = req.body;
+
+//     if (!email || !password) {
+//       console.warn("❌ Missing email or password");
+//       return res.status(400).json({ msg: "Missing email or password" });
+//     }
+
+//     const user = await Users.findOne({ email });
+//     if (!user) {
+//       console.warn("❌ User not found for email:", email);
+//       return res.status(401).json({ msg: "Invalid credentials" });
+//     }
+
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       console.warn("❌ Password mismatch for email:", email);
+//       return res.status(401).json({ msg: "Invalid credentials" });
+//     }
+
+//     const token = generateToken(user);
+//     const refreshToken = generateRefreshToken(user);
+
+//     console.log("✅ Auth successful:", user.email);
+//     res.json({ token, refreshToken });
+//   } catch (err) {
+//     console.error("🔥 Login route error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+
+
 /**
  * POST /api/auth/request-reset
  */
@@ -259,6 +295,7 @@ router.post("/login", async (req, res) => {
 // });
 
 // POST /request-password-reset
+
 router.post("/request-password-reset", async (req, res) => {
   try {
     const { email } = req.body;
