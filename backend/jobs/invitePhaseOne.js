@@ -108,7 +108,6 @@
 //   console.timeEnd("🟡 invitePhaseOne");
 // }
 
-
 // // invitePhaseOne.js// invitePhaseOne.js
 // import { getEligibleProviders } from "../utils/providerFilters.js";
 // import sendInAppInvite from "../invites/sendInAppInvite.js";
@@ -144,7 +143,6 @@
 //     console.error("❌ Invalid job.location:", location);
 //     return;
 //   }
-  
 
 //   const jobId = job._id.toString();
 //   const tier = RADIUS_TIERS[Math.min(phase - 1, RADIUS_TIERS.length - 1)];
@@ -267,12 +265,42 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
     return;
   }
 
-  let hybrid = [], profit = [], allProviders = [];
+  let hybrid = [],
+    profit = [],
+    allProviders = [];
+
   const location = job.location; // { type: 'Point', coordinates: [lng, lat] }
-  if (!location ||
-      !Array.isArray(location.coordinates) ||
-      location.coordinates.length !== 2 ||
-      location.coordinates.some(n => typeof n !== 'number' || isNaN(n))) {
+  console.log("📍 Raw job.location:", location);
+
+  if (typeof location?.coordinates === "string") {
+    try {
+      location.coordinates = JSON.parse(location.coordinates);
+      console.log("✅ Parsed stringified coordinates:", location.coordinates);
+    } catch {
+      console.warn("⚠️ Failed to parse coordinates string.");
+    }
+  }
+
+  console.log("📍 Type:", typeof location);
+  console.log("📍 location.coordinates:", location?.coordinates);
+  console.log(
+    "📍 Coordinates valid array?",
+    Array.isArray(location?.coordinates)
+  );
+  console.log("📍 Coordinates length:", location?.coordinates?.length);
+  console.log(
+    "📍 Coordinate types:",
+    location?.coordinates?.map((n, i) => `index ${i}: ${n} (${typeof n})`)
+  );
+  console.log("✅ Final coordinates used in invitePhaseOne:", location.coordinates);
+
+
+  if (
+    !location ||
+    !Array.isArray(location.coordinates) ||
+    location.coordinates.length !== 2 ||
+    location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
+  ) {
     console.error("❌ Missing or invalid job location", location);
     return;
   }
@@ -294,7 +322,9 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
   } else if (phase >= 2 && phase <= 4) {
     const radiusMiles = tier.miles;
     const maxMeters = radiusMiles * MILES_TO_METERS;
-    console.log(`📍 Searching within ${radiusMiles} miles (${maxMeters} meters)...`);
+    console.log(
+      `📍 Searching within ${radiusMiles} miles (${maxMeters} meters)...`
+    );
     allProviders = await Users.find({
       role: "serviceProvider",
       isActive: true,
@@ -318,15 +348,23 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
   }
 
   hybrid = getEligibleProviders(allProviders, "hybrid", job.serviceZipcode);
-  profit = getEligibleProviders(allProviders, "profit_sharing", job.serviceZipcode);
+  profit = getEligibleProviders(
+    allProviders,
+    "profit_sharing",
+    job.serviceZipcode
+  );
 
-  console.log(`📦 Hybrid count: ${hybrid.length}, Profit-sharing count: ${profit.length}`);
+  console.log(
+    `📦 Hybrid count: ${hybrid.length}, Profit-sharing count: ${profit.length}`
+  );
 
   job.invitedProviders = [...hybrid, ...profit].map((p) => p._id);
   job.invitationPhase = phase;
   job.invitationExpiresAt = expiresAt;
   await job.save();
-  console.log(`💾 Job updated with ${job.invitedProviders.length} invited providers.`);
+  console.log(
+    `💾 Job updated with ${job.invitedProviders.length} invited providers.`
+  );
 
   const jobIdStr = job._id.toString();
   const inviteTasks = [];
@@ -361,7 +399,9 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
 
   // 🔁 Schedule next phase if needed
   if (phase < 5) {
-    console.log(`⏳ Scheduling next phase (${phase + 1}) in ${tier.durationMs / 1000}s`);
+    console.log(
+      `⏳ Scheduling next phase (${phase + 1}) in ${tier.durationMs / 1000}s`
+    );
     setTimeout(async () => {
       const latest = await mongoose.model("Job").findById(job._id);
       if (!latest || latest.status === "accepted" || latest.acceptedProvider) {
@@ -371,6 +411,8 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
       invitePhaseOne(latest, null, io, phase + 1);
     }, tier.durationMs);
   } else {
-    console.log(`🎯 Final phase reached for job ${job._id}. No further escalation.`);
+    console.log(
+      `🎯 Final phase reached for job ${job._id}. No further escalation.`
+    );
   }
 }

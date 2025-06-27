@@ -183,7 +183,7 @@ export default function CustomerDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 0 },
+  container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 0, paddingTop: 50 },
   containerLogo: {},
   centered: {
     flex: 1,

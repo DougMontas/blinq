@@ -949,12 +949,12 @@ export default function EmergencyForm() {
     setSubmitting(true);
     try {
       const coords = await fetchCoordinates();
-      if (!coords) {
-        Alert.alert("Error", "Failed to get coordinates from address. Please check your address.");
-        setSubmitting(false);
-        return;
-      }
-
+        if (!coords || coords.some(n => typeof n !== "number" || isNaN(n))) {
+          Alert.alert("Error", "Invalid GPS coordinates returned.");
+          setSubmitting(false);
+          return;
+        }
+      
       const payload = {
         category,
         service: selectedService,
