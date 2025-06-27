@@ -913,6 +913,7 @@ export default function EmergencyForm() {
       const res = await fetch(url);
       const json = await res.json();
       const loc = json.results[0]?.geometry?.location;
+      console.log("location>>>>:::", loc)
       return loc ? [loc.lng, loc.lat] : null;
     } catch (e) {
       console.warn("Geocode failed", e);
