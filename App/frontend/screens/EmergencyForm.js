@@ -1396,11 +1396,10 @@ export default function EmergencyForm() {
     try {
       const query = encodeURIComponent(`${address}, ${city}, ${zipcode}`);
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-      console.log("📍 Geocoding URL:", url);
       const res = await fetch(url);
       const json = await res.json();
       const loc = json.results[0]?.geometry?.location;
-      console.log("📍 Geocode response:", loc);
+      console.log("📍 location from Google Maps:", loc);
       return loc ? [loc.lng, loc.lat] : null;
     } catch (e) {
       console.warn("Geocode failed", e);
@@ -1436,7 +1435,6 @@ export default function EmergencyForm() {
     setSubmitting(true);
     try {
       const coords = await fetchCoordinates();
-
       if (!coords || coords.length !== 2 || coords.some(n => typeof n !== "number" || isNaN(n))) {
         Alert.alert("Error", "Failed to get coordinates from address. Please check your address.");
         setSubmitting(false);
@@ -1459,7 +1457,7 @@ export default function EmergencyForm() {
         location: { type: "Point", coordinates: coords },
       };
 
-      console.log("📤 Submitting job payload:", payload);
+      console.log("📤 Sending payload:", JSON.stringify(payload, null, 2));
 
       const { data: job } = await api.post("/jobs", payload);
       navigation.navigate("PaymentScreen", { jobId: job._id });

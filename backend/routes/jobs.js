@@ -39,6 +39,57 @@ const fields = [
 /**
  * POST /api/jobs
  */
+// router.post("/", auth, async (req, res) => {
+//   try {
+//     const {
+//       category,
+//       service,
+//       address,
+//       serviceCity,
+//       serviceZipcode,
+//       details = {},
+//       baseAmount = 0,
+//       adjustmentAmount = 0,
+//       rushFee = 0,
+//       estimatedTotal = baseAmount + adjustmentAmount + rushFee,
+//     } = req.body;
+
+//     if (!category || !address) {
+//       return res
+//         .status(400)
+//         .json({ msg: "`category` and `address` are required." });
+//     }
+//     console.log("🛠️ Incoming job req.body:", req.body);
+
+//     const job = await Job.create({
+//       customer: req.user.id,
+//       address,
+//       serviceCity,
+//       serviceZipcode,
+//       serviceType: category,
+//       details: {
+//         issue: service,
+//         ...details,
+//       },
+//       baseAmount,
+//       adjustmentAmount,
+//       rushFee,
+//       estimatedTotal,
+//       paymentStatus: "unpaid",
+//       status: "pending",
+//       invitedProviders: [],
+//       invitationPhase: 0,
+//     });
+
+//     return res.status(201).json(job);
+//   } catch (err) {
+//     console.error("POST /api/jobs error:", err);
+//     return res
+//       .status(500)
+//       .json({ msg: "Could not create job", error: err.message });
+//   }
+// });
+
 router.post("/", auth, async (req, res) => {
   try {
     const {
@@ -52,6 +103,7 @@ router.post("/", auth, async (req, res) => {
       adjustmentAmount = 0,
       rushFee = 0,
       estimatedTotal = baseAmount + adjustmentAmount + rushFee,
+      location, // <-- ✅ include location
     } = req.body;
 
     if (!category || !address) {
@@ -59,6 +111,18 @@ router.post("/", auth, async (req, res) => {
         .status(400)
         .json({ msg: "`category` and `address` are required." });
     }
+
+    if (
+      !location ||
+      location.type !== "Point" ||
+      !Array.isArray(location.coordinates) ||
+      location.coordinates.length !== 2 ||
+      location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
+    ) {
+      return res.status(400).json({ msg: "Invalid or missing coordinates." });
+    }
+
+    console.log("🛠️ Incoming job req.body:", req.body);
 
     const job = await Job.create({
       customer: req.user.id,
@@ -78,6 +142,7 @@ router.post("/", auth, async (req, res) => {
       status: "pending",
       invitedProviders: [],
       invitationPhase: 0,
+      location, // ✅ Required for geospatial queries and validation
     });
 
     return res.status(201).json(job);
@@ -88,6 +153,7 @@ router.post("/", auth, async (req, res) => {
       .json({ msg: "Could not create job", error: err.message });
   }
 });
+
 
 /**
  * PUT /api/jobs/:jobId/accept
@@ -361,8 +427,7 @@ router.get("/pending", auth, async (req, res) => {
 
 // ———————— MULTER UPLOAD CONFIG ————————
 
-router.post(
-  "/:jobId/upload/arrival",
+router.post("/:jobId/upload/arrival",
   auth,
   upload.single("image"),
   async (req, res) => {
@@ -390,8 +455,7 @@ router.post(
 );
 
 // Completion photo
-router.post(
-  "/:jobId/upload/completion",
+router.post("/:jobId/upload/completion",
   auth,
   upload.single("image"),
   async (req, res) => {
