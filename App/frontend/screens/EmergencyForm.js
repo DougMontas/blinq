@@ -1040,7 +1040,12 @@ export default function EmergencyForm() {
       };
   
       console.log("📦 Final job payload before POST:", payload);
-  
+      console.log("📦 Sending job payload:", {
+        ...payload,
+        locationCoordinates: payload.location.coordinates,
+        locationType: payload.location.type,
+      });
+      
       const { data: job } = await api.post("/jobs", payload);
       navigation.navigate("PaymentScreen", { jobId: job._id });
     } catch (err) {
