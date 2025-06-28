@@ -272,14 +272,24 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
   const location = job.location; // { type: 'Point', coordinates: [lng, lat] }
   console.log("📍 Raw job.location:", location);
 
-  if (typeof location?.coordinates === "string") {
-    try {
-      location.coordinates = JSON.parse(location.coordinates);
-      console.log("✅ Parsed stringified coordinates:", location.coordinates);
-    } catch {
-      console.warn("⚠️ Failed to parse coordinates string.");
-    }
+  if (
+    !location ||
+    !Array.isArray(location.coordinates) ||
+    location.coordinates.length !== 2 ||
+    location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
+  ) {
+    console.error("❌ Missing or invalid job location", location);
+    return;
   }
+
+  // if (typeof location?.coordinates === "string") {
+  //   try {
+  //     location.coordinates = JSON.parse(location.coordinates);
+  //     console.log("✅ Parsed stringified coordinates:", location.coordinates);
+  //   } catch {
+  //     console.warn("⚠️ Failed to parse coordinates string.");
+  //   }
+  // }
 
   console.log("📍 Type:", typeof location);
   console.log("📍 location.coordinates:", location?.coordinates);
@@ -290,7 +300,9 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
   console.log("📍 Coordinates length:", location?.coordinates?.length);
   console.log(
     "📍 Coordinate types:",
-    location?.coordinates?.map((n, i) => `index ${i}: ${n} (${typeof n})`)
+    Array.isArray(location?.coordinates)
+      ? location.coordinates.map((n, i) => `index ${i}: ${n} (${typeof n})`)
+      : "N/A"
   );
   console.log("✅ Final coordinates used in invitePhaseOne:", location.coordinates);
 

@@ -921,6 +921,66 @@ export default function EmergencyForm() {
     }
   };
 
+  // const handleSubmit = async () => {
+  //   if (!address.trim() || !city.trim() || !zipcode.trim()) {
+  //     return Alert.alert("Info", "Please enter address, city, and zip code.");
+  //   }
+  //   if (!selectedService) {
+  //     return Alert.alert("Info", "Please choose your specific issue.");
+  //   }
+
+  //   const finalAns = {};
+  //   serviceQuestions.forEach((q) => {
+  //     const val = answers[q.id];
+  //     if (val === "Other") {
+  //       const txt = (otherAnswers[q.id] || "").trim();
+  //       if (!txt) {
+  //         return Alert.alert(
+  //           "Info",
+  //           `Specify your 'Other' answer for: ${q.question}`
+  //         );
+  //       }
+  //       finalAns[q.question] = txt;
+  //     } else if (val) {
+  //       finalAns[q.question] = val;
+  //     }
+  //   });
+
+  //   setSubmitting(true);
+  //   try {
+  //     const coords = await fetchCoordinates();
+  //     if (!coords || coords.length !== 2 || coords.some(n => typeof n !== "number" || isNaN(n))) {
+  //       Alert.alert("Error", "Invalid location data. Please check your address and try again.");
+  //       setSubmitting(false);
+  //       return;
+  //     }
+      
+  //     const payload = {
+  //       category,
+  //       service: selectedService,
+  //       address,
+  //       serviceCity: city,
+  //       serviceZipcode: zipcode,
+  //       details: finalAns,
+  //       baseAmount: basePrice,
+  //       adjustmentAmount: adjustmentTotal,
+  //       rushFee,
+  //       convenienceFee: convFee,
+  //       estimatedTotal: grandTotal,
+  //       coveredDescription: getCoveredDescription(selectedService),
+  //       location: { type: "Point", coordinates: coords },
+  //     };
+  //     const { data: job } = await api.post("/jobs", payload);
+  //     navigation.navigate("PaymentScreen", { jobId: job._id });
+  //   } catch (err) {
+  //     console.error(err.response?.data || err);
+  //     Alert.alert("Error", "Submission failed – please try again.");
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
+
+
   const handleSubmit = async () => {
     if (!address.trim() || !city.trim() || !zipcode.trim()) {
       return Alert.alert("Info", "Please enter address, city, and zip code.");
@@ -928,7 +988,7 @@ export default function EmergencyForm() {
     if (!selectedService) {
       return Alert.alert("Info", "Please choose your specific issue.");
     }
-
+  
     const finalAns = {};
     serviceQuestions.forEach((q) => {
       const val = answers[q.id];
@@ -945,16 +1005,24 @@ export default function EmergencyForm() {
         finalAns[q.question] = val;
       }
     });
-
+  
     setSubmitting(true);
     try {
       const coords = await fetchCoordinates();
-        if (!coords || coords.some(n => typeof n !== "number" || isNaN(n))) {
-          Alert.alert("Error", "Invalid GPS coordinates returned.");
-          setSubmitting(false);
-          return;
-        }
-      
+      console.log("📍 Coordinates from geocoding:", coords);
+  
+      if (
+        !coords ||
+        !Array.isArray(coords) ||
+        coords.length !== 2 ||
+        coords.some((n) => typeof n !== "number" || isNaN(n))
+      ) {
+        Alert.alert("Error", "Invalid coordinates received from geocoding.");
+        console.warn("⚠️ Invalid geocode result:", coords);
+        setSubmitting(false);
+        return;
+      }
+  
       const payload = {
         category,
         service: selectedService,
@@ -970,6 +1038,9 @@ export default function EmergencyForm() {
         coveredDescription: getCoveredDescription(selectedService),
         location: { type: "Point", coordinates: coords },
       };
+  
+      console.log("📦 Final job payload before POST:", payload);
+  
       const { data: job } = await api.post("/jobs", payload);
       navigation.navigate("PaymentScreen", { jobId: job._id });
     } catch (err) {
@@ -979,6 +1050,7 @@ export default function EmergencyForm() {
       setSubmitting(false);
     }
   };
+  
 
   const cancelEstimate = () => navigation.goBack();
 
