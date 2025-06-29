@@ -430,7 +430,7 @@ export default function App() {
           <NavigationContainer ref={navigationRef} linking={linking}>
             <Stack.Navigator
               initialRouteName={initialRoute}
-              screenOptions={{ headerShown: false }}
+              screenOptions={{ headerShown: false, gestureEnabled: false, }}
             >
               <Stack.Screen name="Loading" component={LoadingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />

@@ -1,3 +1,5 @@
+// 
+
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -11,6 +13,7 @@ import {
   Dimensions,
   TouchableOpacity,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -211,88 +214,94 @@ export default function ProviderJobStatus() {
   const { additionalCharge: ac, estimatedTotal } = job;
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
-      <View style={styles.containerLogo}>
-        <Image
-          source={require("../assets/blinqfix_logo-new.jpeg")}
-          style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
-          resizeMode="contain"
-        />
-      </View>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={100}
+    >
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
+        <View style={styles.containerLogo}>
+          <Image
+            source={require("../assets/blinqfix_logo-new.jpeg")}
+            style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
+            resizeMode="contain"
+          />
+        </View>
 
-      {job.paymentStatus !== "paid" && (
-        <Text style={styles.alert}>** Status will update live **</Text>
-      )}
-
-      <JobDetails jobId={jobId} job={job} />
-
-      {showPhone && job?.customer?.phoneNumber && (
-        <Text style={styles.phone}>
-          Customer Phone: {job.customer.phoneNumber}
-        </Text>
-      )}
-
-      <View style={styles.card}>
-        <Text style={styles.title}>Provider Actions</Text>
-
-        <Text style={{ textAlign: "center", marginBottom: 10 }}>
-          Additional Charge: ${ac.toFixed(2)}
-          {"\n"}
-          Estimate Total: ${estimatedTotal.toFixed(2)}
-        </Text>
-
-        <Text style={styles.label}>Step1: Arrival Photo</Text>
-        <CustomButton
-          title="Capture Arrival Photo"
-          onPress={() => pickAndUpload("arrival")}
-          disabled={awaitingAdditional}
-        />
-
-        <Text style={styles.label}>Step2: Additional Charge</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={additionalCharge}
-          onChangeText={setAdditionalCharge}
-          placeholder="e.g. 50.00"
-        />
-        <TextInput
-          style={styles.input}
-          value={additionalChargeReason}
-          onChangeText={setAdditionalChargeReason}
-          placeholder="Reason for additional charge"
-        />
-        <CustomButton
-          title="Submit Additional Charge"
-          onPress={handleUpdateCharge}
-          disabled={awaitingAdditional}
-        />
-        {awaitingAdditional && (
-          <Text style={styles.warn}>Awaiting homeowner payment…</Text>
+        {job.paymentStatus !== "paid" && (
+          <Text style={styles.alert}>** Status will update live **</Text>
         )}
 
-        <Text style={styles.label}>Step3: Completion Photo</Text>
-        <CustomButton
-          title="Capture Completion Photo"
-          onPress={() => pickAndUpload("completion")}
-          disabled={awaitingAdditional}
-        />
+        <JobDetails jobId={jobId} job={job} />
 
-        <Text style={styles.label}>Step4: Finalize Job</Text>
-        <CustomButton
-          title="Mark Job Completed"
-          onPress={handleFinalize}
-          disabled={!job.arrivalImage || !job.completionImage}
-        />
+        {showPhone && job?.customer?.phoneNumber && (
+          <Text style={styles.phone}>
+            Customer Phone: {job.customer.phoneNumber}
+          </Text>
+        )}
 
-        <CustomButton
-          title={cancelling ? "Cancelling…" : "Cancel Job"}
-          onPress={handleCancelJob}
-          color="red"
-          disabled={cancelling}
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.card}>
+          <Text style={styles.title}>Provider Actions</Text>
+
+          <Text style={{ textAlign: "center", marginBottom: 10 }}>
+            Additional Charge: ${ac.toFixed(2)}
+            {"\n"}
+            Estimate Total: ${estimatedTotal.toFixed(2)}
+          </Text>
+
+          <Text style={styles.label}>Step1: Arrival Photo</Text>
+          <CustomButton
+            title="Capture Arrival Photo"
+            onPress={() => pickAndUpload("arrival")}
+            disabled={awaitingAdditional}
+          />
+
+          <Text style={styles.label}>Step2: Additional Charge</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={additionalCharge}
+            onChangeText={setAdditionalCharge}
+            placeholder="e.g. 50.00"
+          />
+          <TextInput
+            style={styles.input}
+            value={additionalChargeReason}
+            onChangeText={setAdditionalChargeReason}
+            placeholder="Reason for additional charge"
+          />
+          <CustomButton
+            title="Submit Additional Charge"
+            onPress={handleUpdateCharge}
+            disabled={awaitingAdditional}
+          />
+          {awaitingAdditional && (
+            <Text style={styles.warn}>Awaiting homeowner payment…</Text>
+          )}
+
+          <Text style={styles.label}>Step3: Completion Photo</Text>
+          <CustomButton
+            title="Capture Completion Photo"
+            onPress={() => pickAndUpload("completion")}
+            disabled={awaitingAdditional}
+          />
+
+          <Text style={styles.label}>Step4: Finalize Job</Text>
+          <CustomButton
+            title="Mark Job Completed"
+            onPress={handleFinalize}
+            disabled={!job.arrivalImage || !job.completionImage}
+          />
+
+          <CustomButton
+            title={cancelling ? "Cancelling…" : "Cancel Job"}
+            onPress={handleCancelJob}
+            color="red"
+            disabled={cancelling}
+          />
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
