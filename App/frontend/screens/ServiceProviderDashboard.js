@@ -909,6 +909,7 @@ import ProviderStatsCard from "../components/ProviderStatsCard";
 import JobDetails from "../components/JobDetails";
 import FooterPro from "../components/FooterPro";
 import DeleteAccountButton from "../components/DeleteAccountButton";
+import MyAccountScreen from "./MyAccountScreen";
 
 const SOCKET_HOST = "https://blinqfix.onrender.com";
 const { width } = Dimensions.get("window");
@@ -1173,7 +1174,8 @@ export default function ServiceProviderDashboard() {
         <FooterPro />
       </ScrollView>
 
-      <DeleteAccountButton />
+      {/* <DeleteAccountButton /> */}
+      <MyAccountScreen />
     </View>
   );
 }

@@ -354,6 +354,7 @@ import CustomerFAQScreen from "./screens/CustomerFAQScreen";
 import ProviderMapDashboard from "./components/ProviderMapDashboard";
 import DeleteAccountScreen from "./screens/DeleteAccountScreen";
 import { saveSession, loadSession, clearSession } from "./utils/sessionManager";
+import MyAccountScreen from "./screens/MyAccountScreen";
 
 export const navigationRef = createNavigationContainerRef();
 const AuthContext = createContext();
@@ -454,6 +455,7 @@ export default function App() {
               <Stack.Screen name="CustomerFAQScreen" component={CustomerFAQScreen} />
               <Stack.Screen name="DeleteAccountScreen" component={DeleteAccountScreen} />
               <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+              <Stack.Screen name="MyAccountScreen" component={MyAccountScreen} />
               <Stack.Screen name="NotFound" component={NotFoundScreen} options={{ headerShown: false }} />
             </Stack.Navigator>
           </NavigationContainer>

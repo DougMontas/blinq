@@ -719,7 +719,9 @@ export default function CustomerJobStatus() {
   const [animatedRegion, setAnimatedRegion] = useState(null);
 
   const details = job?.details ?? {};
-  const description = details.issue ? getCoveredDescription(details.issue) : null;
+  const description = details.issue
+    ? getCoveredDescription(details.issue)
+    : null;
 
   useEffect(() => {
     if (job && job.status !== "completed") {
@@ -749,12 +751,14 @@ export default function CustomerJobStatus() {
       setProviderCoords(coords);
 
       if (animatedRegion) {
-        animatedRegion.timing({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          duration: 1000,
-          useNativeDriver: false,
-        }).start();
+        animatedRegion
+          .timing({
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            duration: 1000,
+            useNativeDriver: false,
+          })
+          .start();
       }
 
       if (job?.location?.coordinates) {
@@ -876,7 +880,6 @@ export default function CustomerJobStatus() {
       </View>
       <Text style={styles.title}>Job Status</Text>
       <Text style={{ marginBottom: 16 }}>Status: {job.status}</Text>
-
       {providerInfo && job.status === "accepted" && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Your Service Pro</Text>
@@ -886,7 +889,9 @@ export default function CustomerJobStatus() {
               style={{ width: 160, height: 160, borderRadius: 100 }}
             />
           )}
-          <Text style={{ fontWeight: "bold", fontSize: 16 }}>{providerInfo.name}</Text>
+          <Text style={{ fontWeight: "bold", fontSize: 16 }}>
+            {providerInfo.name}
+          </Text>
           <Text>{providerInfo.businessName}</Text>
           <Text>{providerInfo.aboutMe}</Text>
           <View style={{ alignItems: "center", marginVertical: 8 }}>
@@ -894,6 +899,9 @@ export default function CustomerJobStatus() {
           </View>
         </View>
       )}
+
+      console.log("🗺️ jobLocation:::::", jobLocation); 
+      console.log("📍 providerCoords:::::", providerCoords);
 
       {animatedRegion && providerCoords && (
         <MapView
@@ -908,13 +916,11 @@ export default function CustomerJobStatus() {
           />
         </MapView>
       )}
-
       {eta && (
         <Text style={{ textAlign: "center", marginBottom: 10 }}>
           Estimated Arrival: {eta} min
         </Text>
       )}
-
       {(job.status === "pending" || job.status === "invited") && (
         <View style={styles.waiting}>
           <Text style={styles.heading}>Please Wait…</Text>
@@ -927,7 +933,6 @@ export default function CustomerJobStatus() {
           )}
         </View>
       )}
-
       {job.paymentStatus === "awaiting-additional-payment" && (
         <View style={styles.pending}>
           <Text style={styles.pendingText}>
@@ -937,7 +942,6 @@ export default function CustomerJobStatus() {
           <Text>Total due: ${totalDue.toFixed(2)}</Text>
         </View>
       )}
-
       {job.providerCompleted && !job.customerCompleted && (
         <View style={styles.confirm}>
           <Text style={styles.heading}>Confirm Job Complete</Text>
@@ -945,7 +949,10 @@ export default function CustomerJobStatus() {
             The provider marked this job complete. Please confirm below:
           </Text>
           <TouchableOpacity
-            style={[styles.confirmButton, confirming && styles.confirmButtonDisabled]}
+            style={[
+              styles.confirmButton,
+              confirming && styles.confirmButtonDisabled,
+            ]}
             onPress={handleCustomerComplete}
             disabled={confirming}
           >
