@@ -176,7 +176,9 @@ export default function CustomerDashboard() {
         ))}
       </View>
       <Footer />
-      <DeleteAccountButton />
+
+      {/* <DeleteAccountButton /> */}
+      
       <View style={{ height: 40, marginVertical: 50 }} />
     </ScrollView>
   );

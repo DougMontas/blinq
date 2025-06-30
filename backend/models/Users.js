@@ -110,6 +110,7 @@ const usersSchema = new mongoose.Schema(
       type: String,
       enum: ["subscription", "profit_sharing", "hybrid"],
       default: "profit_sharing",
+      select: true,
     },
     stripeCustomerId: { type: String },
     cardOnFile: { type: String },

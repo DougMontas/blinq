@@ -245,7 +245,7 @@
 //           Active job: {activeJob._id} (navigated to ProviderJobStatus)
 //         </Text>
 //       )}
-      
+
 //       {/* <ProviderMapDashboard /> */}
 
 //       <FooterPro />
@@ -885,8 +885,13 @@
 //   inviteBtnText: { color: "#fff", fontWeight: "600" },
 // });
 
-
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -908,7 +913,7 @@ import LogoutButton from "../components/LogoutButton";
 import ProviderStatsCard from "../components/ProviderStatsCard";
 import JobDetails from "../components/JobDetails";
 import FooterPro from "../components/FooterPro";
-import DeleteAccountButton from "../components/DeleteAccountButton";
+// import DeleteAccountButton from "../components/DeleteAccountButton";
 import MyAccountScreen from "./MyAccountScreen";
 
 const SOCKET_HOST = "https://blinqfix.onrender.com";
@@ -970,7 +975,11 @@ export default function ServiceProviderDashboard() {
       if (!user) return;
       const zip = encodeURIComponent(user.serviceZipcode || user.zipcode || "");
       try {
-        const { data } = await api.get(`/jobs/pending?serviceType=${encodeURIComponent(user.serviceType)}&serviceZipcode=${zip}`);
+        const { data } = await api.get(
+          `/jobs/pending?serviceType=${encodeURIComponent(
+            user.serviceType
+          )}&serviceZipcode=${zip}`
+        );
         if (mounted) setJobInvitations(data || []);
       } catch (err) {
         if (mounted && err.response?.status === 404) {
@@ -981,7 +990,9 @@ export default function ServiceProviderDashboard() {
       }
     };
     fetchInvites();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [user]);
 
   useEffect(() => {
@@ -1009,9 +1020,10 @@ export default function ServiceProviderDashboard() {
 
     const handleInvitation = (payload) => {
       const jobId = payload.jobId || payload._id;
-      const clickable = typeof payload.clickable === "boolean"
-        ? payload.clickable
-        : payload.buttonsActive ?? true;
+      const clickable =
+        typeof payload.clickable === "boolean"
+          ? payload.clickable
+          : payload.buttonsActive ?? true;
       navigation.navigate("ProviderInvitation", {
         jobId,
         invitationExpiresAt: payload.invitationExpiresAt ?? null,
@@ -1045,7 +1057,10 @@ export default function ServiceProviderDashboard() {
     const requestAndTrack = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Location Required", "Location permission is required to receive jobs.");
+        Alert.alert(
+          "Location Required",
+          "Location permission is required to receive jobs."
+        );
         return;
       }
       const sendLocation = async () => {
@@ -1064,11 +1079,14 @@ export default function ServiceProviderDashboard() {
     requestAndTrack();
   }, []);
 
-  const onInvitationAccepted = useCallback((job) => {
-    setActiveJob(job);
-    setJobInvitations((prev) => prev.filter((j) => j._id !== job._id));
-    navigation.navigate("ProviderJobStatus", { jobId: job._id });
-  }, [navigation]);
+  const onInvitationAccepted = useCallback(
+    (job) => {
+      setActiveJob(job);
+      setJobInvitations((prev) => prev.filter((j) => j._id !== job._id));
+      navigation.navigate("ProviderJobStatus", { jobId: job._id });
+    },
+    [navigation]
+  );
 
   const onInvitationDenied = useCallback((jobId) => {
     setJobInvitations((prev) => prev.filter((j) => j._id !== jobId));
@@ -1076,7 +1094,9 @@ export default function ServiceProviderDashboard() {
 
   const rawName = useMemo(() => {
     if (!user) return "";
-    return user.name || [user.firstName, user.lastName].filter(Boolean).join(" ");
+    return (
+      user.name || [user.firstName, user.lastName].filter(Boolean).join(" ")
+    );
   }, [user]);
 
   const firstName = rawName.split(" ")[0] || "Provider";
@@ -1089,7 +1109,9 @@ export default function ServiceProviderDashboard() {
         <View style={styles.containerLogo}>
           <Image
             source={require("../assets/blinqfix_logo-new.jpeg")}
-            style={[{ width: LOGO_SIZE, height: LOGO_SIZE, marginHorizontal: 120 }]}
+            style={[
+              { width: LOGO_SIZE, height: LOGO_SIZE, marginHorizontal: 120 },
+            ]}
             resizeMode="contain"
           />
           <Text style={styles.sectionTitle1}>Dashboard</Text>
@@ -1104,7 +1126,9 @@ export default function ServiceProviderDashboard() {
           style={styles.profileBtn}
           onPress={() => navigation.navigate("ProviderProfile")}
         >
-          <Text style={styles.profileBtnText}>Complete / Update Your Profile</Text>
+          <Text style={styles.profileBtnText}>
+            Complete / Update Your Profile
+          </Text>
         </TouchableOpacity>
 
         {location && (
@@ -1117,7 +1141,12 @@ export default function ServiceProviderDashboard() {
               longitudeDelta: 0.01,
             }}
           >
-            <Marker coordinate={{ latitude: location.latitude, longitude: location.longitude }} />
+            <Marker
+              coordinate={{
+                latitude: location.latitude,
+                longitude: location.longitude,
+              }}
+            />
           </MapView>
         )}
 
@@ -1174,8 +1203,24 @@ export default function ServiceProviderDashboard() {
         <FooterPro />
       </ScrollView>
 
-      {/* <DeleteAccountButton /> */}
-      <MyAccountScreen />
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#1976d2",
+          padding: 16,
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 999,
+        }}
+        onPress={() => navigation.navigate("MyAccountScreen")}
+      >
+        <Text
+          style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}
+        >
+          My Account
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }

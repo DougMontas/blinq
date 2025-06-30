@@ -65,6 +65,7 @@ router.get("/me", auth, async (req, res) => {
       "serviceType",
       "portfolio",
       "serviceZipcode",
+      "billingTier",
       "zipcode",
       "address",
       "aboutMe",
@@ -80,7 +81,6 @@ router.get("/me", auth, async (req, res) => {
     ].join(" ");
 
     const user = await Users.findById(req.user.id, fields).lean();
-
     console.timeEnd("🔍 MongoDB user fetch");
 
     if (!user) return res.status(404).json({ msg: "User not found" });
@@ -116,6 +116,18 @@ router.get("/active-providers", async (req, res) => {
   } catch (err) {
     console.error("Failed to fetch active providers:", err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// backend/routes/users.js
+router.get("/billing-info", auth, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id).select("billingTier isActive").lean();
+    if (!user) return res.status(404).json({ msg: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error("Billing info fetch failed:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
