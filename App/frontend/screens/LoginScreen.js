@@ -987,6 +987,15 @@ export default function LoginScreen() {
 
   useEffect(() => {
     (async () => {
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        await api.post("/users/push-token", { token });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
       console.log("📡 Full Login URL:", api.defaults.baseURL + "/auth/login");
 
       try {

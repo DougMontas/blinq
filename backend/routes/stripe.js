@@ -94,4 +94,31 @@ router.get("/onboard", auth, async (req, res) => {
   }
 });
 
+
+router.post("/update-billing", auth, async (req, res) => {
+  try {
+    const { billingTier } = req.body;
+
+    if (!["profit_sharing", "hybrid"].includes(billingTier)) {
+      return res.status(400).json({ msg: "Invalid billing tier." });
+    }
+
+    const user = await Users.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    user.billingTier = billingTier;
+    await user.save();
+
+    // Optional: Generate Stripe URL to confirm subscription update
+    // const url = await generateStripePortalLink(user.stripeCustomerId); // optional
+
+    return res.status(200).json({ msg: "Billing updated", billingTier });
+  } catch (err) {
+    console.error("Error updating billing tier:", err);
+    res.status(500).json({ msg: "Internal server error" });
+  }
+});
+
+
+
 export default router;

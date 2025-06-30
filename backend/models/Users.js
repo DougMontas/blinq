@@ -21,6 +21,8 @@ const usersSchema = new mongoose.Schema(
     /* ---------- auth ---------- */
     password: { type: String, required: true, select: false },
 
+    pushToken: { type: String },
+
     role: {
       type: String,
       enum: ["customer", "serviceProvider", "admin"],

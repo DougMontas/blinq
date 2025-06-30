@@ -1,31 +1,27 @@
+// utils/registerPushNotifications.js
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
-import { Alert } from "react-native";
+import { Platform } from "react-native";
 
 export async function registerForPushNotificationsAsync() {
-  try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+  if (!Device.isDevice) return null;
 
-    if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  const finalStatus = existingStatus === "granted"
+    ? existingStatus
+    : (await Notifications.requestPermissionsAsync()).status;
 
-    if (finalStatus !== "granted") {
-      Alert.alert("Notifications Disabled", "Enable notifications in settings.");
-      return null;
-    }
+  if (finalStatus !== "granted") return null;
 
-    if (Device.isDevice) {
-      const { data: token } = await Notifications.getExpoPushTokenAsync();
-      return token;
-    } else {
-      Alert.alert("Use a physical device to receive push notifications.");
-      return null;
-    }
-  } catch (err) {
-    Alert.alert("Notification Error", "Could not register for push notifications.");
-    return null;
+  const token = (await Notifications.getExpoPushTokenAsync()).data;
+  console.log("🔔 Expo Push Token:", token);
+
+  if (Platform.OS === "android") {
+    Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.MAX,
+    });
   }
+
+  return token;
 }
