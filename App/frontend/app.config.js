@@ -152,7 +152,7 @@ export default {
     assetBundlePatterns: ["**/*"],
     ios: {
       bundleIdentifier: "com.doug30.blinqfix.app",
-      buildNumber: "1.0.0",
+      buildNumber: "1.0.1",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription: "We need access to your camera to let providers upload arrival/completion photos.",
