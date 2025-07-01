@@ -5,9 +5,9 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "start": "npx expo start",
-    "android": "npx expo start --android",
-    "ios": "npx expo start --ios",
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "npx expo start --web"
   },
   "dependencies": {
@@ -43,7 +43,7 @@
     "multer": "^1.4.5-lts.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-native": "^0.79.3",
+    "react-native": "0.79.4",
     "react-native-maps": "1.20.1",
     "react-native-maps-directions": "^1.9.0",
     "react-native-safe-area-context": "^5.4.1",
@@ -52,7 +52,8 @@
     "react-native-webview": "13.13.5",
     "socket.io-client": "^4.8.1",
     "expo-audio": "~0.4.6",
-    "expo-video": "~2.2.2"
+    "expo-video": "~2.2.2",
+    "expo-system-ui": "~5.0.9"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
