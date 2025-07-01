@@ -184,7 +184,7 @@ export default {
         projectId: "05911a90-207f-46d5-802a-05f6b45fd4ce",
       },
       stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
-      EXPO_PUBLIC_API_URL: "https://blinqfix.onrender.com",
+      EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
       EXPO_PUBLIC_GOOGLE_MAPS_API_KEY:
         process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     },
