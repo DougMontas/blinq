@@ -525,7 +525,8 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 // Safely extract API URL from expo config
-const expoApiUrl = Constants.expoConfig?.extra?.apiUrl;
+const expoApiUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL;
+// const expoApiUrl = Constants.expoConfig?.extra?.apiUrl;
 
 if (!expoApiUrl) {
   console.error("❌ EXPO_PUBLIC_API_URL is not defined in app.config.js or .env");

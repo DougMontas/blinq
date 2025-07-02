@@ -1804,21 +1804,53 @@ export default function EmergencyForm() {
   const handleOtherChange = (qId, val) =>
     setOtherAnswers((prev) => ({ ...prev, [qId]: val }));
 
+  // const fetchCoordinates = async () => {
+  //   try {
+  //     const query = encodeURIComponent(`${address}, ${city}, ${zipcode}`);
+  //     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+  //     const res = await fetch(url);
+  //     const json = await res.json();
+  //     const loc = json.results[0]?.geometry?.location;
+  //     console.log("📍 location from Google Maps:", loc);
+  //     return loc ? [loc.lng, loc.lat] : null;
+  //   } catch (e) {
+  //     console.warn("Geocode failed", e);
+  //     return null;
+  //   }
+  // };
+
   const fetchCoordinates = async () => {
     try {
+      if (!address || !city || !zipcode) {
+        console.warn("⚠️ Missing address/city/zipcode");
+        return null;
+      }
+  
       const query = encodeURIComponent(`${address}, ${city}, ${zipcode}`);
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      const loc = json.results[0]?.geometry?.location;
-      console.log("📍 location from Google Maps:", loc);
+      const key = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+  
+      if (!key) {
+        console.error("❌ Missing Google Maps API key");
+        return null;
+      }
+  
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${key}`;
+  
+      const response = await fetch(url);
+      const json = await response.json();
+  
+      const loc = json.results?.[0]?.geometry?.location;
+  
+      console.log("📍 Geocoded:", loc);
+  
       return loc ? [loc.lng, loc.lat] : null;
-    } catch (e) {
-      console.warn("Geocode failed", e);
+    } catch (err) {
+      console.warn("❌ Geocode failed", err);
       return null;
     }
   };
 
+  
   const handleSubmit = async () => {
     if (!address.trim() || !city.trim() || !zipcode.trim()) {
       return Alert.alert("Info", "Please enter address, city, and zip code.");

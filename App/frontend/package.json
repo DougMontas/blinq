@@ -22,7 +22,7 @@
     "@stripe/stripe-js": "^7.3.0",
     "@stripe/stripe-react-native": "0.45.0",
     "axios": "^1.9.0",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "expo": "53.0.15",
     "expo-audio": "~0.4.6",
     "expo-av": "15.1.7",
