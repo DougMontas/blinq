@@ -2154,7 +2154,7 @@ export default function CustomerJobStatus() {
         </View>
       )}
 
-      {jobLocation.latitude && jobLocation.longitude && (
+      {/* {jobLocation.latitude && jobLocation.longitude && (
         <MapView
           ref={mapRef}
           provider={Platform.OS === "ios" ? PROVIDER_GOOGLE : undefined}
@@ -2178,7 +2178,40 @@ export default function CustomerJobStatus() {
             />
           )}
         </MapView>
-      )}
+      )} */}
+
+{jobLocation.latitude && jobLocation.longitude && (
+  <MapView
+    ref={mapRef}
+    style={{ height: 220, borderRadius: 10, marginVertical: 12 }}
+    initialRegion={{
+      latitude: jobLocation.latitude,
+      longitude: jobLocation.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    }}
+    onMapReady={() => {
+      if (providerCoords && mapRef.current) {
+        mapRef.current.fitToCoordinates([jobLocation, providerCoords], {
+          edgePadding: { top: 80, bottom: 80, left: 80, right: 80 },
+          animated: true,
+        });
+      }
+    }}
+  >
+    <Marker coordinate={jobLocation} title="Customer" />
+    {providerCoords && (
+      <Marker coordinate={providerCoords} title="Service Pro" pinColor="blue" />
+    )}
+    {routeCoords.length === 2 && (
+      <Polyline
+        coordinates={routeCoords}
+        strokeColor="#1976d2"
+        strokeWidth={3}
+      />
+    )}
+  </MapView>
+)}
 
       {eta && (
         <Text style={{ textAlign: "center", marginBottom: 10 }}>
