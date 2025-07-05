@@ -140,7 +140,7 @@ export default {
     slug: "blinqfix",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/blinqfix_logo-new.jpeg",
+    icon: "./assets/driver_marker.png",
     userInterfaceStyle: "light",
     splash: {
       image: "./assets/blinqfix_logo-new.jpeg",
