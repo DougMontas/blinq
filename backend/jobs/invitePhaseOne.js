@@ -252,7 +252,7 @@ import mongoose from "mongoose";
 
 const MILES_TO_METERS = 1609.34;
 const RADIUS_TIERS = [
-  { miles: 5, durationMs: 5 * 60 * 1000 },
+  { miles: 5, durationMs: .1 * .1 * 10 },
   { miles: 15, durationMs: 5 * 60 * 1000 },
   { miles: 30, durationMs: 5 * 60 * 1000 },
 ];
