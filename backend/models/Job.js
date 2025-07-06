@@ -337,6 +337,23 @@ const jobSchema = new Schema(
 
     cancelledProviders: [{ type: Types.ObjectId, ref: "Users" }],
 
+    cancelledBy: {
+      type: String, // 'customer', 'provider', or 'unknown'
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    auditLog: [
+      {
+        action: String, // e.g., 'cancel', 'accept', 'reinvite'
+        by: String, // 'customer' or 'provider'
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "Users" },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
+
     arrivalImage: { type: Buffer },
     completionImage: { type: Buffer },
     arrivalImageId: Types.ObjectId,

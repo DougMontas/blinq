@@ -374,6 +374,15 @@ const linking = {
   },
 };
 
+// Set the global notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
 export default function App() {
   const [initialRoute, setInitialRoute] = useState(null);
   const [role, setRole] = useState(null);
@@ -419,6 +428,15 @@ export default function App() {
 
   const { stripeKey } = Constants.expoConfig.extra;
   if (!initialRoute) return null;
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log("📲 Push notification received in foreground/background", notification);
+    });
+  
+    return () => subscription.remove();
+  }, []);
+  
 
   return (
     <SafeAreaProvider>

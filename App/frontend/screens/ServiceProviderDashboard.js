@@ -1041,6 +1041,20 @@ export default function ServiceProviderDashboard() {
     };
 
     socket.on("jobInvitation", handleInvitation);
+    socket.on("jobInvitation", (payload) => {
+      if (!payload.clickable) {
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: "New Job Nearby",
+            body: "You’ve received a teaser invite. Open the app to view details.",
+            sound: "default",
+          },
+          trigger: null, // fires immediately
+        });
+      }
+    
+      // Continue to navigate or update state if needed
+    });
     socket.on("invitationExpired", handleExpired);
     socket.on("jobCancelled", handleCancel);
     socket.on("jobPaid", handlePaid);

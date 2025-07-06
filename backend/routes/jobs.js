@@ -861,6 +861,39 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
   }
 });
 
+router.put("/:jobId/cancelled", auth, async (req, res) => {
+  const { jobId } = req.params;
+  const { travelFee = 0, cancelledBy = "unknown" } = req.body;
+
+  try {
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found." });
+
+    // Audit log setup
+    job.auditLog = job.auditLog || [];
+    job.auditLog.push({
+      action: "cancel",
+      by: cancelledBy,
+      user: req.user.id,
+      timestamp: new Date(),
+    });
+
+    // Apply cancellation metadata
+    job.status = `cancelled_by_${cancelledBy}`;
+    job.paymentStatus = "refunded"; // Or other appropriate enum
+    job.travelFee = travelFee;
+    job.cancelledBy = cancelledBy;
+    job.cancelledAt = new Date();
+
+    await job.save();
+    return res.json({ msg: "Job successfully cancelled.", job });
+  } catch (err) {
+    console.error("Cancel job error:", err);
+    return res.status(500).json({ msg: "Server error" });
+  }
+});
+
+
 router.get("/:jobId([0-9a-fA-F]{24})", auth, async (req, res) => {
   try {
     const { jobId } = req.params;
