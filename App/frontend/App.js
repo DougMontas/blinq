@@ -427,7 +427,7 @@ export default function App() {
   }, []);
 
   const { stripeKey } = Constants.expoConfig.extra;
-  if (!initialRoute) return null;
+  if (!initialRoute) return (null);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener(notification => {

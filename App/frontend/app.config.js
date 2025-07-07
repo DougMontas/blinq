@@ -230,6 +230,7 @@ export default {
           "This is required to upload photos from your library.",
         UIBackgroundModes: ["location", "remote-notification"],
         ITSAppUsesNonExemptEncryption: false,
+        NSPushNotificationUsageDescription: "We use this to alert you of emergency job offers."
       },
     },
     android: {
