@@ -954,7 +954,7 @@
 //   //       setSubmitting(false);
 //   //       return;
 //   //     }
-      
+
 //   //     const payload = {
 //   //       category,
 //   //       service: selectedService,
@@ -980,7 +980,6 @@
 //   //   }
 //   // };
 
-
 //   const handleSubmit = async () => {
 //     if (!address.trim() || !city.trim() || !zipcode.trim()) {
 //       return Alert.alert("Info", "Please enter address, city, and zip code.");
@@ -988,7 +987,7 @@
 //     if (!selectedService) {
 //       return Alert.alert("Info", "Please choose your specific issue.");
 //     }
-  
+
 //     const finalAns = {};
 //     serviceQuestions.forEach((q) => {
 //       const val = answers[q.id];
@@ -1005,12 +1004,12 @@
 //         finalAns[q.question] = val;
 //       }
 //     });
-  
+
 //     setSubmitting(true);
 //     try {
 //       const coords = await fetchCoordinates();
 //       console.log("📍 Coordinates from geocoding:", coords);
-  
+
 //       if (
 //         !coords ||
 //         !Array.isArray(coords) ||
@@ -1022,7 +1021,7 @@
 //         setSubmitting(false);
 //         return;
 //       }
-  
+
 //       const payload = {
 //         category,
 //         service: selectedService,
@@ -1038,14 +1037,14 @@
 //         coveredDescription: getCoveredDescription(selectedService),
 //         location: { type: "Point", coordinates: coords },
 //       };
-  
+
 //       console.log("📦 Final job payload before POST:", payload);
 //       console.log("📦 Sending job payload:", {
 //         ...payload,
 //         locationCoordinates: payload.location.coordinates,
 //         locationType: payload.location.type,
 //       });
-      
+
 //       const { data: job } = await api.post("/jobs", payload);
 //       navigation.navigate("PaymentScreen", { jobId: job._id });
 //     } catch (err) {
@@ -1055,7 +1054,6 @@
 //       setSubmitting(false);
 //     }
 //   };
-  
 
 //   const cancelEstimate = () => navigation.goBack();
 
@@ -1077,7 +1075,7 @@
 //         >
 //           <BackButton />
 //           <Text style={styles.title}>{category} Request Form</Text>
-    
+
 //           <Text style={styles.label}>Your Address *</Text>
 //           <TextInput
 //             style={styles.input}
@@ -1085,7 +1083,7 @@
 //             value={address}
 //             onChangeText={setAddress}
 //           />
-    
+
 //           <Text style={styles.label}>City *</Text>
 //           <TextInput
 //             style={styles.input}
@@ -1093,7 +1091,7 @@
 //             value={city}
 //             onChangeText={setCity}
 //           />
-    
+
 //           <Text style={styles.label}>Zip Code *</Text>
 //           <TextInput
 //             style={styles.input}
@@ -1102,7 +1100,7 @@
 //             value={zipcode}
 //             onChangeText={setZipcode}
 //           />
-    
+
 //           {!subcategory && categoryQuestion && (
 //             <View style={styles.section}>
 //               <Text style={styles.label}>{categoryQuestion.question}</Text>
@@ -1120,7 +1118,7 @@
 //               ))}
 //             </View>
 //           )}
-    
+
 //           {selectedService &&
 //             serviceQuestions.map((q) => {
 //               const selectedVal = answers[q.id] || "";
@@ -1161,7 +1159,7 @@
 //                 </View>
 //               );
 //             })}
-    
+
 //           {selectedService && (
 //             <HoverableCard style={styles.summary}>
 //               <Text style={styles.summaryTitle}>Price Summary</Text>
@@ -1179,7 +1177,7 @@
 //               <Text style={styles.descriptionText}>{description}</Text>
 //             </HoverableCard>
 //           )}
-    
+
 //           <View style={styles.actionRow}>
 //             <HoverableCard
 //               style={[styles.btn, styles.btnPrimary]}
@@ -1268,7 +1266,6 @@
 //   },
 //   descriptionText: { color: "red", fontSize: 16, textAlign: "center" },
 // });
-
 
 // import React, { useState, useMemo, useEffect, useRef } from "react";
 // import {
@@ -1825,24 +1822,24 @@
 //         console.warn("⚠️ Missing address/city/zipcode");
 //         return null;
 //       }
-  
+
 //       const query = encodeURIComponent(`${address}, ${city}, ${zipcode}`);
 //       const key = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-  
+
 //       if (!key) {
 //         console.error("❌ Missing Google Maps API key");
 //         return null;
 //       }
-  
+
 //       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${key}`;
-  
+
 //       const response = await fetch(url);
 //       const json = await response.json();
-  
+
 //       const loc = json.results?.[0]?.geometry?.location;
-  
+
 //       console.log("📍 Geocoded:", loc);
-  
+
 //       return loc ? [loc.lng, loc.lat] : null;
 //     } catch (err) {
 //       console.warn("❌ Geocode failed", err);
@@ -1850,7 +1847,6 @@
 //     }
 //   };
 
-  
 //   const handleSubmit = async () => {
 //     if (!address.trim() || !city.trim() || !zipcode.trim()) {
 //       return Alert.alert("Info", "Please enter address, city, and zip code.");
@@ -2064,7 +2060,6 @@
 //   );
 // }
 
-
 // const styles = StyleSheet.create({
 //     container: { flex: 1, backgroundColor: "#fff", marginVertical: 0 },
 //     title: {
@@ -2139,11 +2134,12 @@ import {
   View,
   Text,
   TextInput,
-  ScrollView,
   Alert,
   StyleSheet,
   Animated,
   Pressable,
+  KeyboardAvoidingView,
+  ScrollView,
   Platform,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -2283,7 +2279,8 @@ export default function EmergencyForm() {
 
   const registerPushToken = async () => {
     if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
@@ -2325,7 +2322,10 @@ export default function EmergencyForm() {
     try {
       const coords = await fetchCoordinates();
       if (!coords) {
-        Alert.alert("Error", "Failed to get coordinates from address. Please check your address.");
+        Alert.alert(
+          "Error",
+          "Failed to get coordinates from address. Please check your address."
+        );
         setSubmitting(false);
         return;
       }
@@ -2370,7 +2370,143 @@ export default function EmergencyForm() {
     return selectedService ? getCoveredDescription(selectedService) : "";
   }, [selectedService]);
 
-  return null;
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={100}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ padding: 36 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <BackButton />
+        <Text style={styles.title}>{category} Request Form</Text>
+
+        <Text style={styles.label}>Your Address *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter address"
+          value={address}
+          onChangeText={setAddress}
+        />
+
+        <Text style={styles.label}>City *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter city"
+          value={city}
+          onChangeText={setCity}
+        />
+
+        <Text style={styles.label}>Zip Code *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter zip code"
+          keyboardType="numeric"
+          value={zipcode}
+          onChangeText={setZipcode}
+        />
+
+        {!subcategory && categoryQuestion && (
+          <View style={styles.section}>
+            <Text style={styles.label}>{categoryQuestion.question}</Text>
+            {categoryQuestion.options.map((svc) => (
+              <HoverableCard
+                key={svc}
+                style={[
+                  styles.radioRow,
+                  selectedService === svc && styles.radioRowSelected,
+                ]}
+                onPress={() => handleServiceSelect(svc)}
+              >
+                <Text style={styles.radioLabel}>{svc}</Text>
+              </HoverableCard>
+            ))}
+          </View>
+        )}
+
+        {selectedService &&
+          serviceQuestions.map((q) => {
+            const selectedVal = answers[q.id] || "";
+            return (
+              <View key={q.id} style={styles.section}>
+                <Text style={styles.label}>{q.question}</Text>
+                {q.options.map((opt) => (
+                  <HoverableCard
+                    key={opt.value}
+                    style={[
+                      styles.radioRow,
+                      selectedVal === opt.value && styles.radioRowSelected,
+                    ]}
+                    onPress={() => handleAnswerChange(q.id, opt.value)}
+                  >
+                    <Text style={styles.radioLabel}>{opt.value}</Text>
+                  </HoverableCard>
+                ))}
+                {!q.options.some((o) => o.value === "Other") && (
+                  <HoverableCard
+                    style={[
+                      styles.radioRow,
+                      selectedVal === "Other" && styles.radioRowSelected,
+                    ]}
+                    onPress={() => handleAnswerChange(q.id, "Other")}
+                  >
+                    <Text style={styles.radioLabel}>Other</Text>
+                  </HoverableCard>
+                )}
+                {selectedVal === "Other" && (
+                  <TextInput
+                    style={[styles.input, { marginTop: 8 }]}
+                    placeholder="Please specify"
+                    value={otherAnswers[q.id] || ""}
+                    onChangeText={(txt) => handleOtherChange(q.id, txt)}
+                  />
+                )}
+              </View>
+            );
+          })}
+
+        {selectedService && (
+          <HoverableCard style={styles.summary}>
+            <Text style={styles.summaryTitle}>Price Summary</Text>
+            <Text style={styles.summaryLine}>
+              Subtotal: ${subtotal.toFixed(2)}
+            </Text>
+            <Text style={styles.fee}>
+              BlinqFix fee ({(FEE_RATE * 100).toFixed(0)}%): $
+              {convFee.toFixed(2)}
+            </Text>
+            <Text style={styles.summaryLine}>
+              <Text style={{ fontWeight: "700" }}>Estimated Total:</Text> $
+              {grandTotal.toFixed(2)}
+            </Text>
+            <Text style={styles.sectionTitle}>What’s Covered:</Text>
+            <Text style={styles.descriptionText}>{description}</Text>
+          </HoverableCard>
+        )}
+
+        <View style={styles.actionRow}>
+          <HoverableCard
+            style={[styles.btn, styles.btnPrimary]}
+            onPress={handleSubmit}
+          >
+            <Text style={styles.btnText}>
+              {submitting ? "Processing…" : "Pay & Book"}
+            </Text>
+          </HoverableCard>
+          <HoverableCard
+            style={[styles.btn, styles.btnSecondary]}
+            onPress={cancelEstimate}
+          >
+            <Text style={styles.btnText}>Cancel Estimate</Text>
+          </HoverableCard>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -2431,7 +2567,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnPrimary: { backgroundColor: "#1976d2" },
-  btnSecondary: { backgroundColor: "#aaa" },
+  btnSecondary: { backgroundColor: "red" },
   btnText: { color: "#fff", fontWeight: "bold" },
   sectionTitle: {
     fontWeight: "bold",
