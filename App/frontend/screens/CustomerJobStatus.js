@@ -3067,12 +3067,32 @@ export default function CustomerJobStatus() {
               style={{ width: 160, height: 160, borderRadius: 100 }}
             />
           )}
-          <Text style={{ fontWeight: "bold", fontSize: 16 }}>{providerInfo.name}</Text>
+          <Text style={{ fontWeight: "bold", fontSize: 16 }}>
+            {providerInfo.name}
+          </Text>
           <Text>{providerInfo.businessName}</Text>
           <Text>{providerInfo.aboutMe}</Text>
           <View style={{ alignItems: "center", marginVertical: 8 }}>
             <StarRating rating={providerInfo.averageRating} size={22} />
           </View>
+        </View>
+      )}
+
+      {job.status === "accepted" && (
+        <View style={styles.waiting}>
+          <Text style={styles.heading}>
+            Your emergency service pro is now in route
+          </Text>
+          <Text style={{ color: "red", textAlign: "center", marginTop: 10 }}>
+            Make the necessary preparations. Put away pets, ensure gate access,
+            and prepare for all necessary access if needed.
+          </Text>
+          {description && (
+            <>
+              <Text style={styles.sectionTitle}>What’s Covered:</Text>
+              <Text style={styles.descriptionText}>{description}</Text>
+            </>
+          )}
         </View>
       )}
 
@@ -3087,15 +3107,29 @@ export default function CustomerJobStatus() {
             latitudeDelta: 0.01,
             longitudeDelta: 0.01,
           }}
+          onMapReady={() => {
+            if (providerCoords && mapRef.current) {
+              mapRef.current.fitToCoordinates([jobLocation, providerCoords], {
+                edgePadding: { top: 80, bottom: 80, left: 80, right: 80 },
+                animated: true,
+              });
+            }
+          }}
         >
           <Marker coordinate={jobLocation} title="Customer" />
-          {providerCoords && (
-            <Marker
-              coordinate={providerCoords}
-              title="Service Pro"
-              pinColor="blue"
-            />
-          )}
+          {/* Provider Marker */}
+          {providerCoords &&
+            providerCoords.latitude &&
+            providerCoords.longitude && (
+              <Marker
+                coordinate={providerCoords}
+                title="Service Pro"
+                pinColor="blue"
+                description="Provider's current location"
+              />
+            )}
+
+          {/* Route Line */}
           {routeCoords.length === 2 && (
             <Polyline
               coordinates={routeCoords}
@@ -3111,6 +3145,28 @@ export default function CustomerJobStatus() {
         <Text style={{ textAlign: "center", marginBottom: 10 }}>
           Estimated Arrival: {eta} min
         </Text>
+      )}
+
+      {(job.status === "pending" || job.status === "invited") && (
+        <View style={styles.waiting}>
+          <Text style={styles.heading}>Please Wait…</Text>
+          <Text>Your request has been sent to a local professional.</Text>
+          {description && (
+            <>
+              <Text style={styles.sectionTitle}>What’s Covered:</Text>
+              <Text style={styles.descriptionText}>{description}</Text>
+            </>
+          )}
+        </View>
+      )}
+      {job.paymentStatus === "awaiting-additional-payment" && (
+        <View style={styles.pending}>
+          <Text style={styles.pendingText}>
+            Additional charge of ${job.additionalCharge.toFixed(2)} pending…
+          </Text>
+          <Text>Convenience fee: ${convFee.toFixed(2)}</Text>
+          <Text>Total due: ${totalDue.toFixed(2)}</Text>
+        </View>
       )}
 
       {job.providerCompleted && !job.customerCompleted && (
@@ -3133,6 +3189,23 @@ export default function CustomerJobStatus() {
           </TouchableOpacity>
         </View>
       )}
+      {job?.status?.startsWith("cancelled") && (
+        <View style={styles.confirm}>
+          <Text style={styles.heading}>Your job was cancelled.</Text>
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={handleReinvite}
+          >
+            <Text style={styles.confirmButtonText}>Reinvite Providers</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.confirmButton, { backgroundColor: "#d32f2f" }]}
+            onPress={handleCancelJob}
+          >
+            <Text style={styles.confirmButtonText}>Cancel Job</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -3140,16 +3213,58 @@ export default function CustomerJobStatus() {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 24, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
   containerLogo: { justifyContent: "center", alignItems: "center" },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginTop: 20, marginBottom: 4, textAlign: "center" },
-  descriptionText: { fontSize: 14, color: "#555", lineHeight: 20, textAlign: "center" },
-  card: { backgroundColor: "#f0f0f0", padding: 12, borderRadius: 8, marginBottom: 16, alignItems: "center" },
-  waiting: { padding: 12, backgroundColor: "#e3f2fd", borderRadius: 6, marginVertical: 16 },
-  heading: { fontSize: 18, fontWeight: "600", marginBottom: 8, textAlign: "center" },
-  confirm: { padding: 12, backgroundColor: "#e8f5e9", borderRadius: 6, marginTop: 16 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 20,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: "#555",
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  card: {
+    backgroundColor: "#f0f0f0",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  waiting: {
+    padding: 12,
+    backgroundColor: "#e3f2fd",
+    borderRadius: 6,
+    marginVertical: 16,
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  confirm: {
+    padding: 12,
+    backgroundColor: "#e8f5e9",
+    borderRadius: 6,
+    marginTop: 16,
+  },
   confirmText: { marginBottom: 10, fontSize: 15 },
-  confirmButton: { backgroundColor: "#1976d2", paddingVertical: 12, borderRadius: 6, alignItems: "center" },
+  confirmButton: {
+    backgroundColor: "#1976d2",
+    paddingVertical: 12,
+    borderRadius: 6,
+    alignItems: "center",
+  },
   confirmButtonDisabled: { backgroundColor: "#999" },
   confirmButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });
