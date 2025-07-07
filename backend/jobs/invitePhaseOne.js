@@ -381,16 +381,41 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
   const jobIdStr = job._id.toString();
   const inviteTasks = [];
 
+  // for (const p of profit) {
+  //   const teaserPayload = {
+  //     jobId: jobIdStr,
+  //     invitationExpiresAt: expiresAt,
+  //     clickable: phase >= 5, // round 5 and later get real invites
+  //   };
+  //   io.to(p._id.toString()).emit("jobInvitation", teaserPayload);
+  //   console.log(`📨 Sent teaser invite to profit-sharing ${p._id}`);
+  //   const redactedJob = { ...job.toObject(), address: "[Address Hidden]" };
+  //   inviteTasks.push(sendTeaserInvite(p, redactedJob));
+  // }
+
   for (const p of profit) {
     const teaserPayload = {
       jobId: jobIdStr,
       invitationExpiresAt: expiresAt,
-      clickable: phase >= 5, // round 5 and later get real invites
+      clickable: phase >= 5,
     };
+  
     io.to(p._id.toString()).emit("jobInvitation", teaserPayload);
     console.log(`📨 Sent teaser invite to profit-sharing ${p._id}`);
+  
     const redactedJob = { ...job.toObject(), address: "[Address Hidden]" };
     inviteTasks.push(sendTeaserInvite(p, redactedJob));
+  
+    if (p.expoPushToken) {
+      inviteTasks.push(
+        sendPushNotification({
+          to: p.expoPushToken,
+          title: "New Emergency Job",
+          body: "Open BlinqFix to view the job details.",
+          data: { jobId: jobIdStr, clickable: teaserPayload.clickable },
+        })
+      );
+    }
   }
 
   for (const p of hybrid) {

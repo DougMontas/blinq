@@ -22,6 +22,8 @@ const usersSchema = new mongoose.Schema(
     password: { type: String, required: true, select: false },
 
     pushToken: { type: String },
+    expoPushToken: { type: String }, // <-- must be set from frontend after login
+
 
     role: {
       type: String,
