@@ -913,7 +913,7 @@ router.put("/:jobId/cancelled", async (req, res) => {
     await job.save();
 
     // Reinvite logic
-    invitePhaseOne(job, null, io, 1);
+    invitePhaseOne(job, null, req.io, 1);
   } else {
     await job.save();
   }
