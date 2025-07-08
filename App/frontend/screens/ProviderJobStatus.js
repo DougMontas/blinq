@@ -244,11 +244,7 @@ export default function ProviderJobStatus() {
   const awaitingAdditional = job.status === "awaiting-additional-payment";
   const { additionalCharge: ac, estimatedTotal } = job;
 
-  useEffect(() => {
-    if (job && job.status !== "completed") {
-      saveSession({ role: "serviceProvider", jobId: job._id });
-    }
-  }, [job]);
+ 
 
   return (
     <KeyboardAvoidingView

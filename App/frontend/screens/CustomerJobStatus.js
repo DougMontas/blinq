@@ -3060,11 +3060,7 @@ export default function CustomerJobStatus() {
   if (loading) return <ActivityIndicator style={styles.center} size="large" />;
   if (!job) return <Text style={styles.center}>Job not found.</Text>;
 
-  useEffect(() => {
-  if (job && job.status !== "completed") {
-    saveSession({ role: "customer", jobId: job._id });
-  }
-}, [job]);
+
 
 
   return (
