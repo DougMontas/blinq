@@ -916,15 +916,21 @@ router.put("/:jobId/cancelled", async (req, res) => {
 cron.schedule("0 * * * *", async () => {
   const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
   const oldJobs = await Job.find({
-    status: { $in: ["invited", "accepted", "pending"] },
+    status: { $in: ["invited", "accepted"] },
     createdAt: { $lt: cutoff },
   });
 
   for (const job of oldJobs) {
+    if (!job.location?.coordinates) {
+      console.warn(`Skipping auto-cancel for job ${job._id} — missing location`);
+      continue;
+    }
+
     job.status = "cancelled-auto";
     await job.save();
   }
 });
+
 
 router.get("/:jobId([0-9a-fA-F]{24})", auth, async (req, res) => {
   try {

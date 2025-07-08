@@ -56,11 +56,7 @@ export default function ProviderJobStatus() {
   const phoneTimer = useRef(null);
   const confirmTimeout = useRef(null);
 
-  useEffect(() => {
-    if (job && job.status !== "completed") {
-      saveSession({ role: "serviceProvider", jobId: job._id });
-    }
-  }, [job]);
+
 
   useEffect(() => {
     let alive = true;
@@ -78,6 +74,7 @@ export default function ProviderJobStatus() {
               onPress: () => navigation.navigate("ServiceProviderDashboard"),
             },
           ]);
+          await clearSession();
         }
 
         if (data.acceptedProvider && !phoneTimer.current) {
@@ -193,7 +190,7 @@ export default function ProviderJobStatus() {
     );
   };
   
-  
+
   const pickAndUpload = async (phase) => {
     const status = await ImagePicker.requestCameraPermissionsAsync();
     if (status.status !== "granted") {
@@ -246,6 +243,12 @@ export default function ProviderJobStatus() {
 
   const awaitingAdditional = job.status === "awaiting-additional-payment";
   const { additionalCharge: ac, estimatedTotal } = job;
+
+  useEffect(() => {
+    if (job && job.status !== "completed") {
+      saveSession({ role: "serviceProvider", jobId: job._id });
+    }
+  }, [job]);
 
   return (
     <KeyboardAvoidingView

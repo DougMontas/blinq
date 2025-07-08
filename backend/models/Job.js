@@ -106,11 +106,8 @@
 //     invitationExpiresAt: { type: Date },
 //   },
 
-
-
 //   { timestamps: true }
 // );
-
 
 // jobSchema.add({
 //   location: {
@@ -124,7 +121,6 @@
 // jobSchema.index({ serviceProvider: 1, status: 1 });
 
 // export default mongoose.model("Job", jobSchema);
-
 
 // import mongoose from "mongoose";
 
@@ -291,7 +287,10 @@ const jobSchema = new Schema(
         "awaiting-additional-payment",
         "paid",
         "provider_completed",
-        "cancelled_by_provider",
+        "cancelled-by-customer",
+        "cancelled-by-serviceProvider",
+        "cancelled,",
+        "cancelled-auto,",
         "completed",
         "canceled",
       ],
@@ -316,6 +315,7 @@ const jobSchema = new Schema(
         "balancePending",
         "awaiting-additional-payment",
         "cancelled,",
+        
       ],
       default: "unpaid",
     },
