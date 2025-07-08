@@ -895,30 +895,68 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 //   }
 // });
 
-router.put("/:jobId/cancelled", async (req, res) => {
-  const job = await Job.findById(req.params.jobId); // ✅ Correct param
-  if (!job) return res.status(404).json({ msg: "Job not found" });
+// router.put("/:jobId/cancelled", async (req, res) => {
+//   const job = await Job.findById(req.params.jobId); // ✅ Correct param
+//   if (!job) return res.status(404).json({ msg: "Job not found" });
 
-  const { cancelledBy } = req.body;
+//   const { cancelledBy } = req.body;
 
-  if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
-    return res.status(400).json({ msg: 'Invalid cancellation source' });
-  }
+//   if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
+//     return res.status(400).json({ msg: 'Invalid cancellation source' });
+//   }
   
-  job.status = `cancelled-by-${cancelledBy}`;
+//   job.status = `cancelled-by-${cancelledBy}`;
 
-  if (cancelledBy === "serviceProvider") {
-    // Reset accepted provider
-    job.acceptedProvider = null;
-    await job.save();
+//   if (cancelledBy === "serviceProvider") {
+//     // Reset accepted provider
+//     job.acceptedProvider = null;
+//     await job.save();
 
-    // Reinvite logic
-    invitePhaseOne(job, null, req.io, 1);
-  } else {
-    await job.save();
+//     // Reinvite logic
+//     invitePhaseOne(job, null, req.io, 1);
+//   } else {
+//     await job.save();
+//   }
+
+//   res.json(job);
+// });
+
+router.put("/:jobId/cancelled", async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    const { cancelledBy, travelFee } = req.body;
+
+    if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
+      return res.status(400).json({ msg: 'Invalid cancellation source' });
+    }
+
+    job.status = `cancelled-by-${cancelledBy}`;
+
+    if (cancelledBy === "serviceProvider") {
+      job.acceptedProvider = null;
+
+      if (typeof travelFee === "number") {
+        job.travelFee = travelFee;
+      }
+
+      await job.save();
+
+      if (req.io) {
+        invitePhaseOne(job, null, req.io, 1);
+      } else {
+        console.warn("⚠️ req.io is missing for socket emit");
+      }
+    } else {
+      await job.save();
+    }
+
+    res.json(job);
+  } catch (err) {
+    console.error("❌ Job cancel error:", err);
+    res.status(500).json({ msg: "Server error during cancellation" });
   }
-
-  res.json(job);
 });
 
 

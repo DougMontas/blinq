@@ -373,6 +373,7 @@ export default {
           "We use your location to keep you connected with your service provider.",
         NSPhotoLibraryUsageDescription:
           "This is required to upload photos from your library.",
+        NSUserTrackingUsageDescription: "We use this for push notification delivery.",
         UIBackgroundModes: ["location", "remote-notification"],
         ITSAppUsesNonExemptEncryption: false,
         NSPushNotificationUsageDescription:

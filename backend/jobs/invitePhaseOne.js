@@ -410,6 +410,7 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
       inviteTasks.push(
         sendPushNotification({
           to: p.expoPushToken,
+          sound: "default",
           title: "New Emergency Job",
           body: "Open BlinqFix to view the job details.",
           data: { jobId: jobIdStr, clickable: teaserPayload.clickable },
