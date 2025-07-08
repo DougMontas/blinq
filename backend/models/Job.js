@@ -290,7 +290,7 @@ const jobSchema = new Schema(
         "cancelled-by-customer",
         "cancelled-by-serviceProvider",
         "cancelled,",
-        "cancelled-auto,",
+        "cancelled-auto",
         "completed",
         "canceled",
       ],
@@ -314,7 +314,7 @@ const jobSchema = new Schema(
         "paid",
         "balancePending",
         "awaiting-additional-payment",
-        "cancelled,",
+        "cancelled",
         
       ],
       default: "unpaid",
