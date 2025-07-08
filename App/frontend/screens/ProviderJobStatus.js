@@ -123,43 +123,77 @@ export default function ProviderJobStatus() {
     }
   };
 
+  // const handleCancelJob = async () => {
+  //   if (!confirmingCancel) {
+  //     setConfirmingCancel(true);
+  //     Alert.alert(
+  //       "Confirm Cancellation",
+  //       "Tap again to confirm job cancellation."
+  //     );
+  //     confirmTimeout.current = setTimeout(
+  //       () => setConfirmingCancel(false),
+  //       5000
+  //     );
+  //     return;
+  //   }
+
+  //   setCancelling(true);
+  //   try {
+  //     await api.put(`/jobs/${jobId}/cancel`, { travelFee: TRAVEL_FEE });
+  //     Alert.alert(
+  //       "Cancelled",
+  //       `Job cancelled; a $${TRAVEL_FEE} travel fee applies.`,
+  //       [
+  //         {
+  //           text: "OK",
+  //           onPress: () => navigation.navigate("ServiceProviderDashboard"),
+  //         },
+  //       ]
+  //     );
+  //   } catch (err) {
+  //     console.error("Cancel-job error:", err);
+  //     Alert.alert("Error", "Cancellation failed.");
+  //   } finally {
+  //     setCancelling(false);
+  //     setConfirmingCancel(false);
+  //     if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
+  //   }
+  // };
+
   const handleCancelJob = async () => {
-    if (!confirmingCancel) {
-      setConfirmingCancel(true);
-      Alert.alert(
-        "Confirm Cancellation",
-        "Tap again to confirm job cancellation."
-      );
-      confirmTimeout.current = setTimeout(
-        () => setConfirmingCancel(false),
-        5000
-      );
-      return;
-    }
-
-    setCancelling(true);
-    try {
-      await api.put(`/jobs/${jobId}/cancel`, { travelFee: TRAVEL_FEE });
-      Alert.alert(
-        "Cancelled",
-        `Job cancelled; a $${TRAVEL_FEE} travel fee applies.`,
-        [
-          {
-            text: "OK",
-            onPress: () => navigation.navigate("ServiceProviderDashboard"),
+    Alert.alert(
+      "Cancel Job",
+      "Are you sure you want to cancel this job? The customer will be notified and the search will restart.",
+      [
+        {
+          text: "No",
+          style: "cancel",
+        },
+        {
+          text: "Yes, Cancel",
+          style: "destructive",
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              await api.put(`/jobs/${jobId}/cancel`, {
+                cancelledBy: "serviceProvider",
+                travelFee: TRAVEL_FEE,
+              });
+              Alert.alert("Cancelled", "The job has been cancelled.");
+              navigation.navigate("ServiceProviderDashboard");
+            } catch (err) {
+              console.error("Cancel-job error:", err);
+              Alert.alert("Error", "Cancellation failed.");
+            } finally {
+              setCancelling(false);
+            }
           },
-        ]
-      );
-    } catch (err) {
-      console.error("Cancel-job error:", err);
-      Alert.alert("Error", "Cancellation failed.");
-    } finally {
-      setCancelling(false);
-      setConfirmingCancel(false);
-      if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
-    }
+        },
+      ]
+    );
   };
-
+  
+  
   const pickAndUpload = async (phase) => {
     const status = await ImagePicker.requestCameraPermissionsAsync();
     if (status.status !== "granted") {

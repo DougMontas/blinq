@@ -3043,6 +3043,18 @@ export default function CustomerJobStatus() {
     }
   };
 
+  const handleCancelJob = async () => {
+    try {
+      const { data } = await api.put(`/jobs/${jobId}/cancelled`, {
+        cancelledBy: "customer", // this will be used by backend to decide logic
+      });
+      Alert.alert("Cancelled", "The job has been cancelled.");
+      setJob(data);
+    } catch (err) {
+      Alert.alert("Error", "Failed to cancel job.");
+    }
+  };
+
   if (loading) return <ActivityIndicator style={styles.center} size="large" />;
   if (!job) return <Text style={styles.center}>Job not found.</Text>;
 
@@ -3191,7 +3203,7 @@ export default function CustomerJobStatus() {
       )}
       {job?.status?.startsWith("cancelled") && (
         <View style={styles.confirm}>
-          <Text style={styles.heading}>Your job was cancelled.</Text>
+          <Text style={styles.heading}>Your job was cancelled - Locating a service pro.</Text>
           <TouchableOpacity
             style={styles.confirmButton}
             onPress={handleReinvite}
