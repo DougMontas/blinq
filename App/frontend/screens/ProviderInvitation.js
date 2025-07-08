@@ -572,6 +572,7 @@ import api from "../api/client";
 import serviceMatrix, { getCoveredDescription } from "../utils/serviceMatrix";
 import { Audio } from "expo-av";
 import * as Notifications from "expo-notifications";
+import BackButton from "../components/BackButton";
 
 const { width } = Dimensions.get("window");
 const LOGO_SIZE = width * 0.55;
@@ -693,6 +694,7 @@ export default function ProviderInvitationScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <BackButton />
       <View style={styles.containerLogo}>
         <Image
           source={require("../assets/blinqfix_logo-new.jpeg")}

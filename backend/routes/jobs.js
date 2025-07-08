@@ -896,22 +896,49 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 // });
 
 router.put("/:jobId/cancelled", async (req, res) => {
-  const job = await Job.findById(req.params.id);
+  const job = await Job.findById(req.params.jobId); // ✅ Correct param
   if (!job) return res.status(404).json({ msg: "Job not found" });
 
   const { cancelledBy } = req.body;
+
+  if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
+    return res.status(400).json({ msg: 'Invalid cancellation source' });
+  }
+  
   job.status = `cancelled-by-${cancelledBy}`;
 
   if (cancelledBy === "serviceProvider") {
-    // Reinvite logic (phase 1)
+    // Reset accepted provider
     job.acceptedProvider = null;
     await job.save();
+
+    // Reinvite logic
     invitePhaseOne(job, null, io, 1);
   } else {
     await job.save();
   }
+
   res.json(job);
 });
+
+
+// router.put("/:jobId/cancelled", async (req, res) => {
+//   const job = await Job.findById(req.params.id);
+//   if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//   const { cancelledBy } = req.body;
+//   job.status = `cancelled-by-${cancelledBy}`;
+
+//   if (cancelledBy === "serviceProvider") {
+//     // Reinvite logic (phase 1)
+//     job.acceptedProvider = null;
+//     await job.save();
+//     invitePhaseOne(job, null, io, 1);
+//   } else {
+//     await job.save();
+//   }
+//   res.json(job);
+// });
 
 cron.schedule("0 * * * *", async () => {
   const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);

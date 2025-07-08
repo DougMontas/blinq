@@ -714,14 +714,24 @@ export const useAuth = () => useContext(AuthContext);
 
 const Stack = createNativeStackNavigator();
 
+// const linking = {
+//   prefixes: [
+//     "blinqfix://",
+//     "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
+//   ],
+//   config: {
+//     screens: {
+//       ResetPasswordScreen: "reset-password/:token",
+//     },
+//   },
+// };
+
 const linking = {
-  prefixes: [
-    "blinqfix://",
-    "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
-  ],
+  prefixes: ['blinqfix://', 'https://blinqfix.com'],
   config: {
     screens: {
-      ResetPasswordScreen: "reset-password/:token",
+      OnboardingComplete: 'onboarding-complete',
+      PasswordResetComplete: 'password-reset-complete',
     },
   },
 };

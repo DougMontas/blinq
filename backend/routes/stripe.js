@@ -45,8 +45,10 @@ router.get("/onboard", auth, async (req, res) => {
 
       const link = await stripe.accountLinks.create({
         account: req.user.stripeAccountId,
-        refresh_url: `${baseUrl}/onboard-refresh`,
-        return_url: `${baseUrl}/onboard-complete`,
+        refresh_url: 'https://blinqfix.com/onboard-refresh',
+        return_url: 'blinqfix://onboarding-complete',
+        // refresh_url: `${baseUrl}/onboard-refresh`,
+        // return_url: `${baseUrl}/onboard-complete`,
         type: "account_onboarding",
       });
 

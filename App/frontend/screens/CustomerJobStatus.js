@@ -3056,12 +3056,8 @@ export default function CustomerJobStatus() {
     }
   };
 
-
   if (loading) return <ActivityIndicator style={styles.center} size="large" />;
   if (!job) return <Text style={styles.center}>Job not found.</Text>;
-
-
-
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -3114,9 +3110,51 @@ export default function CustomerJobStatus() {
       )}
 
       {jobLocation?.latitude && jobLocation?.longitude && (
+        // <MapView
+        //   ref={mapRef}
+        //   provider={Platform.OS === "ios" ? PROVIDER_GOOGLE : undefined}
+        //   style={{ height: 220, borderRadius: 10, marginVertical: 12 }}
+        //   initialRegion={{
+        //     latitude: jobLocation.latitude,
+        //     longitude: jobLocation.longitude,
+        //     latitudeDelta: 0.01,
+        //     longitudeDelta: 0.01,
+        //   }}
+        //   onMapReady={() => {
+        //     if (providerCoords && mapRef.current) {
+        //       mapRef.current.fitToCoordinates([jobLocation, providerCoords], {
+        //         edgePadding: { top: 80, bottom: 80, left: 80, right: 80 },
+        //         animated: true,
+        //       });
+        //     }
+        //   }}
+        // >
+        //   <Marker coordinate={jobLocation} title="Customer" />
+        //   {/* Provider Marker */}
+        //   {providerCoords &&
+        //     providerCoords.latitude &&
+        //     providerCoords.longitude && (
+        //       <Marker
+        //         coordinate={providerCoords}
+        //         title="Service Pro"
+        //         pinColor="blue"
+        //         description="Provider's current location"
+        //       />
+        //     )}
+
+        //   {/* Route Line */}
+        //   {routeCoords.length === 2 && (
+        //     <Polyline
+        //       coordinates={routeCoords}
+        //       strokeColor="#1976d2"
+        //       strokeWidth={4}
+        //       lineCap="round"
+        //     />
+        //   )}
+        // </MapView>
         <MapView
           ref={mapRef}
-          provider={Platform.OS === "ios" ? PROVIDER_GOOGLE : undefined}
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined} // ✅ Use Apple Maps on iOS
           style={{ height: 220, borderRadius: 10, marginVertical: 12 }}
           initialRegion={{
             latitude: jobLocation.latitude,
@@ -3133,28 +3171,6 @@ export default function CustomerJobStatus() {
             }
           }}
         >
-          <Marker coordinate={jobLocation} title="Customer" />
-          {/* Provider Marker */}
-          {providerCoords &&
-            providerCoords.latitude &&
-            providerCoords.longitude && (
-              <Marker
-                coordinate={providerCoords}
-                title="Service Pro"
-                pinColor="blue"
-                description="Provider's current location"
-              />
-            )}
-
-          {/* Route Line */}
-          {routeCoords.length === 2 && (
-            <Polyline
-              coordinates={routeCoords}
-              strokeColor="#1976d2"
-              strokeWidth={4}
-              lineCap="round"
-            />
-          )}
         </MapView>
       )}
 
@@ -3208,7 +3224,9 @@ export default function CustomerJobStatus() {
       )}
       {job?.status?.startsWith("cancelled") && (
         <View style={styles.confirm}>
-          <Text style={styles.heading}>Your job was cancelled - Locating a service pro.</Text>
+          <Text style={styles.heading}>
+            Your job was cancelled - Locating a service pro.
+          </Text>
           <TouchableOpacity
             style={styles.confirmButton}
             onPress={handleReinvite}

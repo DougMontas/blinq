@@ -196,12 +196,154 @@
 // };
 
 
+// import "dotenv/config";
+
+// export default {
+//   expo: {
+//     name: "BlinqFix",
+//     slug: "blinqfix",
+//     version: "1.0.0",
+//     orientation: "portrait",
+//     icon: "./assets/driver_marker.png",
+//     userInterfaceStyle: "light",
+//     splash: {
+//       image: "./assets/blinqfix_logo-new.jpeg",
+//       resizeMode: "contain",
+//       backgroundColor: "#ffffff",
+//     },
+//     updates: {
+//       fallbackToCacheTimeout: 0,
+//     },
+//     assetBundlePatterns: ["**/*"],
+//     ios: {
+//       bundleIdentifier: "com.doug30.blinqfix.app",
+//       buildNumber: "1.0.0",
+//       supportsTablet: true,
+//       infoPlist: {
+//         NSCameraUsageDescription:
+//           "We need access to your camera to let providers upload arrival/completion photos.",
+//         NSLocationWhenInUseUsageDescription:
+//           "We use your location to find or provide local emergency services.",
+//         NSLocationAlwaysAndWhenInUseUsageDescription:
+//           "We need background location for real-time tracking of your service provider.",
+//         NSPhotoLibraryUsageDescription:
+//           "This is required to upload photos from your library.",
+//         UIBackgroundModes: ["location", "remote-notification"],
+//         ITSAppUsesNonExemptEncryption: false,
+//         NSPushNotificationUsageDescription: "We use this to alert you of emergency job offers."
+//       },
+//     },
+//     android: {
+//       package: "com.doug30.blinqfix.app",
+//       versionCode: 1,
+//       permissions: [
+//         "ACCESS_FINE_LOCATION",
+//         "ACCESS_COARSE_LOCATION",
+//         "CAMERA",
+//         "READ_EXTERNAL_STORAGE",
+//       ],
+//     },
+//     plugins: ["expo-notifications", "expo-location", "expo-image-picker"],
+//     extra: {
+//       eas: {
+//         projectId: "05911a90-207f-46d5-802a-05f6b45fd4ce",
+//       },
+//       stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
+//       EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
+//       EXPO_PUBLIC_GOOGLE_MAPS_API_KEY:
+//         process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+//     },
+//     runtimeVersion: {
+//       policy: "sdkVersion",
+//     },
+//     platforms: ["ios", "android", "web"],
+//   },
+// };
+
+//working
+// import "dotenv/config";
+
+// export default {
+//   expo: {
+//     name: "BlinqFix",
+//     slug: "blinqfix",
+//     scheme: "blinqfix", // ✅ Needed for deep linking
+//     version: "1.0.0",
+//     orientation: "portrait",
+//     icon: "./assets/driver_marker.png",
+//     userInterfaceStyle: "light",
+//     splash: {
+//       image: "./assets/blinqfix_logo-new.jpeg",
+//       resizeMode: "contain",
+//       backgroundColor: "#ffffff",
+//     },
+//     updates: {
+//       fallbackToCacheTimeout: 0,
+//     },
+//     assetBundlePatterns: ["**/*"],
+//     ios: {
+//       bundleIdentifier: "com.doug30.blinqfix.app",
+//       buildNumber: "1.0.0",
+//       supportsTablet: true,
+//       associatedDomains: ["applinks:blinqfix.com"], // ✅ For iOS universal links
+//       infoPlist: {
+//         NSCameraUsageDescription:
+//           "We need access to your camera to let providers upload arrival/completion photos.",
+//         NSLocationWhenInUseUsageDescription:
+//           "We use your location to find or provide local emergency services.",
+//         NSLocationAlwaysAndWhenInUseUsageDescription:
+//           "We need background location for real-time tracking of your service provider.",
+//         NSPhotoLibraryUsageDescription:
+//           "This is required to upload photos from your library.",
+//         UIBackgroundModes: ["location", "remote-notification"],
+//         ITSAppUsesNonExemptEncryption: false,
+//         NSPushNotificationUsageDescription:
+//           "We use this to alert you of emergency job offers.",
+//       },
+//     },
+//     android: {
+//       package: "com.doug30.blinqfix.app",
+//       versionCode: 1,
+//       permissions: [
+//         "ACCESS_FINE_LOCATION",
+//         "ACCESS_COARSE_LOCATION",
+//         "CAMERA",
+//         "READ_EXTERNAL_STORAGE",
+//       ],
+//       intentFilters: [
+//         {
+//           action: "VIEW",
+//           data: {
+//             scheme: "https",
+//             host: "blinqfix.com",
+//           },
+//           category: ["BROWSABLE", "DEFAULT"],
+//         },
+//       ], // ✅ For Android deep/universal linking
+//     },
+//     plugins: ["expo-notifications", "expo-location", "expo-image-picker"],
+//     extra: {
+//       eas: {
+//         projectId: "05911a90-207f-46d5-802a-05f6b45fd4ce",
+//       },
+//       stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
+//       EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
+//       EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+//     },
+//     runtimeVersion: {
+//       policy: "sdkVersion",
+//     },
+//     platforms: ["ios", "android", "web"],
+//   },
+// };
+
 import "dotenv/config";
 
 export default {
   expo: {
     name: "BlinqFix",
     slug: "blinqfix",
+    scheme: "blinqfix",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/driver_marker.png",
@@ -219,6 +361,7 @@ export default {
       bundleIdentifier: "com.doug30.blinqfix.app",
       buildNumber: "1.0.0",
       supportsTablet: true,
+      associatedDomains: ["applinks:blinqfix.com"],
       infoPlist: {
         NSCameraUsageDescription:
           "We need access to your camera to let providers upload arrival/completion photos.",
@@ -226,11 +369,14 @@ export default {
           "We use your location to find or provide local emergency services.",
         NSLocationAlwaysAndWhenInUseUsageDescription:
           "We need background location for real-time tracking of your service provider.",
+        NSLocationAlwaysUsageDescription:
+          "We use your location to keep you connected with your service provider.",
         NSPhotoLibraryUsageDescription:
           "This is required to upload photos from your library.",
         UIBackgroundModes: ["location", "remote-notification"],
         ITSAppUsesNonExemptEncryption: false,
-        NSPushNotificationUsageDescription: "We use this to alert you of emergency job offers."
+        NSPushNotificationUsageDescription:
+          "We use this to alert you of emergency job offers.",
       },
     },
     android: {
@@ -242,6 +388,16 @@ export default {
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
       ],
+      intentFilters: [
+        {
+          action: "VIEW",
+          data: {
+            scheme: "https",
+            host: "blinqfix.com",
+          },
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+      ],
     },
     plugins: ["expo-notifications", "expo-location", "expo-image-picker"],
     extra: {
@@ -250,8 +406,7 @@ export default {
       },
       stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
       EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
-      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY:
-        process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     },
     runtimeVersion: {
       policy: "sdkVersion",
@@ -259,3 +414,4 @@ export default {
     platforms: ["ios", "android", "web"],
   },
 };
+

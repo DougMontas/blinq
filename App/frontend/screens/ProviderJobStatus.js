@@ -172,7 +172,7 @@ export default function ProviderJobStatus() {
           onPress: async () => {
             setCancelling(true);
             try {
-              await api.put(`/jobs/${jobId}/cancel`, {
+              await api.put(`/jobs/${jobId}/cancelled`, {
                 cancelledBy: "serviceProvider",
                 travelFee: TRAVEL_FEE,
               });
