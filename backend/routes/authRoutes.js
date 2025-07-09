@@ -109,8 +109,8 @@ router.post("/register", async (req, res) => {
 
       const accountLink = await stripeInstance.accountLinks.create({
         account: newUser.stripeAccountId,
-        refresh_url: `${baseUrl}/stripe/onboarding-failed`,
-        return_url: `${baseUrl}/stripe/onboarding-success`,
+        refresh_url: `https://blinqfix.com/onboard-refresh`,
+        return_url: `blinqfix://onboarding-complete`,
         type: "account_onboarding",
       });
 

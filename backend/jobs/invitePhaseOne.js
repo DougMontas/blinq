@@ -446,8 +446,16 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
         console.log(`🛑 Job ${job._id} already accepted. Stopping escalation.`);
         return;
       }
-      invitePhaseOne(latest, null, req.io, phase + 1);
+      invitePhaseOne(latest, null, io, phase + 1); // ✅ use passed-in io
     }, tier.durationMs);
+    // setTimeout(async () => {
+    //   const latest = await mongoose.model("Job").findById(job._id);
+    //   if (!latest || latest.status === "accepted" || latest.acceptedProvider) {
+    //     console.log(`🛑 Job ${job._id} already accepted. Stopping escalation.`);
+    //     return;
+    //   }
+    //   invitePhaseOne(latest, null, req.io, phase + 1);
+    // }, tier.durationMs);
   } else {
     console.log(
       `🎯 Final phase reached for job ${job._id}. No further escalation.`
