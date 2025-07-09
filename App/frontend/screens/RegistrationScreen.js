@@ -2455,8 +2455,8 @@ const SERVICES = ["Electrician", "HVAC", "Plumbing", "Roofing", "Handyman"];
 const BILLING = ["profit_sharing", "hybrid"];
 
 const BILLING_PRODUCTS = {
-  profit_sharing: "prod_SRVui6dGPZ11rv",
-  hybrid: "prod_S71nDAu8fYLFGa",
+  profit_sharing: "prod_Se5JgrG5D9G2Wq",
+  hybrid: "prod_Se4dOaW9m5lRpw",
 };
 
 export default function RegistrationScreen() {

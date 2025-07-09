@@ -941,6 +941,39 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 //   res.json(job);
 // });
 
+// router.put("/:jobId/cancelled", async (req, res) => {
+//   try {
+//     const job = await Job.findById(req.params.jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//     const { cancelledBy } = req.body;
+
+//     if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
+//       return res.status(400).json({ msg: 'Invalid cancellation source' });
+//     }
+
+//     job.status = `cancelled-by-${cancelledBy}`;
+
+//     if (cancelledBy === "serviceProvider") {
+//       job.acceptedProvider = null;
+//       await job.save();
+
+//       if (req.io) {
+//         invitePhaseOne(job, null, req.io, 1);
+//       } else {
+//         console.warn("⚠️ Socket.io instance (req.io) is missing");
+//       }
+//     } else {
+//       await job.save();
+//     }
+
+//     res.json(job);
+//   } catch (err) {
+//     console.error("❌ Job cancel error:", err);
+//     res.status(500).json({ msg: "Server error during cancellation" });
+//   }
+// });
+
 router.put("/:jobId/cancelled", async (req, res) => {
   try {
     const job = await Job.findById(req.params.jobId);
@@ -952,10 +985,20 @@ router.put("/:jobId/cancelled", async (req, res) => {
       return res.status(400).json({ msg: 'Invalid cancellation source' });
     }
 
-    job.status = `cancelled-by-${cancelledBy}`;
+    // Log cancellation
+    job.auditLog.push({
+      action: "cancel",
+      by: cancelledBy,
+      user: req.user?._id, // If available
+      timestamp: new Date(),
+    });
 
     if (cancelledBy === "serviceProvider") {
       job.acceptedProvider = null;
+      job.status = "invited"; // ✅ Reset status for reinvite
+      job.invitationPhase = 1;
+      job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
+
       await job.save();
 
       if (req.io) {
@@ -964,6 +1007,7 @@ router.put("/:jobId/cancelled", async (req, res) => {
         console.warn("⚠️ Socket.io instance (req.io) is missing");
       }
     } else {
+      job.status = "cancelled-by-customer";
       await job.save();
     }
 
