@@ -49,7 +49,7 @@ export default function PaymentScreen() {
           customerEphemeralKeySecret: sheetParams.ephemeralKey,
           paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
           allowsDelayedPaymentMethods: true,
-          returnURL: "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success", // required for iOS redirect methods
+          returnURL: "blinqfix://onboarding-complete", // required for iOS redirect methods
         });
 
         if (initError) throw initError;

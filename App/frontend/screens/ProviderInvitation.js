@@ -879,7 +879,7 @@ export default function ProviderInvitationScreen() {
         const { data } = await api.get(`/jobs/${jobId}`);
         if (alive) setJob(data);
 
-        if (clickable) {
+        if (clickable || !clickable) {
           try {
             const { sound } = await Audio.Sound.createAsync(
               require("../assets/notification.mp3")
