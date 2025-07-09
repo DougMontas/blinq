@@ -14,46 +14,105 @@ const stripe = StripePackage(process.env.STRIPE_SECRET_KEY, {
 
 const router = express.Router();
 
+// router.post("/subscribe", auth, async (req, res) => {
+//   try {
+//     const provider = req.user;
+//     if (provider.tier !== "hybrid")
+//       return res.status(400).json({ msg: "Provider is not in hybrid tier." });
+
+//     if (!provider.stripeAccountId)
+//       return res
+//         .status(400)
+//         .json({ msg: "Provider has no Stripe account yet." });
+
+//     const { paymentMethodId } = req.body;
+
+//     let customerId = provider.stripeCustomerId;
+//     if (!customerId) {
+//       const customer = await stripe.customers.create({
+//         email: provider.email,
+//         name: provider.businessName || provider.name,
+//         payment_method: paymentMethodId,
+//         dob: provider.dob,
+//         ssnLast4: provider.ssnLast4,
+//         invoice_settings: { default_payment_method: paymentMethodId },
+//       });
+//       customerId = customer.id;
+//       provider.stripeCustomerId = customerId;
+//       await provider.save();
+//     } else {
+//       await stripe.paymentMethods.attach(paymentMethodId, {
+//         customer: customerId,
+//       });
+//       await stripe.customers.update(customerId, {
+//         invoice_settings: { default_payment_method: paymentMethodId },
+//       });
+//     }
+
+//     const subs = await stripe.subscriptions.list({
+//       customer: customerId,
+//       status: "all",
+//       limit: 1,
+//     });
+//     if (!subs.data.length) {
+//       await stripe.subscriptions.create({
+//         customer: customerId,
+//         items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+//         metadata: { providerId: provider.id },
+//       });
+//     }
+
+//     res.json({ ok: true });
+//   } catch (err) {
+//     console.error("Subscribe error", err);
+//     res.status(500).json({ msg: "Failed to start hybrid subscription." });
+//   }
+// });
+
 router.post("/subscribe", auth, async (req, res) => {
   try {
     const provider = req.user;
-    if (provider.tier !== "hybrid")
-      return res.status(400).json({ msg: "Provider is not in hybrid tier." });
 
-    if (!provider.stripeAccountId)
-      return res
-        .status(400)
-        .json({ msg: "Provider has no Stripe account yet." });
+    if (provider.billingTier !== "hybrid") {
+      return res.status(400).json({ msg: "You must be in the hybrid tier to subscribe." });
+    }
+
+    if (!provider.stripeAccountId) {
+      return res.status(400).json({ msg: "Provider has no Stripe account yet." });
+    }
 
     const { paymentMethodId } = req.body;
 
     let customerId = provider.stripeCustomerId;
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: provider.email,
         name: provider.businessName || provider.name,
-        payment_method: paymentMethodId,
-        dob: provider.dob,
-        ssnLast4: provider.ssnLast4,
-        invoice_settings: { default_payment_method: paymentMethodId },
+        phone: provider.phoneNumber,
       });
+
       customerId = customer.id;
       provider.stripeCustomerId = customerId;
       await provider.save();
-    } else {
-      await stripe.paymentMethods.attach(paymentMethodId, {
-        customer: customerId,
-      });
-      await stripe.customers.update(customerId, {
-        invoice_settings: { default_payment_method: paymentMethodId },
-      });
     }
 
+    // Attach and set default payment method
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    });
+
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    // Check if already subscribed
     const subs = await stripe.subscriptions.list({
       customer: customerId,
-      status: "all",
+      status: "active",
       limit: 1,
     });
+
     if (!subs.data.length) {
       await stripe.subscriptions.create({
         customer: customerId,
@@ -62,12 +121,13 @@ router.post("/subscribe", auth, async (req, res) => {
       });
     }
 
-    res.json({ ok: true });
+    res.json({ msg: "Hybrid subscription active." });
   } catch (err) {
-    console.error("Subscribe error", err);
+    console.error("Subscribe error", err.message, err?.raw || err);
     res.status(500).json({ msg: "Failed to start hybrid subscription." });
   }
 });
+
 
 /**
  * PUT /api/billing/jobs/:jobId/complete
