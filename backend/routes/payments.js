@@ -226,6 +226,52 @@ router.post("/stripe", async (req, res) => {
 //   }
 // });
 
+// router.post("/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
+
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//     const provider = await Users.findById(job.acceptedProvider);
+//     if (!provider || !provider.stripeAccountId) {
+//       return res.status(400).json({ msg: "Invalid provider or missing Stripe account." });
+//     }
+
+//     const customer = await stripe.customers.create({
+//       metadata: {
+//         jobId,
+//         userId: req.user.id,
+//       },
+//     });
+
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.id },
+//       { apiVersion: "2022-11-15" }
+//     );
+
+//     const paymentIntent = await createJobPaymentIntent({
+//       amountUsd: job.estimatedTotal,
+//       customerStripeId: customer.id,
+//       provider: {
+//         stripeAccountId: provider.stripeAccountId,
+//         tier: provider.billingTier,
+//       },
+//     });
+
+//     res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       customer: customer.id,
+//       ephemeralKey: ephemeralKey.secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//   } catch (err) {
+//     console.error("❌ /payment-sheet error:", err.message, err?.raw || err);
+//     res.status(500).json({ msg: err.message || "Payment sheet setup failed." });
+//   }
+// });
+
 router.post("/payment-sheet", auth, async (req, res) => {
   try {
     const { jobId } = req.body;
@@ -234,23 +280,34 @@ router.post("/payment-sheet", auth, async (req, res) => {
     const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found." });
 
-    const provider = await Users.findById(job.acceptedProvider);
-    if (!provider || !provider.stripeAccountId) {
-      return res.status(400).json({ msg: "Invalid provider or missing Stripe account." });
+    if (!job.acceptedProvider) {
+      return res.status(400).json({ msg: "No provider assigned to this job yet." });
     }
 
+    const provider = await Users.findById(job.acceptedProvider);
+    if (!provider) {
+      return res.status(404).json({ msg: "Provider not found." });
+    }
+
+    if (!provider.stripeAccountId) {
+      return res.status(400).json({ msg: "Provider missing Stripe account ID." });
+    }
+
+    console.log("✅ Preparing customer...");
     const customer = await stripe.customers.create({
       metadata: {
         jobId,
-        userId: req.user.id,
+        customerId: req.user.id,
       },
     });
 
+    console.log("✅ Creating ephemeral key...");
     const ephemeralKey = await stripe.ephemeralKeys.create(
       { customer: customer.id },
       { apiVersion: "2022-11-15" }
     );
 
+    console.log("✅ Creating payment intent...");
     const paymentIntent = await createJobPaymentIntent({
       amountUsd: job.estimatedTotal,
       customerStripeId: customer.id,
@@ -260,6 +317,10 @@ router.post("/payment-sheet", auth, async (req, res) => {
       },
     });
 
+    if (!paymentIntent?.client_secret) {
+      throw new Error("Failed to create PaymentIntent.");
+    }
+
     res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
       customer: customer.id,
@@ -267,10 +328,11 @@ router.post("/payment-sheet", auth, async (req, res) => {
       publishableKey: process.env.STRIPE_PUBLIC_KEY,
     });
   } catch (err) {
-    console.error("❌ /payment-sheet error:", err.message, err?.raw || err);
+    console.error("❌ /payment-sheet server error:", err.message, err);
     res.status(500).json({ msg: err.message || "Payment sheet setup failed." });
   }
 });
+
 
 /********************************************************************************************
  * @route   POST /api/payments/xrpl
