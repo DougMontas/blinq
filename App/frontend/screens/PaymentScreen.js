@@ -35,13 +35,17 @@ export default function PaymentScreen() {
         setJob(jobData);
 
         const amountInCents = Math.round((jobData.estimatedTotal || 0) * 100);
-        const { data: sheetParams } = await api.post(
-          "/payments/payment-sheet",
-          {
-            amount: amountInCents,
-            currency: "usd",
-          }
-        );
+        
+        const { data: sheetParams } = await api.post("/payments/payment-sheet", {
+          jobId,
+        });
+        // const { data: sheetParams } = await api.post(
+        //   "/payments/payment-sheet",
+        //   {
+        //     amount: amountInCents,
+        //     currency: "usd",
+        //   }
+        // );
 
         const { error: initError } = await initPaymentSheet({
           merchantDisplayName: "BlinqFix",

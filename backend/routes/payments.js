@@ -142,9 +142,52 @@ router.post("/stripe", async (req, res) => {
  * @route   POST /api/payments/payment-sheet
  * @desc    Create ephemeral key + payment intent for mobile app
  *******************************************************************************************/
+// router.post("/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { amount, currency = "usd" } = req.body;
+
+//     const customer = await stripe.customers.create();
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.id },
+//       { apiVersion: "2022-11-15" }
+//     );
+
+//     const provider = await Users.findById(req.user.id); // or linked job
+//     const paymentIntent = await createJobPaymentIntent({
+//       amountUsd: amount / 100,
+//       customerStripeId: customer.id,
+//       provider: {
+//         stripeAccountId: provider.stripeAccountId,
+//         tier: provider.billingTier,
+//       },
+//     });
+//     // const paymentIntent = await stripe.paymentIntents.create({
+//     //   amount,
+//     //   currency,
+//     //   customer: customer.id,
+//     //   automatic_payment_methods: { enabled: true },
+//     // });
+
+//     res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       customer: customer.id,
+//       ephemeralKey: ephemeralKey.secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//   } catch (err) {
+//     console.error("POST /api/payments/payment-sheet error:", err);
+//     res.status(500).json({ msg: err.message });
+//   }
+// });
+
+
 router.post("/payment-sheet", auth, async (req, res) => {
   try {
-    const { amount, currency = "usd" } = req.body;
+    const { jobId } = req.body;
+    if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
+
+    const job = await Jobs.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found." });
 
     const customer = await stripe.customers.create();
     const ephemeralKey = await stripe.ephemeralKeys.create(
@@ -152,21 +195,19 @@ router.post("/payment-sheet", auth, async (req, res) => {
       { apiVersion: "2022-11-15" }
     );
 
-    const provider = await Users.findById(req.user.id); // or linked job
+    const provider = await Users.findById(job.acceptedProvider);
+    if (!provider || !provider.stripeAccountId) {
+      return res.status(400).json({ msg: "Provider is not ready for payment." });
+    }
+
     const paymentIntent = await createJobPaymentIntent({
-      amountUsd: amount / 100,
+      amountUsd: job.estimatedTotal,
       customerStripeId: customer.id,
       provider: {
         stripeAccountId: provider.stripeAccountId,
         tier: provider.billingTier,
       },
     });
-    // const paymentIntent = await stripe.paymentIntents.create({
-    //   amount,
-    //   currency,
-    //   customer: customer.id,
-    //   automatic_payment_methods: { enabled: true },
-    // });
 
     res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
@@ -175,11 +216,10 @@ router.post("/payment-sheet", auth, async (req, res) => {
       publishableKey: process.env.STRIPE_PUBLIC_KEY,
     });
   } catch (err) {
-    console.error("POST /api/payments/payment-sheet error:", err);
+    console.error("💥 Error creating payment sheet:", err);
     res.status(500).json({ msg: err.message });
   }
 });
-
 /********************************************************************************************
  * @route   POST /api/payments/xrpl
  * @desc    Process XRP payment (stub)
