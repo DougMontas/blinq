@@ -561,6 +561,7 @@ router.post("/payments/additional-charge-sheet", auth, async (req, res) => {
     return res.status(500).json({ msg: "Stripe error", error: err.message });
   }
 });
+
 router.post("/payments/payment-sheet", async (req, res) => {
   // const { amount, currency, jobId } = req.body;
 

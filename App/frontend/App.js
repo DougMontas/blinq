@@ -924,8 +924,8 @@ const linking = {
   prefixes: ['blinqfix://', 'https://blinqfix.com'],
   config: {
     screens: {
-      OnboardingComplete: 'onboarding-complete',
-      PasswordResetComplete: 'password-reset-complete',
+      OnboardingComplete: 'https://blinqfix.com/onboarding-return',
+      PasswordResetComplete: 'https://blinqfix.com/onboarding-refresh',
     },
   },
 };
