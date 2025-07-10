@@ -136,6 +136,13 @@ router.get("/onboard", auth, async (req, res) => {
       return res.status(400).json({ msg: "Invalid date of birth format." });
     }
 
+
+    console.log("🚀 Stripe Onboarding Payload", {
+  account: stripeAccountId,
+  return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+  refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+});
+
     // Create or update Stripe Connect account
     let stripeAccountId = req.user.stripeAccountId;
 
@@ -183,8 +190,20 @@ router.get("/onboard", auth, async (req, res) => {
       });
     }
 
-    const refreshUrl = process.env.STRIPE_ONBOARDING_REFRESH_URL || "https://blinqfix.com/onboarding-refresh";
-    const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL || "https://blinqfix.com/onboarding-complete";
+    const refreshUrl = process.env.STRIPE_ONBOARDING_REFRESH_URL?.startsWith("http")
+    ? process.env.STRIPE_ONBOARDING_REFRESH_URL
+    : "https://blinqfix.com/onboarding-refresh";
+  
+  const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
+    ? process.env.STRIPE_ONBOARDING_RETURN_URL
+    : "https://blinqfix.com/onboarding-complete";
+  
+
+    console.log("🚀 Stripe Onboarding Payload", {
+      account: stripeAccountId,
+      return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+      refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+    });
 
     const link = await stripe.accountLinks.create({
       account: stripeAccountId,

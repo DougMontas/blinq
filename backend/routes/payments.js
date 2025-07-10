@@ -152,12 +152,21 @@ router.post("/payment-sheet", auth, async (req, res) => {
       { apiVersion: "2022-11-15" }
     );
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency,
-      customer: customer.id,
-      automatic_payment_methods: { enabled: true },
+    const provider = await Users.findById(req.user.id); // or linked job
+    const paymentIntent = await createJobPaymentIntent({
+      amountUsd: amount / 100,
+      customerStripeId: customer.id,
+      provider: {
+        stripeAccountId: provider.stripeAccountId,
+        tier: provider.billingTier,
+      },
     });
+    // const paymentIntent = await stripe.paymentIntents.create({
+    //   amount,
+    //   currency,
+    //   customer: customer.id,
+    //   automatic_payment_methods: { enabled: true },
+    // });
 
     res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
