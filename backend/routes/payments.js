@@ -84,6 +84,7 @@ import Stripe from "stripe";
 import xrpl from "xrpl";
 import { auth } from "../middlewares/auth.js";
 import Job from "../models/Job.js"
+import Users from "../models/Users.js"
 
 const router = express.Router();
 
@@ -230,7 +231,7 @@ router.post("/payment-sheet", auth, async (req, res) => {
     const { jobId } = req.body;
     if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
 
-    const job = await Jobs.findById(jobId);
+    const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found." });
 
     const provider = await Users.findById(job.acceptedProvider);
