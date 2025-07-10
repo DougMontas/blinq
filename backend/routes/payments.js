@@ -122,6 +122,8 @@ export async function createJobPaymentIntent({
  * @route   POST /api/payments/stripe
  * @desc    Generic Stripe PaymentIntent (testing)
  *******************************************************************************************/
+
+
 router.post("/stripe", async (req, res) => {
   const { amount, currency = "usd" } = req.body;
   try {
@@ -143,6 +145,7 @@ router.post("/stripe", async (req, res) => {
  * @route   POST /api/payments/payment-sheet
  * @desc    Create ephemeral key + payment intent for mobile app
  *******************************************************************************************/
+
 // router.post("/payment-sheet", auth, async (req, res) => {
 //   try {
 //     const { amount, currency = "usd" } = req.body;
@@ -182,24 +185,70 @@ router.post("/stripe", async (req, res) => {
 // });
 
 
+// router.post("/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
+
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//     const customer = await stripe.customers.create();
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.id },
+//       { apiVersion: "2022-11-15" }
+//     );
+
+//     const provider = await Users.findById(job.acceptedProvider);
+//     if (!provider || !provider.stripeAccountId) {
+//       return res.status(400).json({ msg: "Provider is not ready for payment." });
+//     }
+
+//     const paymentIntent = await createJobPaymentIntent({
+//       amountUsd: job.estimatedTotal,
+//       customerStripeId: customer.id,
+//       provider: {
+//         stripeAccountId: provider.stripeAccountId,
+//         tier: provider.billingTier,
+//       },
+//     });
+
+//     res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       customer: customer.id,
+//       ephemeralKey: ephemeralKey.secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//   } catch (err) {
+//     console.error("💥 Error creating payment sheet:", err);
+//     res.status(500).json({ msg: err.message });
+//   }
+// });
+
 router.post("/payment-sheet", auth, async (req, res) => {
   try {
     const { jobId } = req.body;
     if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
 
-    const job = await Job.findById(jobId);
+    const job = await Jobs.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found." });
 
-    const customer = await stripe.customers.create();
+    const provider = await Users.findById(job.acceptedProvider);
+    if (!provider || !provider.stripeAccountId) {
+      return res.status(400).json({ msg: "Invalid provider or missing Stripe account." });
+    }
+
+    const customer = await stripe.customers.create({
+      metadata: {
+        jobId,
+        userId: req.user.id,
+      },
+    });
+
     const ephemeralKey = await stripe.ephemeralKeys.create(
       { customer: customer.id },
       { apiVersion: "2022-11-15" }
     );
-
-    const provider = await Users.findById(job.acceptedProvider);
-    if (!provider || !provider.stripeAccountId) {
-      return res.status(400).json({ msg: "Provider is not ready for payment." });
-    }
 
     const paymentIntent = await createJobPaymentIntent({
       amountUsd: job.estimatedTotal,
@@ -217,10 +266,11 @@ router.post("/payment-sheet", auth, async (req, res) => {
       publishableKey: process.env.STRIPE_PUBLIC_KEY,
     });
   } catch (err) {
-    console.error("💥 Error creating payment sheet:", err);
-    res.status(500).json({ msg: err.message });
+    console.error("❌ /payment-sheet error:", err.message, err?.raw || err);
+    res.status(500).json({ msg: err.message || "Payment sheet setup failed." });
   }
 });
+
 /********************************************************************************************
  * @route   POST /api/payments/xrpl
  * @desc    Process XRP payment (stub)
