@@ -9,6 +9,14 @@ import sendEmail from "../utils/sendEmail.js";
 const router = express.Router();
 const baseUrl = process.env.FRONTEND_BASE_URL;
 
+const refreshUrl = process.env.STRIPE_ONBOARDING_REFRESH_URL?.startsWith("http")
+? process.env.STRIPE_ONBOARDING_REFRESH_URL
+: "https://blinqfix.com/onboarding-refresh";
+
+const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
+? process.env.STRIPE_ONBOARDING_RETURN_URL
+: "https://blinqfix.com/onboarding-complete";
+
 router.post("/register", async (req, res) => {
   try {
     let {
@@ -109,8 +117,8 @@ router.post("/register", async (req, res) => {
 
       const accountLink = await stripeInstance.accountLinks.create({
         account: newUser.stripeAccountId,
-        refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
-        return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+        refresh_url: refreshUrl,
+        return_url: returnUrl,
         type: "account_onboarding",
       });
 

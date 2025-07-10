@@ -10,6 +10,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 const baseUrl = process.env.FRONTEND_BASE_URL || "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success"
 
+const refreshUrl = process.env.STRIPE_ONBOARDING_REFRESH_URL?.startsWith("http")
+? process.env.STRIPE_ONBOARDING_REFRESH_URL
+: "https://blinqfix.com/onboarding-refresh";
+
+const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
+? process.env.STRIPE_ONBOARDING_RETURN_URL
+: "https://blinqfix.com/onboarding-complete";
+
 // router.get("/onboard", auth, async (req, res) => {
 //   try {
 //     if (req.user.role !== "serviceProvider") {
@@ -139,8 +147,8 @@ router.get("/onboard", auth, async (req, res) => {
 
     console.log("🚀 Stripe Onboarding Payload", {
   account: stripeAccountId,
-  return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
-  refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+  return_url: returnUrl,
+  refresh_url: refreshUrl,
 });
 
     // Create or update Stripe Connect account
@@ -190,13 +198,7 @@ router.get("/onboard", auth, async (req, res) => {
       });
     }
 
-    const refreshUrl = process.env.STRIPE_ONBOARDING_REFRESH_URL?.startsWith("http")
-    ? process.env.STRIPE_ONBOARDING_REFRESH_URL
-    : "https://blinqfix.com/onboarding-refresh";
-  
-  const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
-    ? process.env.STRIPE_ONBOARDING_RETURN_URL
-    : "https://blinqfix.com/onboarding-complete";
+ 
   
 
     console.log("🚀 Stripe Onboarding Payload", {
