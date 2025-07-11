@@ -85,7 +85,7 @@ import xrpl from "xrpl";
 import { auth } from "../middlewares/auth.js";
 import Job from "../models/Job.js";
 import Users from "../models/Users.js";
-import { createJobPaymentIntent } from "./payments.js";
+// import { createJobPaymentIntent } from "./payments.js";
 
 const router = express.Router();
 
@@ -489,18 +489,18 @@ router.post("/payment-sheet", auth, async (req, res) => {
       provider = await Users.findById(job.acceptedProvider);
     }
 
-    const paymentIntent = await createJobPaymentIntent({
-      amountUsd: job.estimatedTotal,
-      customerStripeId: customer.id,
-      provider: provider?.stripeAccountId
-        ? {
-            stripeAccountId: provider.stripeAccountId,
-            tier: provider.billingTier,
-          }
-        : null,
-    });
+    // const paymentIntent = await createJobPaymentIntent({
+    //   amountUsd: job.estimatedTotal,
+    //   customerStripeId: customer.id,
+    //   provider: provider?.stripeAccountId
+    //     ? {
+    //         stripeAccountId: provider.stripeAccountId,
+    //         tier: provider.billingTier,
+    //       }
+    //     : null,
+    // });
 
-    console.log("✅ Returning PaymentIntent:", paymentIntent.id);
+    // console.log("✅ Returning PaymentIntent:", paymentIntent.id);
 
     res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
