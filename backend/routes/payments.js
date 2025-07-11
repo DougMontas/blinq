@@ -83,8 +83,8 @@ import express from "express";
 import Stripe from "stripe";
 import xrpl from "xrpl";
 import { auth } from "../middlewares/auth.js";
-import Job from "../models/Job.js"
-import Users from "../models/Users.js"
+import Job from "../models/Job.js";
+import Users from "../models/Users.js";
 
 const router = express.Router();
 
@@ -139,21 +139,25 @@ export async function createJobPaymentIntent({
   };
 
   if (provider?.stripeAccountId) {
-    baseParams.application_fee_amount = CUSTOMER_FEE + Math.round(JOB_CENTS * 0.07); // platform fee
+    baseParams.application_fee_amount =
+      CUSTOMER_FEE + Math.round(JOB_CENTS * 0.07); // platform fee
     baseParams.transfer_data = {
       destination: provider.stripeAccountId,
     };
   }
 
+  console.log("✅ Stripe intent created:", {
+    id: intent.id,
+    secret: intent.client_secret,
+  });
+
   return stripe.paymentIntents.create(baseParams);
 }
-
 
 /********************************************************************************************
  * @route   POST /api/payments/stripe
  * @desc    Generic Stripe PaymentIntent (testing)
  *******************************************************************************************/
-
 
 router.post("/stripe", async (req, res) => {
   const { amount, currency = "usd" } = req.body;
@@ -214,7 +218,6 @@ router.post("/stripe", async (req, res) => {
 //     res.status(500).json({ msg: err.message });
 //   }
 // });
-
 
 // router.post("/payment-sheet", auth, async (req, res) => {
 //   try {
@@ -338,7 +341,7 @@ router.post("/stripe", async (req, res) => {
 //     );
 
 //     console.log("✅ Creating payment intent...");
-    
+
 //     const paymentIntent = await createJobPaymentIntent({
 //       amountUsd: job.estimatedTotal,
 //       customerStripeId: customer.id,
@@ -387,10 +390,12 @@ router.post("/payment-sheet", auth, async (req, res) => {
     const paymentIntent = await createJobPaymentIntent({
       amountUsd: job.estimatedTotal,
       customerStripeId: customer.id,
-      provider: provider?.stripeAccountId ? {
-        stripeAccountId: provider.stripeAccountId,
-        tier: provider.billingTier,
-      } : null,
+      provider: provider?.stripeAccountId
+        ? {
+            stripeAccountId: provider.stripeAccountId,
+            tier: provider.billingTier,
+          }
+        : null,
     });
 
     res.json({
@@ -399,9 +404,25 @@ router.post("/payment-sheet", auth, async (req, res) => {
       ephemeralKey: ephemeralKey.secret,
       publishableKey: process.env.STRIPE_PUBLIC_KEY,
     });
+    console.log("✅ Created PaymentIntent:");
+    console.log("  ID:      ", paymentIntent.id);
+    console.log("  Secret:  ", paymentIntent.client_secret);
+    console.log(
+      "  Mode:    ",
+      process.env.STRIPE_SECRET_KEY?.includes("live") ? "LIVE" : "TEST"
+    );
+
+    console.log("✅ Created PaymentIntent:", paymentIntent.id);
+    console.log("✅ Returning client secret:", paymentIntent.client_secret);
+    console.log(
+      "🔑 Stripe mode:",
+      process.env.STRIPE_SECRET_KEY?.startsWith("sk_live") ? "LIVE" : "TEST"
+    );
   } catch (err) {
     console.error("❌ /payment-sheet error:", err.message, err?.raw || err);
-    res.status(500).json({ msg: err.message || "Failed to setup payment sheet" });
+    res
+      .status(500)
+      .json({ msg: err.message || "Failed to setup payment sheet" });
   }
 });
 

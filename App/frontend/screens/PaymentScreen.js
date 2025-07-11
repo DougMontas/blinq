@@ -304,6 +304,8 @@ export default function PaymentScreen() {
         const { data: jobData } = await api.get(`/jobs/${jobId}`);
         setJob(jobData);
 
+        
+
         const { data: sheetParams } = await api.post("/payments/payment-sheet", {
           jobId,
         });
@@ -312,6 +314,7 @@ export default function PaymentScreen() {
           Alert.alert("Stripe Error", "Invalid payment session returned.");
           return;
         }
+        console.log("🧾 Received sheetParams:", sheetParams);
 
         const { error: initError } = await initPaymentSheet({
           merchantDisplayName: "BlinqFix",
