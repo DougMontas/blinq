@@ -85,6 +85,7 @@ import xrpl from "xrpl";
 import { auth } from "../middlewares/auth.js";
 import Job from "../models/Job.js";
 import Users from "../models/Users.js";
+import { createJobPaymentIntent } from "./payments.js";
 
 const router = express.Router();
 
@@ -119,6 +120,41 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 //   });
 // }
 
+// export async function createJobPaymentIntent({
+//   amountUsd,
+//   customerStripeId,
+//   provider, // optional
+// }) {
+//   const JOB_CENTS = Math.round(amountUsd * 100);
+//   const CUSTOMER_FEE = Math.round(JOB_CENTS * 0.07);
+//   const TOTAL_CENTS = JOB_CENTS + CUSTOMER_FEE;
+
+//   const baseParams = {
+//     amount: TOTAL_CENTS,
+//     currency: "usd",
+//     customer: customerStripeId,
+//     description: "BlinqFix Job Prepayment",
+//     metadata: {
+//       type: provider ? provider.tier : "pre-dispatch",
+//     },
+//   };
+
+//   if (provider?.stripeAccountId) {
+//     baseParams.application_fee_amount =
+//       CUSTOMER_FEE + Math.round(JOB_CENTS * 0.07); // platform fee
+//     baseParams.transfer_data = {
+//       destination: provider.stripeAccountId,
+//     };
+//   }
+
+//   console.log("✅ Stripe intent created:", {
+//     id: intent.id,
+//     secret: intent.client_secret,
+//   });
+
+//   return stripe.paymentIntents.create(baseParams);
+// }
+
 export async function createJobPaymentIntent({
   amountUsd,
   customerStripeId,
@@ -146,13 +182,16 @@ export async function createJobPaymentIntent({
     };
   }
 
+  const intent = await stripe.paymentIntents.create(baseParams); // ✅ define it
+
   console.log("✅ Stripe intent created:", {
     id: intent.id,
     secret: intent.client_secret,
   });
 
-  return stripe.paymentIntents.create(baseParams);
+  return intent;
 }
+
 
 /********************************************************************************************
  * @route   POST /api/payments/stripe
@@ -367,10 +406,72 @@ router.post("/stripe", async (req, res) => {
 //   }
 // });
 
+// router.post("/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//     const customer = await stripe.customers.create({
+//       metadata: { jobId, userId: req.user.id },
+//     });
+
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.id },
+//       { apiVersion: "2022-11-15" }
+//     );
+
+//     let provider = null;
+//     if (job.acceptedProvider) {
+//       provider = await Users.findById(job.acceptedProvider);
+//     }
+
+//     const paymentIntent = await createJobPaymentIntent({
+//       amountUsd: job.estimatedTotal,
+//       customerStripeId: customer.id,
+//       provider: provider?.stripeAccountId
+//         ? {
+//             stripeAccountId: provider.stripeAccountId,
+//             tier: provider.billingTier,
+//           }
+//         : null,
+//     });
+
+//     res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       customer: customer.id,
+//       ephemeralKey: ephemeralKey.secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//     console.log("✅ Created PaymentIntent:");
+//     console.log("  ID:      ", paymentIntent.id);
+//     console.log("  Secret:  ", paymentIntent.client_secret);
+//     console.log(
+//       "  Mode:    ",
+//       process.env.STRIPE_SECRET_KEY?.includes("live") ? "LIVE" : "TEST"
+//     );
+
+//     console.log("✅ Created PaymentIntent:", paymentIntent.id);
+//     console.log("✅ Returning client secret:", paymentIntent.client_secret);
+//     console.log(
+//       "🔑 Stripe mode:",
+//       process.env.STRIPE_SECRET_KEY?.startsWith("sk_live") ? "LIVE" : "TEST"
+//     );
+//   } catch (err) {
+//     console.error("❌ /payment-sheet error:", err.message, err?.raw || err);
+//     res
+//       .status(500)
+//       .json({ msg: err.message || "Failed to setup payment sheet" });
+//   }
+// });
+
+
 router.post("/payment-sheet", auth, async (req, res) => {
   try {
     const { jobId } = req.body;
-    const job = await Job.findById(jobId);
+    if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
+
+    const job = await Jobs.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found." });
 
     const customer = await stripe.customers.create({
@@ -382,6 +483,7 @@ router.post("/payment-sheet", auth, async (req, res) => {
       { apiVersion: "2022-11-15" }
     );
 
+    // Optional: allow intent without provider (if job is still pending)
     let provider = null;
     if (job.acceptedProvider) {
       provider = await Users.findById(job.acceptedProvider);
@@ -398,34 +500,19 @@ router.post("/payment-sheet", auth, async (req, res) => {
         : null,
     });
 
+    console.log("✅ Returning PaymentIntent:", paymentIntent.id);
+
     res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
       customer: customer.id,
       ephemeralKey: ephemeralKey.secret,
       publishableKey: process.env.STRIPE_PUBLIC_KEY,
     });
-    console.log("✅ Created PaymentIntent:");
-    console.log("  ID:      ", paymentIntent.id);
-    console.log("  Secret:  ", paymentIntent.client_secret);
-    console.log(
-      "  Mode:    ",
-      process.env.STRIPE_SECRET_KEY?.includes("live") ? "LIVE" : "TEST"
-    );
-
-    console.log("✅ Created PaymentIntent:", paymentIntent.id);
-    console.log("✅ Returning client secret:", paymentIntent.client_secret);
-    console.log(
-      "🔑 Stripe mode:",
-      process.env.STRIPE_SECRET_KEY?.startsWith("sk_live") ? "LIVE" : "TEST"
-    );
   } catch (err) {
-    console.error("❌ /payment-sheet error:", err.message, err?.raw || err);
-    res
-      .status(500)
-      .json({ msg: err.message || "Failed to setup payment sheet" });
+    console.error("❌ /payment-sheet error:", err.message, err);
+    res.status(500).json({ msg: err.message || "Failed to setup payment sheet" });
   }
 });
-
 
 
 /********************************************************************************************
