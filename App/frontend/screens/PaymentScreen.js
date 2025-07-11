@@ -296,6 +296,53 @@ export default function PaymentScreen() {
     return true;
   };
 
+  // useEffect(() => {
+  //   const preparePayment = async () => {
+  //     setLoadingSheet(true);
+  //     setPaymentReady(false);
+  //     try {
+  //       const { data: jobData } = await api.get(`/jobs/${jobId}`);
+  //       setJob(jobData);
+
+        
+
+  //       const { data: sheetParams } = await api.post("/payments/payment-sheet", {
+  //         jobId,
+  //       });
+
+  //       if (!validateSheetParams(sheetParams)) {
+  //         Alert.alert("Stripe Error", "Invalid payment session returned.");
+  //         return;
+  //       }
+  //       console.log("🧾 Received sheetParams:", sheetParams);
+
+  //       const { error: initError } = await initPaymentSheet({
+  //         merchantDisplayName: "BlinqFix",
+  //         customerId: sheetParams.customer,
+  //         customerEphemeralKeySecret: sheetParams.ephemeralKey,
+  //         paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
+  //         allowsDelayedPaymentMethods: true,
+  //         returnURL: "https://blinqfix.com/onboarding-complete",
+  //       });
+
+  //       if (initError) {
+  //         console.error("❌ initPaymentSheet failed:", initError);
+  //         Alert.alert("Stripe Error", initError.message || "Could not initialize payment sheet.");
+  //         return;
+  //       }
+
+  //       setPaymentReady(true);
+  //     } catch (err) {
+  //       console.error("❌ initPaymentSheet error:", err.response?.data || err.message || err);
+  //       Alert.alert("Stripe Error", "Could not initialize payment sheet.");
+  //     } finally {
+  //       setLoadingSheet(false);
+  //     }
+  //   };
+
+  //   preparePayment();
+  // }, [jobId]);
+
   useEffect(() => {
     const preparePayment = async () => {
       setLoadingSheet(true);
@@ -303,43 +350,31 @@ export default function PaymentScreen() {
       try {
         const { data: jobData } = await api.get(`/jobs/${jobId}`);
         setJob(jobData);
-
-        
-
+  
         const { data: sheetParams } = await api.post("/payments/payment-sheet", {
           jobId,
         });
-
-        if (!validateSheetParams(sheetParams)) {
-          Alert.alert("Stripe Error", "Invalid payment session returned.");
-          return;
-        }
+  
         console.log("🧾 Received sheetParams:", sheetParams);
-
+  
         const { error: initError } = await initPaymentSheet({
           merchantDisplayName: "BlinqFix",
           customerId: sheetParams.customer,
           customerEphemeralKeySecret: sheetParams.ephemeralKey,
           paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
           allowsDelayedPaymentMethods: true,
-          returnURL: "https://blinqfix.com/onboarding-complete",
         });
-
-        if (initError) {
-          console.error("❌ initPaymentSheet failed:", initError);
-          Alert.alert("Stripe Error", initError.message || "Could not initialize payment sheet.");
-          return;
-        }
-
+  
+        if (initError) throw initError;
         setPaymentReady(true);
       } catch (err) {
-        console.error("❌ initPaymentSheet error:", err.response?.data || err.message || err);
+        console.error("❌ initPaymentSheet error:", err);
         Alert.alert("Stripe Error", "Could not initialize payment sheet.");
       } finally {
         setLoadingSheet(false);
       }
     };
-
+  
     preparePayment();
   }, [jobId]);
 

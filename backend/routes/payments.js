@@ -466,13 +466,61 @@ router.post("/stripe", async (req, res) => {
 // });
 
 
+// router.post("/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
+
+//     const job = await Jobs.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//     const customer = await stripe.customers.create({
+//       metadata: { jobId, userId: req.user.id },
+//     });
+
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.id },
+//       { apiVersion: "2022-11-15" }
+//     );
+
+//     // Optional: allow intent without provider (if job is still pending)
+//     let provider = null;
+//     if (job.acceptedProvider) {
+//       provider = await Users.findById(job.acceptedProvider);
+//     }
+
+//     // const paymentIntent = await createJobPaymentIntent({
+//     //   amountUsd: job.estimatedTotal,
+//     //   customerStripeId: customer.id,
+//     //   provider: provider?.stripeAccountId
+//     //     ? {
+//     //         stripeAccountId: provider.stripeAccountId,
+//     //         tier: provider.billingTier,
+//     //       }
+//     //     : null,
+//     // });
+
+//     // console.log("✅ Returning PaymentIntent:", paymentIntent.id);
+
+//     res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       customer: customer.id,
+//       ephemeralKey: ephemeralKey.secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//   } catch (err) {
+//     console.error("❌ /payment-sheet error:", err.message, err);
+//     res.status(500).json({ msg: err.message || "Failed to setup payment sheet" });
+//   }
+// });
+
 router.post("/payment-sheet", auth, async (req, res) => {
   try {
     const { jobId } = req.body;
-    if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
+    if (!jobId) return res.status(400).json({ msg: "Missing job ID" });
 
-    const job = await Jobs.findById(jobId);
-    if (!job) return res.status(404).json({ msg: "Job not found." });
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
 
     const customer = await stripe.customers.create({
       metadata: { jobId, userId: req.user.id },
@@ -483,26 +531,17 @@ router.post("/payment-sheet", auth, async (req, res) => {
       { apiVersion: "2022-11-15" }
     );
 
-    // Optional: allow intent without provider (if job is still pending)
-    let provider = null;
-    if (job.acceptedProvider) {
-      provider = await Users.findById(job.acceptedProvider);
-    }
+    const amountCents = Math.round((job.estimatedTotal || 0) * 100);
 
-    // const paymentIntent = await createJobPaymentIntent({
-    //   amountUsd: job.estimatedTotal,
-    //   customerStripeId: customer.id,
-    //   provider: provider?.stripeAccountId
-    //     ? {
-    //         stripeAccountId: provider.stripeAccountId,
-    //         tier: provider.billingTier,
-    //       }
-    //     : null,
-    // });
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountCents,
+      currency: "usd",
+      customer: customer.id,
+      description: "BlinqFix Emergency Job",
+      automatic_payment_methods: { enabled: true },
+    });
 
-    // console.log("✅ Returning PaymentIntent:", paymentIntent.id);
-
-    res.json({
+    return res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
       customer: customer.id,
       ephemeralKey: ephemeralKey.secret,
@@ -510,10 +549,9 @@ router.post("/payment-sheet", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("❌ /payment-sheet error:", err.message, err);
-    res.status(500).json({ msg: err.message || "Failed to setup payment sheet" });
+    res.status(500).json({ msg: err.message || "Stripe Payment Init Failed" });
   }
 });
-
 
 /********************************************************************************************
  * @route   POST /api/payments/xrpl
