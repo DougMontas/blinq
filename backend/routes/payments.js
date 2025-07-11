@@ -540,6 +540,8 @@ router.post("/payment-sheet", auth, async (req, res) => {
       description: "BlinqFix Emergency Job",
       automatic_payment_methods: { enabled: true },
     });
+    
+    console.log("🎯 Returning client secret:", paymentIntent.client_secret);
 
     return res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
