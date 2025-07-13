@@ -242,7 +242,6 @@
 //   },
 // });
 
-
 // import React, { useEffect, useState } from "react";
 // import {
 //   View,
@@ -304,8 +303,6 @@
 //   //       const { data: jobData } = await api.get(`/jobs/${jobId}`);
 //   //       setJob(jobData);
 
-        
-
 //   //       const { data: sheetParams } = await api.post("/payments/payment-sheet", {
 //   //         jobId,
 //   //       });
@@ -350,13 +347,13 @@
 //       try {
 //         const { data: jobData } = await api.get(`/jobs/${jobId}`);
 //         setJob(jobData);
-  
+
 //         const { data: sheetParams } = await api.post("/payments/payment-sheet", {
 //           jobId,
 //         });
-  
+
 //         console.log("🧾 Received sheetParams:", sheetParams);
-  
+
 //         const { error: initError } = await initPaymentSheet({
 //           merchantDisplayName: "BlinqFix",
 //           customerId: sheetParams.customer,
@@ -364,7 +361,7 @@
 //           paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
 //           allowsDelayedPaymentMethods: true,
 //         });
-  
+
 //         if (initError) throw initError;
 //         setPaymentReady(true);
 //       } catch (err) {
@@ -374,7 +371,7 @@
 //         setLoadingSheet(false);
 //       }
 //     };
-  
+
 //     preparePayment();
 //   }, [jobId]);
 
@@ -859,14 +856,23 @@ export default function PaymentScreen() {
         const { data: jobData } = await api.get(`/jobs/${jobId}`);
         setJob(jobData);
 
-        const customerName = `${jobData?.customer?.name || jobData?.firstName || ""} ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
-        const customerEmail = jobData?.customer?.email || jobData?.email || jobData?.customerEmail || "";
+        const customerName = `${
+          jobData?.customer?.name || jobData?.firstName || ""
+        } ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
+        const customerEmail =
+          jobData?.customer?.email ||
+          jobData?.email ||
+          jobData?.customerEmail ||
+          "";
 
-        const { data: sheetParams } = await api.post("/payments/payment-sheet", {
-          jobId,
-          customerName,
-          customerEmail,
-        });
+        const { data: sheetParams } = await api.post(
+          "/payments/payment-sheet",
+          {
+            jobId,
+            customerName,
+            customerEmail,
+          }
+        );
 
         if (!validateSheetParams(sheetParams)) {
           Alert.alert("Stripe Error", "Invalid payment session returned.");
@@ -886,13 +892,19 @@ export default function PaymentScreen() {
 
         if (initError) {
           console.error("❌ initPaymentSheet failed:", initError);
-          Alert.alert("Stripe Error", initError.message || "Could not initialize payment sheet.");
+          Alert.alert(
+            "Stripe Error",
+            initError.message || "Could not initialize payment sheet."
+          );
           return;
         }
 
         setPaymentReady(true);
       } catch (err) {
-        console.error("❌ initPaymentSheet error:", err.response?.data || err.message || err);
+        console.error(
+          "❌ initPaymentSheet error:",
+          err.response?.data || err.message || err
+        );
         Alert.alert("Stripe Error", "Could not initialize payment sheet.");
       } finally {
         setLoadingSheet(false);
@@ -904,14 +916,20 @@ export default function PaymentScreen() {
 
   const handlePay = async () => {
     if (!paymentReady) {
-      return Alert.alert("Payment not ready", "Please wait while we prepare your payment.");
+      return Alert.alert(
+        "Payment not ready",
+        "Please wait while we prepare your payment."
+      );
     }
 
     try {
       const { error } = await presentPaymentSheet();
       if (error) {
         console.error("❌ presentPaymentSheet error:", error);
-        return Alert.alert("Payment Failed", error.message || "Unknown error occurred.");
+        return Alert.alert(
+          "Payment Failed",
+          error.message || "Unknown error occurred."
+        );
       }
 
       setShowAnimation(true);
@@ -929,7 +947,9 @@ export default function PaymentScreen() {
         enterDuration={800}
         holdDuration={400}
         exitDuration={800}
-        onAnimationEnd={() => navigation.replace("CustomerJobStatus", { jobId })}
+        onAnimationEnd={() =>
+          navigation.replace("CustomerJobStatus", { jobId })
+        }
       />
     );
   }
@@ -945,12 +965,22 @@ export default function PaymentScreen() {
   }
 
   return (
-    <StripeProvider
-    publishableKey={Constants.expoConfig.extra.stripeKey}
-    urlScheme="blinqfix"
-    merchantIdentifier="merchant.com.blinqfix"
-  >
     <View key={jobId} style={styles.container}>
+      <View key={jobId} style={styles.container}>
+        {showAnimation ? (
+          <LoadingScreen
+            animationOnly
+            enterDuration={800}
+            holdDuration={400}
+            exitDuration={800}
+            onAnimationEnd={() =>
+              navigation.replace("CustomerJobStatus", { jobId })
+            }
+          />
+        ) : (
+          <>{/* existing summary and payment UI here */}</>
+        )}
+      </View>
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Estimate Details</Text>
         {job.additionalCharge > 0 && (
@@ -958,7 +988,9 @@ export default function PaymentScreen() {
             Extra charge: ${job.additionalCharge.toFixed(2)}
           </Text>
         )}
-        <Text style={styles.totalLine}>Total: ${job.estimatedTotal.toFixed(2)}</Text>
+        <Text style={styles.totalLine}>
+          Total: ${job.estimatedTotal.toFixed(2)}
+        </Text>
         <Text style={styles.sectionTitle}>What’s Covered:</Text>
         <Text style={styles.descriptionText}>{description}</Text>
       </View>
@@ -985,7 +1017,6 @@ export default function PaymentScreen() {
         <Text style={styles.payButtonText}>Pay & Book</Text>
       </TouchableOpacity>
     </View>
-    </StripeProvider>
   );
 }
 

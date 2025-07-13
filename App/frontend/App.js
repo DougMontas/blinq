@@ -1030,6 +1030,11 @@ export default function App() {
   }
 
   return (
+  <StripeProvider
+    publishableKey={Constants.expoConfig.extra.stripeKey}
+    urlScheme="blinqfix"
+    merchantIdentifier="merchant.com.blinqfix"
+  >
     <SafeAreaProvider>
       <AuthContext.Provider value={{ role, setRole }}>
         <NavigationContainer ref={navigationRef} linking={linking}>
@@ -1105,5 +1110,6 @@ export default function App() {
         </NavigationContainer>
       </AuthContext.Provider>
     </SafeAreaProvider>
+    </StripeProvider>
   );
 }
