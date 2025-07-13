@@ -966,21 +966,20 @@ export default function PaymentScreen() {
 
   return (
     <View key={jobId} style={styles.container}>
-      <View key={jobId} style={styles.container}>
-        {showAnimation ? (
-          <LoadingScreen
-            animationOnly
-            enterDuration={800}
-            holdDuration={400}
-            exitDuration={800}
-            onAnimationEnd={() =>
-              navigation.replace("CustomerJobStatus", { jobId })
-            }
-          />
-        ) : (
-          <>{/* existing summary and payment UI here */}</>
-        )}
-      </View>
+      {showAnimation ? (
+        <LoadingScreen
+          animationOnly
+          enterDuration={800}
+          holdDuration={400}
+          exitDuration={800}
+          onAnimationEnd={() =>
+            navigation.replace("CustomerJobStatus", { jobId })
+          }
+        />
+      ) : (
+        <>{/* existing summary and payment UI here */}</>
+      )}
+
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Estimate Details</Text>
         {job.additionalCharge > 0 && (
