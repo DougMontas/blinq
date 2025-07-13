@@ -572,7 +572,11 @@ router.post("/payment-sheet", auth, async (req, res) => {
     //   metadata: { jobId, userId: req.user.id },
     // });
 
-    const { customerName, customerEmail } = req.body;
+    // const { customerName, customerEmail } = req.body;
+
+    const customerName =
+      req.body.customerName || req.user.name || "BlinqFix User";
+    const customerEmail = req.body.customerEmail || req.user.email || "";
 
     const customer = await stripe.customers.create({
       name: customerName,

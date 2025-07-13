@@ -806,7 +806,7 @@ import {
   Alert,
   StyleSheet,
 } from "react-native";
-import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
+import { useStripe } from "@stripe/stripe-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import api from "../api/client";
 import Constants from "expo-constants";
@@ -826,7 +826,7 @@ export default function PaymentScreen() {
   const [job, setJob] = useState(null);
 
   const validateSheetParams = (params) => {
-    console.log("🧪 Validating Stripe Sheet Params:", params);
+    console.log("\uD83D\uDD6A Validating Stripe Sheet Params:", params);
 
     if (!params?.customer || !params?.customer.startsWith("cus_")) {
       console.warn("⚠️ Invalid or missing customer ID");
@@ -858,8 +858,13 @@ export default function PaymentScreen() {
         const { data: jobData } = await api.get(`/jobs/${jobId}`);
         setJob(jobData);
 
+        const customerName = jobData?.customerName || `${jobData?.firstName || ""} ${jobData?.lastName || ""}`;
+        const customerEmail = jobData?.customerEmail || jobData?.email || "";
+
         const { data: sheetParams } = await api.post("/payments/payment-sheet", {
           jobId,
+          customerName,
+          customerEmail,
         });
 
         if (!validateSheetParams(sheetParams)) {
@@ -867,7 +872,7 @@ export default function PaymentScreen() {
           return;
         }
 
-        console.log("🧾 Received sheetParams:", sheetParams);
+        console.log("\uD83D\uDCBE Received sheetParams:", sheetParams);
 
         const { error: initError } = await initPaymentSheet({
           merchantDisplayName: "BlinqFix",
@@ -939,43 +944,41 @@ export default function PaymentScreen() {
   }
 
   return (
-    <StripeProvider publishableKey={Constants.expoConfig.extra.stripeKey}>
-      <View style={styles.container}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Estimate Details</Text>
-          {job.additionalCharge > 0 && (
-            <Text style={{ textAlign: "center" }}>
-              Extra charge: ${job.additionalCharge.toFixed(2)}
+    <View style={styles.container}>
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Estimate Details</Text>
+        {job.additionalCharge > 0 && (
+          <Text style={{ textAlign: "center" }}>
+            Extra charge: ${job.additionalCharge.toFixed(2)}
+          </Text>
+        )}
+        <Text style={styles.totalLine}>Total: ${job.estimatedTotal.toFixed(2)}</Text>
+        <Text style={styles.sectionTitle}>What’s Covered:</Text>
+        <Text style={styles.descriptionText}>{description}</Text>
+      </View>
+
+      {job.additionalCharge > 0 && (
+        <View style={styles.additionalCard}>
+          <Text style={styles.additionalCardTitle}>Additional Charge</Text>
+          <Text style={styles.additionalCardText}>
+            Amount: ${job.additionalCharge.toFixed(2)}
+          </Text>
+          {job.additionalChargeReason && (
+            <Text style={styles.additionalCardText}>
+              Description: {job.additionalChargeReason}
             </Text>
           )}
-          <Text style={styles.totalLine}>Total: ${job.estimatedTotal.toFixed(2)}</Text>
-          <Text style={styles.sectionTitle}>What’s Covered:</Text>
-          <Text style={styles.descriptionText}>{description}</Text>
         </View>
+      )}
 
-        {job.additionalCharge > 0 && (
-          <View style={styles.additionalCard}>
-            <Text style={styles.additionalCardTitle}>Additional Charge</Text>
-            <Text style={styles.additionalCardText}>
-              Amount: ${job.additionalCharge.toFixed(2)}
-            </Text>
-            {job.additionalChargeReason && (
-              <Text style={styles.additionalCardText}>
-                Description: {job.additionalChargeReason}
-              </Text>
-            )}
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
-          onPress={handlePay}
-          disabled={!paymentReady}
-        >
-          <Text style={styles.payButtonText}>Pay & Book</Text>
-        </TouchableOpacity>
-      </View>
-    </StripeProvider>
+      <TouchableOpacity
+        style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
+        onPress={handlePay}
+        disabled={!paymentReady}
+      >
+        <Text style={styles.payButtonText}>Pay & Book</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
