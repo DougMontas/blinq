@@ -918,11 +918,11 @@ export const useAuth = () => useContext(AuthContext);
 const Stack = createNativeStackNavigator();
 
 const linking = {
-  prefixes: ["blinqfix://", "https://blinqfix.com"],
+  prefixes: ["blinqfix://", "https://blinqfix.com", "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/"],
   config: {
     screens: {
-      OnboardingComplete: "https://blinqfix.com/onboarding-return",
-      PasswordResetComplete: "https://blinqfix.com/onboarding-refresh",
+      Login: "onboarding-complete",
+      // PasswordResetComplete: "https://blinqfix.com/onboarding-refresh",
     },
   },
 };
