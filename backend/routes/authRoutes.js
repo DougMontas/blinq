@@ -11,11 +11,131 @@ const baseUrl = process.env.FRONTEND_BASE_URL;
 
 const refreshUrl = process.env.STRIPE_ONBOARDING_REFRESH_URL?.startsWith("http")
 ? process.env.STRIPE_ONBOARDING_REFRESH_URL
-: "https://blinqfix.com/onboarding-refresh";
+: "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
 
 const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 ? process.env.STRIPE_ONBOARDING_RETURN_URL
-: "https://blinqfix.com/onboarding-complete";
+: "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
+
+// router.post("/register", async (req, res) => {
+//   try {
+//     let {
+//       name,
+//       email,
+//       password,
+//       role = "customer",
+//       address,
+//       phoneNumber,
+//       zipcode,
+//       serviceType,
+//       billingTier,
+//       ssnLast4,
+//       dob,
+//       location,
+//       isActive,
+//     } = req.body;
+
+//     if (!name || !email || !password || !address || !phoneNumber) {
+//       return res.status(400).json({
+//         msg: "Name, email, password, address and phoneNumber are required.",
+//       });
+//     }
+
+//     email = email.toLowerCase().trim();
+
+//     const existingUser = await Users.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ msg: "User already exists" });
+//     }
+
+//     const zipArray = Array.isArray(zipcode)
+//       ? zipcode.map(Number)
+//       : [Number(zipcode)];
+
+//     const userData = {
+//       name,
+//       email,
+//       password, // let Mongoose pre-save hook hash it
+//       role,
+//       address,
+//       phoneNumber,
+//       zipcode: zipArray,
+//       location,
+//       isActive: role === "serviceProvider" ? false : true,
+//     };
+
+//     if (role === "serviceProvider") {
+//       Object.assign(userData, {
+//         serviceType,
+//         billingTier,
+//         serviceZipcode: zipArray,
+//         w9: "fill out",
+//         businessLicense: "fill out",
+//         proofOfInsurance: "fill out",
+//         independentContractorAgreement: "fill out",
+//         ssnLast4,
+//         dob,
+//       });
+
+//       const stripe = await import("stripe").then((m) => m.default);
+//       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
+
+//       const account = await stripeInstance.accounts.create({
+//         type: "express",
+//         country: "US",
+//         email,
+//         capabilities: { transfers: { requested: true } },
+//         business_type: "individual",
+//       });
+
+//       userData.stripeAccountId = account.id;
+//     }
+
+//     const newUser = await Users.create(userData);
+
+//     const token = jwt.sign(
+//       { id: newUser._id, role: newUser.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "15m" }
+//     );
+
+//     const refreshToken = jwt.sign(
+//       { id: newUser._id },
+//       process.env.REFRESH_SECRET,
+//       { expiresIn: "30d" }
+//     );
+
+//     newUser.refreshToken = refreshToken;
+//     await newUser.save();
+
+//     if (role === "serviceProvider") {
+//       const stripe = await import("stripe").then((m) => m.default);
+//       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
+
+//       const baseUrl =
+//         process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com"; // Use HTTPS!
+
+//       const accountLink = await stripeInstance.accountLinks.create({
+//         account: newUser.stripeAccountId,
+//         refresh_url: refreshUrl,
+//         return_url: returnUrl,
+//         type: "account_onboarding",
+//       });
+
+
+//       return res.json({
+//         token,
+//         refreshToken,
+//         stripeOnboardingUrl: accountLink.url,
+//       });
+//     }
+
+//     return res.json({ token, refreshToken });
+//   } catch (err) {
+//     console.error("Error in POST /register:", err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
 
 router.post("/register", async (req, res) => {
   try {
@@ -30,7 +150,7 @@ router.post("/register", async (req, res) => {
       serviceType,
       billingTier,
       ssnLast4,
-      dob,
+      dob, // format: YYYY-MM-DD expected
       location,
       isActive,
     } = req.body;
@@ -55,7 +175,7 @@ router.post("/register", async (req, res) => {
     const userData = {
       name,
       email,
-      password, // let Mongoose pre-save hook hash it
+      password,
       role,
       address,
       phoneNumber,
@@ -64,7 +184,17 @@ router.post("/register", async (req, res) => {
       isActive: role === "serviceProvider" ? false : true,
     };
 
+    let dobDate;
     if (role === "serviceProvider") {
+      if (!ssnLast4 || !dob) {
+        return res.status(400).json({ msg: "SSN last 4 digits and DOB are required for providers." });
+      }
+
+      dobDate = new Date(dob);
+      if (isNaN(dobDate.getTime())) {
+        return res.status(400).json({ msg: "Invalid DOB format. Use YYYY-MM-DD." });
+      }
+
       Object.assign(userData, {
         serviceType,
         billingTier,
@@ -80,12 +210,30 @@ router.post("/register", async (req, res) => {
       const stripe = await import("stripe").then((m) => m.default);
       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
+      const [firstName, ...lastParts] = name.trim().split(" ");
+      const lastName = lastParts.join(" ") || "Provider";
+
       const account = await stripeInstance.accounts.create({
         type: "express",
         country: "US",
         email,
-        capabilities: { transfers: { requested: true } },
         business_type: "individual",
+        individual: {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone: phoneNumber,
+          ssn_last_4: ssnLast4,
+          dob: {
+            day: dobDate.getUTCDate(),
+            month: dobDate.getUTCMonth() + 1,
+            year: dobDate.getUTCFullYear(),
+          },
+        },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
       });
 
       userData.stripeAccountId = account.id;
@@ -112,16 +260,13 @@ router.post("/register", async (req, res) => {
       const stripe = await import("stripe").then((m) => m.default);
       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
-      const baseUrl =
-        process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com"; // Use HTTPS!
-
+      const baseUrl = process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com";
       const accountLink = await stripeInstance.accountLinks.create({
         account: newUser.stripeAccountId,
-        refresh_url: refreshUrl,
-        return_url: returnUrl,
+        refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL || `${baseUrl}/onboarding-refresh`,
+        return_url: process.env.STRIPE_ONBOARDING_RETURN_URL || `${baseUrl}/onboarding-complete`,
         type: "account_onboarding",
       });
-
 
       return res.json({
         token,
@@ -136,6 +281,7 @@ router.post("/register", async (req, res) => {
     return res.status(500).json({ msg: "Server error" });
   }
 });
+
 
 router.post("/login", async (req, res) => {
   try {

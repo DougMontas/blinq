@@ -809,6 +809,7 @@ import {
 import { useStripe } from "@stripe/stripe-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import api from "../api/client";
+import { StripeProvider } from "@stripe/stripe-react-native";
 import Constants from "expo-constants";
 import LoadingScreen from "./LoadingScreen";
 import { getCoveredDescription } from "../utils/serviceMatrix";
