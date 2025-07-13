@@ -858,8 +858,8 @@ export default function PaymentScreen() {
         const { data: jobData } = await api.get(`/jobs/${jobId}`);
         setJob(jobData);
 
-        const customerName = jobData?.customerName || `${jobData?.firstName || ""} ${jobData?.lastName || ""}`;
-        const customerEmail = jobData?.customerEmail || jobData?.email || "";
+        const customerName = `${jobData?.customer?.name || jobData?.firstName || ""} ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
+        const customerEmail = jobData?.customer?.email || jobData?.email || jobData?.customerEmail || "";
 
         const { data: sheetParams } = await api.post("/payments/payment-sheet", {
           jobId,
@@ -937,14 +937,14 @@ export default function PaymentScreen() {
 
   if (loadingSheet || !job) {
     return (
-      <View style={styles.container}>
+      <View style={styles.container} key="loading">
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View key={jobId} style={styles.container}>
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Estimate Details</Text>
         {job.additionalCharge > 0 && (
