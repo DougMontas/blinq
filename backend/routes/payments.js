@@ -95,6 +95,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   timeout: 120000,
 });
 
+console.log("🔐 Stripe key in use:", stripe._apiKey?.slice(0, 10));
+console.log("🧾 Stripe Secret Key in use:", process.env.STRIPE_SECRET_KEY?.slice(0, 8));
+console.log("stripe ::::: ",stripe)
+
 /********************************************************************************************
  * ✅ JOB PAYMENT INTENT HELPER FUNCTION (add near the top of this file)
  *******************************************************************************************/
@@ -514,13 +518,54 @@ router.post("/stripe", async (req, res) => {
 //   }
 // });
 
+// router.post("/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     if (!jobId) return res.status(400).json({ msg: "Missing job ID" });
+
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//     const customer = await stripe.customers.create({
+//       metadata: { jobId, userId: req.user.id },
+//     });
+
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.id },
+//       { apiVersion: "2022-11-15" }
+//     );
+
+//     const amountCents = Math.round((job.estimatedTotal || 0) * 100);
+
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount: amountCents,
+//       currency: "usd",
+//       customer: customer.id,
+//       description: "BlinqFix Emergency Job",
+//       automatic_payment_methods: { enabled: true },
+//     });
+
+//     console.log("🎯 Returning client secret:", paymentIntent.client_secret);
+
+//     return res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       customer: customer.id,
+//       ephemeralKey: ephemeralKey.secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//   } catch (err) {
+//     console.error("❌ /payment-sheet error:", err.message, err);
+//     res.status(500).json({ msg: err.message || "Stripe Payment Init Failed" });
+//   }
+// });
+
 router.post("/payment-sheet", auth, async (req, res) => {
   try {
     const { jobId } = req.body;
-    if (!jobId) return res.status(400).json({ msg: "Missing job ID" });
+    if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
 
     const job = await Job.findById(jobId);
-    if (!job) return res.status(404).json({ msg: "Job not found" });
+    if (!job) return res.status(404).json({ msg: "Job not found." });
 
     const customer = await stripe.customers.create({
       metadata: { jobId, userId: req.user.id },
@@ -539,9 +584,17 @@ router.post("/payment-sheet", auth, async (req, res) => {
       customer: customer.id,
       description: "BlinqFix Emergency Job",
       automatic_payment_methods: { enabled: true },
+      metadata: {
+        stripeAccount: stripe._apiKey?.slice(0, 8),
+        jobId: job._id.toString(),
+      },
     });
-    
-    console.log("🎯 Returning client secret:", paymentIntent.client_secret);
+
+    console.log("🎯 PaymentIntent Created:", {
+      id: paymentIntent.id,
+      secret: paymentIntent.client_secret,
+      mode: stripe._apiKey?.includes("live") ? "LIVE" : "TEST",
+    });
 
     return res.json({
       paymentIntentClientSecret: paymentIntent.client_secret,
@@ -554,6 +607,7 @@ router.post("/payment-sheet", auth, async (req, res) => {
     res.status(500).json({ msg: err.message || "Stripe Payment Init Failed" });
   }
 });
+
 
 /********************************************************************************************
  * @route   POST /api/payments/xrpl

@@ -405,7 +405,7 @@ export default {
       eas: {
         projectId: "05911a90-207f-46d5-802a-05f6b45fd4ce",
       },
-      stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
+      stripeKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "pk_test_51RWL9zEI6DlT9jKy5hI2wtjMPn445QOrr7xHmqaORiaawxVrYw3s1JtovLMOgbcANAqap2cQYRHMHs70KaMNOBi800CyPJLzlM",
       EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
       EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     },

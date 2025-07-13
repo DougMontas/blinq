@@ -321,8 +321,7 @@ router.get("/providers/active", async (req, res) => {
 //   }
 // );
 
-router.put(
-  "/profile",
+router.put("/profile",
   auth,
   upload.fields([
     { name: "w9", maxCount: 1 },
