@@ -96,8 +96,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 console.log("🔐 Stripe key in use:", stripe._apiKey?.slice(0, 10));
-console.log("🧾 Stripe Secret Key in use:", process.env.STRIPE_SECRET_KEY?.slice(0, 8));
-console.log("stripe ::::: ",stripe)
+console.log(
+  "🧾 Stripe Secret Key in use:",
+  process.env.STRIPE_SECRET_KEY?.slice(0, 8)
+);
+console.log("stripe ::::: ", stripe);
 
 /********************************************************************************************
  * ✅ JOB PAYMENT INTENT HELPER FUNCTION (add near the top of this file)
@@ -195,7 +198,6 @@ export async function createJobPaymentIntent({
 
   return intent;
 }
-
 
 /********************************************************************************************
  * @route   POST /api/payments/stripe
@@ -469,7 +471,6 @@ router.post("/stripe", async (req, res) => {
 //   }
 // });
 
-
 // router.post("/payment-sheet", auth, async (req, res) => {
 //   try {
 //     const { jobId } = req.body;
@@ -567,7 +568,15 @@ router.post("/payment-sheet", auth, async (req, res) => {
     const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found." });
 
+    // const customer = await stripe.customers.create({
+    //   metadata: { jobId, userId: req.user.id },
+    // });
+
+    const { customerName, customerEmail } = req.body;
+
     const customer = await stripe.customers.create({
+      name: customerName,
+      email: customerEmail,
       metadata: { jobId, userId: req.user.id },
     });
 
@@ -607,7 +616,6 @@ router.post("/payment-sheet", auth, async (req, res) => {
     res.status(500).json({ msg: err.message || "Stripe Payment Init Failed" });
   }
 });
-
 
 /********************************************************************************************
  * @route   POST /api/payments/xrpl
