@@ -48,7 +48,7 @@
 // export default function App() {
 //   const [initialRoute, setInitialRoute] = useState(null);
 //   const [role, setRole] = useState(null);
-  
+
 //   // useEffect(() => {
 //   //   const sendPushToken = async () => {
 //   //     const token = await registerForPushNotificationsAsync();
@@ -56,7 +56,7 @@
 //   //       await api.post("/users/push-token", { expoPushToken: token });
 //   //     }
 //   //   };
-  
+
 //   //   if (userIsAuthenticated) {
 //   //     sendPushToken();
 //   //   }
@@ -175,7 +175,6 @@
 //     </SafeAreaProvider>
 //   );
 // }
-
 
 // // App.js
 // import React, { useEffect, useState, createContext, useContext } from "react";
@@ -433,10 +432,9 @@
 //     const subscription = Notifications.addNotificationReceivedListener(notification => {
 //       console.log("📲 Push notification received in foreground/background", notification);
 //     });
-  
+
 //     return () => subscription.remove();
 //   }, []);
-  
 
 //   return (
 //     <SafeAreaProvider>
@@ -871,7 +869,6 @@
 //   );
 // }
 
-
 import React, { useEffect, useState, createContext, useContext } from "react";
 import {
   NavigationContainer,
@@ -921,11 +918,11 @@ export const useAuth = () => useContext(AuthContext);
 const Stack = createNativeStackNavigator();
 
 const linking = {
-  prefixes: ['blinqfix://', 'https://blinqfix.com'],
+  prefixes: ["blinqfix://", "https://blinqfix.com"],
   config: {
     screens: {
-      OnboardingComplete: 'https://blinqfix.com/onboarding-return',
-      PasswordResetComplete: 'https://blinqfix.com/onboarding-refresh',
+      OnboardingComplete: "https://blinqfix.com/onboarding-return",
+      PasswordResetComplete: "https://blinqfix.com/onboarding-refresh",
     },
   },
 };
@@ -994,18 +991,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationReceivedListener(notification => {
-      console.log("📲 Push notification received in foreground/background", notification);
-    });
-
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data;
-      if (data?.jobId && data?.type === "teaser") {
-        navigationRef.current?.navigate("ProviderInvitation", { jobId: data.jobId });
-      } else if (data?.jobId) {
-        navigationRef.current?.navigate("ProviderJobStatus", { jobId: data.jobId });
+    const subscription = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        console.log(
+          "📲 Push notification received in foreground/background",
+          notification
+        );
       }
-    });
+    );
+
+    const responseSubscription =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data;
+        if (data?.jobId && data?.type === "teaser") {
+          navigationRef.current?.navigate("ProviderInvitation", {
+            jobId: data.jobId,
+          });
+        } else if (data?.jobId) {
+          navigationRef.current?.navigate("ProviderJobStatus", {
+            jobId: data.jobId,
+          });
+        }
+      });
 
     return () => {
       subscription.remove();
@@ -1025,43 +1032,77 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthContext.Provider value={{ role, setRole }}>
-        <StripeProvider
-          publishableKey={stripeKey}
-          urlScheme="blinqfix"
-          merchantIdentifier="merchant.com.blinqfix"
-        >
-          <NavigationContainer ref={navigationRef} linking={linking}>
-            <Stack.Navigator
-              initialRouteName={initialRoute}
-              screenOptions={{ headerShown: false, gestureEnabled: false }}
-            >
-              <Stack.Screen name="Loading" component={LoadingScreen} />
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="HandymanCategoryScreen" component={HandymanCategoryScreen} />
-              <Stack.Screen name="Registration" component={RegistrationScreen} />
-              <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
-              <Stack.Screen name="CustomerDashboard" component={CustomerDashboard} />
-              <Stack.Screen name="EmergencyForm" component={EmergencyForm} />
-              <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
-              <Stack.Screen name="CustomerJobStatus" component={CustomerJobStatus} />
-              <Stack.Screen name="ServiceProviderDashboard" component={ServiceProviderDashboard} />
-              <Stack.Screen name="ProviderInvitation" component={ProviderInvitation} />
-              <Stack.Screen name="ProviderTermsAndAgreement" component={ProviderTermsAndAgreement} />
-              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
-              <Stack.Screen name="ServiceProFaqScreen" component={ServiceProFaqScreen} />
-              <Stack.Screen name="ProviderJobStatus" component={ProviderJobStatus} />
-              <Stack.Screen name="WebViewScreen" component={WebViewScreen} />
-              <Stack.Screen name="ProviderProfile" component={ProviderProfile} />
-              <Stack.Screen name="RateProvider" component={RateProvider} />
-              <Stack.Screen name="TermsAndConditions" component={TermsAndConditions} />
-              <Stack.Screen name="CustomerFAQScreen" component={CustomerFAQScreen} />
-              <Stack.Screen name="DeleteAccountScreen" component={DeleteAccountScreen} />
-              <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-              <Stack.Screen name="MyAccountScreen" component={MyAccountScreen} />
-              <Stack.Screen name="NotFound" component={NotFoundScreen} options={{ headerShown: false }} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </StripeProvider>
+        <NavigationContainer ref={navigationRef} linking={linking}>
+          <Stack.Navigator
+            initialRouteName={initialRoute}
+            screenOptions={{ headerShown: false, gestureEnabled: false }}
+          >
+            <Stack.Screen name="Loading" component={LoadingScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen
+              name="HandymanCategoryScreen"
+              component={HandymanCategoryScreen}
+            />
+            <Stack.Screen name="Registration" component={RegistrationScreen} />
+            <Stack.Screen
+              name="ResetPasswordScreen"
+              component={ResetPasswordScreen}
+            />
+            <Stack.Screen
+              name="CustomerDashboard"
+              component={CustomerDashboard}
+            />
+            <Stack.Screen name="EmergencyForm" component={EmergencyForm} />
+            <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
+            <Stack.Screen
+              name="CustomerJobStatus"
+              component={CustomerJobStatus}
+            />
+            <Stack.Screen
+              name="ServiceProviderDashboard"
+              component={ServiceProviderDashboard}
+            />
+            <Stack.Screen
+              name="ProviderInvitation"
+              component={ProviderInvitation}
+            />
+            <Stack.Screen
+              name="ProviderTermsAndAgreement"
+              component={ProviderTermsAndAgreement}
+            />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
+            <Stack.Screen
+              name="ServiceProFaqScreen"
+              component={ServiceProFaqScreen}
+            />
+            <Stack.Screen
+              name="ProviderJobStatus"
+              component={ProviderJobStatus}
+            />
+            <Stack.Screen name="WebViewScreen" component={WebViewScreen} />
+            <Stack.Screen name="ProviderProfile" component={ProviderProfile} />
+            <Stack.Screen name="RateProvider" component={RateProvider} />
+            <Stack.Screen
+              name="TermsAndConditions"
+              component={TermsAndConditions}
+            />
+            <Stack.Screen
+              name="CustomerFAQScreen"
+              component={CustomerFAQScreen}
+            />
+            <Stack.Screen
+              name="DeleteAccountScreen"
+              component={DeleteAccountScreen}
+            />
+            <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
+            <Stack.Screen name="MyAccountScreen" component={MyAccountScreen} />
+            <Stack.Screen
+              name="NotFound"
+              component={NotFoundScreen}
+              options={{ headerShown: false }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
       </AuthContext.Provider>
     </SafeAreaProvider>
   );

@@ -944,6 +944,11 @@ export default function PaymentScreen() {
   }
 
   return (
+    <StripeProvider
+    publishableKey={Constants.expoConfig.extra.stripeKey}
+    urlScheme="blinqfix"
+    merchantIdentifier="merchant.com.blinqfix"
+  >
     <View key={jobId} style={styles.container}>
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Estimate Details</Text>
@@ -979,6 +984,7 @@ export default function PaymentScreen() {
         <Text style={styles.payButtonText}>Pay & Book</Text>
       </TouchableOpacity>
     </View>
+    </StripeProvider>
   );
 }
 
