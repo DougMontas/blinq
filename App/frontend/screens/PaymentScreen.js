@@ -940,19 +940,19 @@ export default function PaymentScreen() {
     }
   };
 
-  if (showAnimation && !loadingSheet) {
-    return (
-      <LoadingScreen
-        animationOnly
-        enterDuration={800}
-        holdDuration={400}
-        exitDuration={800}
-        onAnimationEnd={() =>
-          navigation.replace("CustomerJobStatus", { jobId })
-        }
-      />
-    );
-  }
+  // if (showAnimation && !loadingSheet) {
+  //   return (
+  //     <LoadingScreen
+  //       animationOnly
+  //       enterDuration={800}
+  //       holdDuration={400}
+  //       exitDuration={800}
+  //       onAnimationEnd={() =>
+  //         navigation.replace("CustomerJobStatus", { jobId })
+  //       }
+  //     />
+  //   );
+  // }
 
   const description = getCoveredDescription(job?.details?.issue);
 
