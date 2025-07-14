@@ -975,49 +975,79 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 //   }
 // });
 
-router.put("/:jobId/cancelled", async (req, res) => {
+// router.put("/:jobId/cancelled", async (req, res) => {
+//   try {
+//     const job = await Job.findById(req.params.jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//     const { cancelledBy } = req.body;
+
+//     if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
+//       return res.status(400).json({ msg: 'Invalid cancellation source' });
+//     }
+
+//     // Log cancellation
+//     job.auditLog.push({
+//       action: "cancel",
+//       by: cancelledBy,
+//       user: req.user?._id, // If available
+//       timestamp: new Date(),
+//     });
+
+//     if (cancelledBy === "serviceProvider") {
+//       job.acceptedProvider = null;
+//       job.status = "invited"; // ✅ Reset status for reinvite
+//       job.invitationPhase = 1;
+//       job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
+
+//       await job.save();
+
+//       if (req.io) {
+//         invitePhaseOne(job, null, req.io, 1);
+//       } else {
+//         console.warn("⚠️ Socket.io instance (req.io) is missing");
+//       }
+//     } else {
+//       job.status = "cancelled-by-customer";
+//       await job.save();
+//     }
+
+//     res.json(job);
+//   } catch (err) {
+//     console.error("❌ Job cancel error:", err);
+//     res.status(500).json({ msg: "Server error during cancellation" });
+//   }
+// });
+
+// PUT /jobs/:jobId/cancelled
+router.put("/:jobId/cancelled", auth, async (req, res) => {
   try {
-    const job = await Job.findById(req.params.jobId);
+    const { jobId } = req.params;
+    const { cancelledBy } = req.body; // Expect 'customer' or 'serviceProvider'
+
+    const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    const { cancelledBy } = req.body;
+    job.status = "cancelled";
+    job.cancelledBy = cancelledBy;
+    job.updatedAt = new Date();
 
-    if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
-      return res.status(400).json({ msg: 'Invalid cancellation source' });
-    }
+    // Optional: stop invitation logic if needed
+    job.invitationActive = false;
 
-    // Log cancellation
-    job.auditLog.push({
-      action: "cancel",
-      by: cancelledBy,
-      user: req.user?._id, // If available
-      timestamp: new Date(),
-    });
+    await job.save();
 
-    if (cancelledBy === "serviceProvider") {
-      job.acceptedProvider = null;
-      job.status = "invited"; // ✅ Reset status for reinvite
-      job.invitationPhase = 1;
-      job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
+    // Emit update via socket (optional)
+    const io = req.app.get("io");
+    if (io) io.to(jobId).emit("jobUpdated", job);
 
-      await job.save();
-
-      if (req.io) {
-        invitePhaseOne(job, null, req.io, 1);
-      } else {
-        console.warn("⚠️ Socket.io instance (req.io) is missing");
-      }
-    } else {
-      job.status = "cancelled-by-customer";
-      await job.save();
-    }
-
-    res.json(job);
+    return res.json(job);
   } catch (err) {
-    console.error("❌ Job cancel error:", err);
-    res.status(500).json({ msg: "Server error during cancellation" });
+    console.error("❌ Error cancelling job:", err);
+    res.status(500).json({ msg: "Server error cancelling job" });
   }
 });
+
 
 
 cron.schedule("0 * * * *", async () => {

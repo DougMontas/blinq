@@ -3155,7 +3155,6 @@ export default function CustomerJobStatus() {
         // </MapView>
         // <MapView
 
-        
         //   ref={mapRef}
         //   provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined} // ✅ Use Apple Maps on iOS
         //   style={{ height: 220, borderRadius: 10, marginVertical: 12 }}
@@ -3175,49 +3174,49 @@ export default function CustomerJobStatus() {
         //   }}
         // >
         // </MapView>
-        <MapView
-  ref={mapRef}
-  provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-  style={{ height: 220, borderRadius: 10, marginVertical: 12 }}
-  initialRegion={{
-    latitude: jobLocation.latitude,
-    longitude: jobLocation.longitude,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  }}
-  onMapReady={() => {
-    if (providerCoords && mapRef.current) {
-      mapRef.current.fitToCoordinates([jobLocation, providerCoords], {
-        edgePadding: { top: 80, bottom: 80, left: 80, right: 80 },
-        animated: true,
-      });
-    }
-  }}
->
-  {/* Customer Marker */}
-  <Marker coordinate={jobLocation} title="Customer" />
+       <MapView
+          key={`map-${jobId}`}
+          ref={mapRef}
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          style={{ height: 220, borderRadius: 10, marginVertical: 12 }}
+          initialRegion={{
+            latitude: jobLocation.latitude,
+            longitude: jobLocation.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+          onMapReady={() => {
+            if (providerCoords && mapRef.current) {
+              mapRef.current.fitToCoordinates([jobLocation, providerCoords], {
+                edgePadding: { top: 80, bottom: 80, left: 80, right: 80 },
+                animated: true,
+              });
+            }
+          }}
+        >
+          {/* Customer Marker */}
+          <Marker coordinate={jobLocation} title="Customer" />
 
-  {/* Provider Animated Marker */}
-  {animatedRegion && (
-    <AnimatedMarker
-      coordinate={animatedRegion}
-      title="Service Pro"
-      pinColor="blue"
-      description="Provider's current location"
-    />
-  )}
+          {/* Provider Animated Marker */}
+          {animatedRegion && (
+            <AnimatedMarker
+              coordinate={animatedRegion}
+              title="Service Pro"
+              pinColor="blue"
+              description="Provider's current location"
+            />
+          )}
 
-  {/* Route Line */}
-  {routeCoords.length === 2 && (
-    <Polyline
-      coordinates={routeCoords}
-      strokeColor="#1976d2"
-      strokeWidth={4}
-      lineCap="round"
-    />
-  )}
-</MapView>
-
+          {/* Route Line */}
+          {routeCoords.length === 2 && (
+            <Polyline
+              coordinates={routeCoords}
+              strokeColor="#1976d2"
+              strokeWidth={4}
+              lineCap="round"
+            />
+          )}
+        </MapView>
       )}
 
       {eta && (

@@ -242,6 +242,243 @@
 //   },
 // });
 
+
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+} from "react-native";
+import { useStripe, StripeProvider } from "@stripe/stripe-react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import api from "../api/client";
+import Constants from "expo-constants";
+import LoadingScreen from "./LoadingScreen";
+import { getCoveredDescription } from "../utils/serviceMatrix";
+
+const FEE_RATE = 0.07;
+
+export default function PaymentScreen() {
+  const navigation = useNavigation();
+  const { jobId } = useRoute().params;
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+  const [loadingSheet, setLoadingSheet] = useState(false);
+  const [paymentReady, setPaymentReady] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [job, setJob] = useState(null);
+
+  const validateSheetParams = (params) => {
+    if (!params?.customer?.startsWith("cus_")) return false;
+    if (!params?.ephemeralKey?.startsWith("ek_")) return false;
+    if (!params?.paymentIntentClientSecret?.includes("_secret_")) return false;
+    return true;
+  };
+
+  useEffect(() => {
+    const preparePayment = async () => {
+      setLoadingSheet(true);
+      try {
+        const { data: jobData } = await api.get(`/jobs/${jobId}`);
+        setJob(jobData);
+
+        const customerName = `${jobData?.customer?.name || jobData?.firstName || ""} ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
+        const customerEmail = jobData?.customer?.email || jobData?.email || jobData?.customerEmail || "";
+
+        const { data: sheetParams } = await api.post("/payments/payment-sheet", {
+          jobId,
+          customerName,
+          customerEmail,
+        });
+
+        if (!validateSheetParams(sheetParams)) {
+          Alert.alert("Stripe Error", "Invalid payment session returned.");
+          return;
+        }
+
+        const { error: initError } = await initPaymentSheet({
+          merchantDisplayName: "BlinqFix",
+          customerId: sheetParams.customer,
+          customerEphemeralKeySecret: sheetParams.ephemeralKey,
+          paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
+          allowsDelayedPaymentMethods: true,
+          returnURL: "https://blinqfix.com/onboarding-complete",
+        });
+
+        if (initError) {
+          Alert.alert("Stripe Error", initError.message || "Could not initialize payment sheet.");
+          return;
+        }
+
+        setPaymentReady(true);
+      } catch (err) {
+        Alert.alert("Stripe Error", "Could not initialize payment sheet.");
+      } finally {
+        setLoadingSheet(false);
+      }
+    };
+
+    preparePayment();
+  }, [jobId]);
+
+  const handlePay = async () => {
+    if (!paymentReady) return Alert.alert("Payment not ready", "Please wait while we prepare your payment.");
+    try {
+      const { error } = await presentPaymentSheet();
+      if (error) return Alert.alert("Payment Failed", error.message || "Unknown error occurred.");
+
+      setShowAnimation(true);
+      await api.put(`/jobs/complete-payment/${jobId}`);
+    } catch (err) {
+      Alert.alert("Error", "Failed to complete payment.");
+    }
+  };
+
+  const description = getCoveredDescription(job?.details?.issue);
+
+  if (loadingSheet || !job) {
+    return (
+      <View style={styles.container} key="loading">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (showAnimation) {
+    return (
+      <LoadingScreen
+        animationOnly
+        enterDuration={800}
+        holdDuration={400}
+        exitDuration={800}
+        onAnimationEnd={() => navigation.navigate("CustomerJobStatus", { jobId })}
+      />
+    );
+  }
+
+  return (
+    <StripeProvider publishableKey={Constants.expoConfig.extra.stripeKey}>
+      <View style={styles.container} key={jobId}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Estimate Details</Text>
+          {job.additionalCharge > 0 && (
+            <Text style={{ textAlign: "center" }}>
+              Extra charge: ${job.additionalCharge.toFixed(2)}
+            </Text>
+          )}
+          <Text style={styles.totalLine}>Total: ${job.estimatedTotal.toFixed(2)}</Text>
+          <Text style={styles.sectionTitle}>What’s Covered:</Text>
+          <Text style={styles.descriptionText}>{description}</Text>
+        </View>
+
+        {job.additionalCharge > 0 && (
+          <View style={styles.additionalCard}>
+            <Text style={styles.additionalCardTitle}>Additional Charge</Text>
+            <Text style={styles.additionalCardText}>
+              Amount: ${job.additionalCharge.toFixed(2)}
+            </Text>
+            {job.additionalChargeReason && (
+              <Text style={styles.additionalCardText}>
+                Description: {job.additionalChargeReason}
+              </Text>
+            )}
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
+          onPress={handlePay}
+          disabled={!paymentReady}
+        >
+          <Text style={styles.payButtonText}>Pay & Book</Text>
+        </TouchableOpacity>
+      </View>
+    </StripeProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  payButton: {
+    backgroundColor: "#1976d2",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  payButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  summaryCard: {
+    width: "90%",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    marginBottom: 24,
+  },
+  summaryTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  totalLine: {
+    marginTop: 8,
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  sectionTitle: {
+    fontWeight: "bold",
+    marginTop: 20,
+    fontSize: 18,
+    textAlign: "center",
+  },
+  descriptionText: {
+    color: "red",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  additionalCard: {
+    width: "90%",
+    backgroundColor: "#fdf6ec",
+    borderLeftWidth: 4,
+    borderLeftColor: "#ffa726",
+    padding: 16,
+    borderRadius: 10,
+    marginTop: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  additionalCardTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#e65100",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  additionalCardText: {
+    fontSize: 15,
+    color: "#5d4037",
+    fontWeight: "600",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+});
+
+
+
 // import React, { useEffect, useState } from "react";
 // import {
 //   View,
@@ -792,306 +1029,847 @@
 //     marginBottom: 2,
 //     textAlign: "center",
 //   },
+// // });
+
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   TouchableOpacity,
+//   Text,
+//   ActivityIndicator,
+//   Alert,
+//   StyleSheet,
+// } from "react-native";
+// import { useStripe } from "@stripe/stripe-react-native";
+// import { useNavigation, useRoute } from "@react-navigation/native";
+// import api from "../api/client";
+// import { StripeProvider } from "@stripe/stripe-react-native";
+// import Constants from "expo-constants";
+// import LoadingScreen from "./LoadingScreen";
+// import { getCoveredDescription } from "../utils/serviceMatrix";
+
+// const FEE_RATE = 0.07;
+
+// export default function PaymentScreen() {
+//   const navigation = useNavigation();
+//   const { jobId } = useRoute().params;
+//   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+//   const [loadingSheet, setLoadingSheet] = useState(false);
+//   const [paymentReady, setPaymentReady] = useState(false);
+//   const [showAnimation, setShowAnimation] = useState(false);
+//   const [job, setJob] = useState(null);
+
+//   const validateSheetParams = (params) => {
+//     console.log("\uD83D\uDD6A Validating Stripe Sheet Params:", params);
+
+//     if (!params?.customer || !params?.customer.startsWith("cus_")) {
+//       console.warn("⚠️ Invalid or missing customer ID");
+//       return false;
+//     }
+
+//     if (!params?.ephemeralKey || !params.ephemeralKey.startsWith("ek_")) {
+//       console.warn("⚠️ Invalid or missing ephemeral key");
+//       return false;
+//     }
+
+//     if (
+//       !params?.paymentIntentClientSecret ||
+//       !params.paymentIntentClientSecret.includes("_secret_") ||
+//       !params.paymentIntentClientSecret.startsWith("pi_")
+//     ) {
+//       console.warn("⚠️ Invalid or missing client secret");
+//       return false;
+//     }
+
+//     return true;
+//   };
+
+//   useEffect(() => {
+//     const preparePayment = async () => {
+//       setLoadingSheet(true);
+//       setPaymentReady(false);
+//       try {
+//         const { data: jobData } = await api.get(`/jobs/${jobId}`);
+//         setJob(jobData);
+
+//         const customerName = `${
+//           jobData?.customer?.name || jobData?.firstName || ""
+//         } ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
+//         const customerEmail =
+//           jobData?.customer?.email ||
+//           jobData?.email ||
+//           jobData?.customerEmail ||
+//           "";
+
+//         const { data: sheetParams } = await api.post(
+//           "/payments/payment-sheet",
+//           {
+//             jobId,
+//             customerName,
+//             customerEmail,
+//           }
+//         );
+
+//         if (!validateSheetParams(sheetParams)) {
+//           Alert.alert("Stripe Error", "Invalid payment session returned.");
+//           return;
+//         }
+
+//         console.log("\uD83D\uDCBE Received sheetParams:", sheetParams);
+
+//         const { error: initError } = await initPaymentSheet({
+//           merchantDisplayName: "BlinqFix",
+//           customerId: sheetParams.customer,
+//           customerEphemeralKeySecret: sheetParams.ephemeralKey,
+//           paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
+//           allowsDelayedPaymentMethods: true,
+//           returnURL: "https://blinqfix.com/onboarding-complete",
+//         });
+
+//         if (initError) {
+//           console.error("❌ initPaymentSheet failed:", initError);
+//           Alert.alert(
+//             "Stripe Error",
+//             initError.message || "Could not initialize payment sheet."
+//           );
+//           return;
+//         }
+
+//         setPaymentReady(true);
+//       } catch (err) {
+//         console.error(
+//           "❌ initPaymentSheet error:",
+//           err.response?.data || err.message || err
+//         );
+//         Alert.alert("Stripe Error", "Could not initialize payment sheet.");
+//       } finally {
+//         setLoadingSheet(false);
+//       }
+//     };
+
+//     preparePayment();
+//   }, [jobId]);
+
+//   const handlePay = async () => {
+//     if (!paymentReady) {
+//       return Alert.alert(
+//         "Payment not ready",
+//         "Please wait while we prepare your payment."
+//       );
+//     }
+
+//     try {
+//       const { error } = await presentPaymentSheet();
+//       if (error) {
+//         console.error("❌ presentPaymentSheet error:", error);
+//         return Alert.alert(
+//           "Payment Failed",
+//           error.message || "Unknown error occurred."
+//         );
+//       }
+
+//       setShowAnimation(true);
+//       await api.put(`/jobs/complete-payment/${jobId}`);
+//     } catch (err) {
+//       console.error("Payment handling error:", err);
+//       Alert.alert("Error", "Failed to complete payment.");
+//     }
+//   };
+
+//   // if (showAnimation && !loadingSheet) {
+//   //   return (
+//   //     <LoadingScreen
+//   //       animationOnly
+//   //       enterDuration={800}
+//   //       holdDuration={400}
+//   //       exitDuration={800}
+//   //       onAnimationEnd={() =>
+//   //         navigation.replace("CustomerJobStatus", { jobId })
+//   //       }
+//   //     />
+//   //   );
+//   // }
+
+//   const description = getCoveredDescription(job?.details?.issue);
+
+//   if (loadingSheet || !job) {
+//     return (
+//       <View style={styles.container} key="loading">
+//         <ActivityIndicator size="large" />
+//       </View>
+//     );
+//   }
+
+//   return (
+//     <View key={jobId} style={styles.container}>
+//       {showAnimation ? (
+//         <LoadingScreen
+//           animationOnly
+//           enterDuration={800}
+//           holdDuration={400}
+//           exitDuration={800}
+//           onAnimationEnd={() =>
+//             navigation.replace("CustomerJobStatus", { jobId })
+//           }
+//         />
+//       ) : (
+//         <>{/* existing summary and payment UI here */}</>
+//       )}
+
+//       <View style={styles.summaryCard}>
+//         <Text style={styles.summaryTitle}>Estimate Details</Text>
+//         {job.additionalCharge > 0 && (
+//           <Text style={{ textAlign: "center" }}>
+//             Extra charge: ${job.additionalCharge.toFixed(2)}
+//           </Text>
+//         )}
+//         <Text style={styles.totalLine}>
+//           Total: ${job.estimatedTotal.toFixed(2)}
+//         </Text>
+//         <Text style={styles.sectionTitle}>What’s Covered:</Text>
+//         <Text style={styles.descriptionText}>{description}</Text>
+//       </View>
+
+//       {job.additionalCharge > 0 && (
+//         <View style={styles.additionalCard}>
+//           <Text style={styles.additionalCardTitle}>Additional Charge</Text>
+//           <Text style={styles.additionalCardText}>
+//             Amount: ${job.additionalCharge.toFixed(2)}
+//           </Text>
+//           {job.additionalChargeReason && (
+//             <Text style={styles.additionalCardText}>
+//               Description: {job.additionalChargeReason}
+//             </Text>
+//           )}
+//         </View>
+//       )}
+
+//       <TouchableOpacity
+//         style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
+//         onPress={handlePay}
+//         disabled={!paymentReady}
+//       >
+//         <Text style={styles.payButtonText}>Pay & Book</Text>
+//       </TouchableOpacity>
+//     </View>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1, justifyContent: "center", alignItems: "center" },
+//   payButton: {
+//     backgroundColor: "#1976d2",
+//     paddingVertical: 14,
+//     paddingHorizontal: 24,
+//     borderRadius: 8,
+//     marginTop: 16,
+//   },
+//   payButtonText: {
+//     color: "#fff",
+//     fontWeight: "bold",
+//     fontSize: 16,
+//   },
+//   summaryCard: {
+//     width: "90%",
+//     backgroundColor: "#fff",
+//     padding: 16,
+//     borderRadius: 10,
+//     shadowColor: "#000",
+//     shadowOpacity: 0.1,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowRadius: 4,
+//     marginBottom: 24,
+//   },
+//   summaryTitle: {
+//     fontSize: 24,
+//     fontWeight: "700",
+//     marginBottom: 8,
+//     textAlign: "center",
+//   },
+//   totalLine: {
+//     marginTop: 8,
+//     fontSize: 20,
+//     fontWeight: "700",
+//     textAlign: "center",
+//   },
+//   sectionTitle: {
+//     fontWeight: "bold",
+//     marginTop: 20,
+//     fontSize: 18,
+//     textAlign: "center",
+//   },
+//   descriptionText: {
+//     color: "red",
+//     fontSize: 16,
+//     textAlign: "center",
+//   },
+//   additionalCard: {
+//     width: "90%",
+//     backgroundColor: "#fdf6ec",
+//     borderLeftWidth: 4,
+//     borderLeftColor: "#ffa726",
+//     padding: 16,
+//     borderRadius: 10,
+//     marginTop: 16,
+//     shadowColor: "#000",
+//     shadowOpacity: 0.05,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowRadius: 4,
+//   },
+//   additionalCardTitle: {
+//     fontSize: 24,
+//     fontWeight: "700",
+//     color: "#e65100",
+//     marginBottom: 4,
+//     textAlign: "center",
+//   },
+//   additionalCardText: {
+//     fontSize: 15,
+//     color: "#5d4037",
+//     fontWeight: "600",
+//     marginBottom: 2,
+//     textAlign: "center",
+//   },
 // });
 
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-} from "react-native";
-import { useStripe } from "@stripe/stripe-react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import api from "../api/client";
-import { StripeProvider } from "@stripe/stripe-react-native";
-import Constants from "expo-constants";
-import LoadingScreen from "./LoadingScreen";
-import { getCoveredDescription } from "../utils/serviceMatrix";
 
-const FEE_RATE = 0.07;
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   TouchableOpacity,
+//   Text,
+//   ActivityIndicator,
+//   Alert,
+//   StyleSheet,
+// } from "react-native";
+// import { useStripe } from "@stripe/stripe-react-native";
+// import { useNavigation, useRoute } from "@react-navigation/native";
+// import api from "../api/client";
+// import Constants from "expo-constants";
+// import LoadingScreen from "./LoadingScreen";
+// import { getCoveredDescription } from "../utils/serviceMatrix";
 
-export default function PaymentScreen() {
-  const navigation = useNavigation();
-  const { jobId } = useRoute().params;
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+// const FEE_RATE = 0.07;
 
-  const [loadingSheet, setLoadingSheet] = useState(false);
-  const [paymentReady, setPaymentReady] = useState(false);
-  const [showAnimation, setShowAnimation] = useState(false);
-  const [job, setJob] = useState(null);
+// export default function PaymentScreen() {
+//   const navigation = useNavigation();
+//   const { jobId } = useRoute().params;
+//   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  const validateSheetParams = (params) => {
-    console.log("\uD83D\uDD6A Validating Stripe Sheet Params:", params);
+//   const [loadingSheet, setLoadingSheet] = useState(false);
+//   const [paymentReady, setPaymentReady] = useState(false);
+//   const [showAnimation, setShowAnimation] = useState(false);
+//   const [job, setJob] = useState(null);
 
-    if (!params?.customer || !params?.customer.startsWith("cus_")) {
-      console.warn("⚠️ Invalid or missing customer ID");
-      return false;
-    }
+//   const validateSheetParams = (params) => {
+//     console.log("🧪 Validating Stripe Sheet Params:", params);
 
-    if (!params?.ephemeralKey || !params.ephemeralKey.startsWith("ek_")) {
-      console.warn("⚠️ Invalid or missing ephemeral key");
-      return false;
-    }
+//     if (!params?.customer || !params?.customer.startsWith("cus_")) {
+//       console.warn("⚠️ Invalid or missing customer ID");
+//       return false;
+//     }
 
-    if (
-      !params?.paymentIntentClientSecret ||
-      !params.paymentIntentClientSecret.includes("_secret_") ||
-      !params.paymentIntentClientSecret.startsWith("pi_")
-    ) {
-      console.warn("⚠️ Invalid or missing client secret");
-      return false;
-    }
+//     if (!params?.ephemeralKey || !params.ephemeralKey.startsWith("ek_")) {
+//       console.warn("⚠️ Invalid or missing ephemeral key");
+//       return false;
+//     }
 
-    return true;
-  };
+//     if (
+//       !params?.paymentIntentClientSecret ||
+//       !params.paymentIntentClientSecret.includes("_secret_") ||
+//       !params.paymentIntentClientSecret.startsWith("pi_")
+//     ) {
+//       console.warn("⚠️ Invalid or missing client secret");
+//       return false;
+//     }
 
-  useEffect(() => {
-    const preparePayment = async () => {
-      setLoadingSheet(true);
-      setPaymentReady(false);
-      try {
-        const { data: jobData } = await api.get(`/jobs/${jobId}`);
-        setJob(jobData);
+//     return true;
+//   };
 
-        const customerName = `${
-          jobData?.customer?.name || jobData?.firstName || ""
-        } ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
-        const customerEmail =
-          jobData?.customer?.email ||
-          jobData?.email ||
-          jobData?.customerEmail ||
-          "";
+//   useEffect(() => {
+//     const preparePayment = async () => {
+//       setLoadingSheet(true);
+//       setPaymentReady(false);
+//       try {
+//         const { data: jobData } = await api.get(`/jobs/${jobId}`);
+//         setJob(jobData);
 
-        const { data: sheetParams } = await api.post(
-          "/payments/payment-sheet",
-          {
-            jobId,
-            customerName,
-            customerEmail,
-          }
-        );
+//         const customerName = `${
+//           jobData?.customer?.name || jobData?.firstName || ""
+//         } ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
+//         const customerEmail =
+//           jobData?.customer?.email ||
+//           jobData?.email ||
+//           jobData?.customerEmail || "";
 
-        if (!validateSheetParams(sheetParams)) {
-          Alert.alert("Stripe Error", "Invalid payment session returned.");
-          return;
-        }
+//         const { data: sheetParams } = await api.post(
+//           "/payments/payment-sheet",
+//           {
+//             jobId,
+//             customerName,
+//             customerEmail,
+//           }
+//         );
 
-        console.log("\uD83D\uDCBE Received sheetParams:", sheetParams);
+//         if (!validateSheetParams(sheetParams)) {
+//           Alert.alert("Stripe Error", "Invalid payment session returned.");
+//           return;
+//         }
 
-        const { error: initError } = await initPaymentSheet({
-          merchantDisplayName: "BlinqFix",
-          customerId: sheetParams.customer,
-          customerEphemeralKeySecret: sheetParams.ephemeralKey,
-          paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
-          allowsDelayedPaymentMethods: true,
-          returnURL: "https://blinqfix.com/onboarding-complete",
-        });
+//         console.log("💾 Received sheetParams:", sheetParams);
 
-        if (initError) {
-          console.error("❌ initPaymentSheet failed:", initError);
-          Alert.alert(
-            "Stripe Error",
-            initError.message || "Could not initialize payment sheet."
-          );
-          return;
-        }
+//         const { error: initError } = await initPaymentSheet({
+//           merchantDisplayName: "BlinqFix",
+//           customerId: sheetParams.customer,
+//           customerEphemeralKeySecret: sheetParams.ephemeralKey,
+//           paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
+//           allowsDelayedPaymentMethods: true,
+//           returnURL: "https://blinqfix.com/onboarding-complete",
+//         });
 
-        setPaymentReady(true);
-      } catch (err) {
-        console.error(
-          "❌ initPaymentSheet error:",
-          err.response?.data || err.message || err
-        );
-        Alert.alert("Stripe Error", "Could not initialize payment sheet.");
-      } finally {
-        setLoadingSheet(false);
-      }
-    };
+//         if (initError) {
+//           console.error("❌ initPaymentSheet failed:", initError);
+//           Alert.alert(
+//             "Stripe Error",
+//             initError.message || "Could not initialize payment sheet."
+//           );
+//           return;
+//         }
 
-    preparePayment();
-  }, [jobId]);
+//         setPaymentReady(true);
+//       } catch (err) {
+//         console.error(
+//           "❌ initPaymentSheet error:",
+//           err.response?.data || err.message || err
+//         );
+//         Alert.alert("Stripe Error", "Could not initialize payment sheet.");
+//       } finally {
+//         setLoadingSheet(false);
+//       }
+//     };
 
-  const handlePay = async () => {
-    if (!paymentReady) {
-      return Alert.alert(
-        "Payment not ready",
-        "Please wait while we prepare your payment."
-      );
-    }
+//     preparePayment();
+//   }, [jobId]);
 
-    try {
-      const { error } = await presentPaymentSheet();
-      if (error) {
-        console.error("❌ presentPaymentSheet error:", error);
-        return Alert.alert(
-          "Payment Failed",
-          error.message || "Unknown error occurred."
-        );
-      }
+//   // const handlePay = async () => {
+//   //   if (!paymentReady) {
+//   //     return Alert.alert(
+//   //       "Payment not ready",
+//   //       "Please wait while we prepare your payment."
+//   //     );
+//   //   }
 
-      setShowAnimation(true);
-      await api.put(`/jobs/complete-payment/${jobId}`);
-    } catch (err) {
-      console.error("Payment handling error:", err);
-      Alert.alert("Error", "Failed to complete payment.");
-    }
-  };
+//   //   try {
+//   //     const { error } = await presentPaymentSheet();
+//   //     if (error) {
+//   //       console.error("❌ presentPaymentSheet error:", error);
+//   //       return Alert.alert(
+//   //         "Payment Failed",
+//   //         error.message || "Unknown error occurred."
+//   //       );
+//   //     }
 
-  // if (showAnimation && !loadingSheet) {
-  //   return (
-  //     <LoadingScreen
-  //       animationOnly
-  //       enterDuration={800}
-  //       holdDuration={400}
-  //       exitDuration={800}
-  //       onAnimationEnd={() =>
-  //         navigation.replace("CustomerJobStatus", { jobId })
-  //       }
-  //     />
-  //   );
-  // }
+//   //     // setShowAnimation(true);
+//   //     await api.put(`/jobs/complete-payment/${jobId}`);
+//   //   } catch (err) {
+//   //     console.error("Payment handling error:", err);
+//   //     Alert.alert("Error", "Failed to complete payment.");
+//   //   }
+//   // };
 
-  const description = getCoveredDescription(job?.details?.issue);
+//   const handlePay = async () => {
+//     if (!paymentReady) {
+//       return Alert.alert("Payment not ready", "Please wait while we prepare your payment.");
+//     }
+  
+//     try {
+//       const { error } = await presentPaymentSheet();
+//       if (error) {
+//         console.error("❌ presentPaymentSheet error:", error);
+//         return Alert.alert("Payment Failed", error.message || "Unknown error occurred.");
+//       }
+  
+//       await api.put(`/jobs/complete-payment/${jobId}`);
+//       navigation.replace("CustomerJobStatus", { jobId }); // navigate directly
+//     } catch (err) {
+//       console.error("Payment handling error:", err);
+//       Alert.alert("Error", "Failed to complete payment.");
+//     }
+//   };
+  
 
-  if (loadingSheet || !job) {
-    return (
-      <View style={styles.container} key="loading">
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+//   const description = getCoveredDescription(job?.details?.issue);
 
-  return (
-    <View key={jobId} style={styles.container}>
-      {showAnimation ? (
-        <LoadingScreen
-          animationOnly
-          enterDuration={800}
-          holdDuration={400}
-          exitDuration={800}
-          onAnimationEnd={() =>
-            navigation.replace("CustomerJobStatus", { jobId })
-          }
-        />
-      ) : (
-        <>{/* existing summary and payment UI here */}</>
-      )}
+//   if (loadingSheet || !job) {
+//     return (
+//       <View style={styles.container} key="loading">
+//         <ActivityIndicator size="large" />
+//       </View>
+//     );
+//   }
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Estimate Details</Text>
-        {job.additionalCharge > 0 && (
-          <Text style={{ textAlign: "center" }}>
-            Extra charge: ${job.additionalCharge.toFixed(2)}
-          </Text>
-        )}
-        <Text style={styles.totalLine}>
-          Total: ${job.estimatedTotal.toFixed(2)}
-        </Text>
-        <Text style={styles.sectionTitle}>What’s Covered:</Text>
-        <Text style={styles.descriptionText}>{description}</Text>
-      </View>
+//   if (showAnimation) {
+//     return (
+//       <LoadingScreen
+//         animationOnly
+//         enterDuration={800}
+//         holdDuration={400}
+//         exitDuration={800}
+//         onAnimationEnd={() =>
+//           navigation.replace("CustomerJobStatus", { jobId })
+//         }
+//       />
+//     );
+//   }
 
-      {job.additionalCharge > 0 && (
-        <View style={styles.additionalCard}>
-          <Text style={styles.additionalCardTitle}>Additional Charge</Text>
-          <Text style={styles.additionalCardText}>
-            Amount: ${job.additionalCharge.toFixed(2)}
-          </Text>
-          {job.additionalChargeReason && (
-            <Text style={styles.additionalCardText}>
-              Description: {job.additionalChargeReason}
-            </Text>
-          )}
-        </View>
-      )}
+//   return (
+//     <View key={jobId} style={styles.container}>
+//       <View style={styles.summaryCard}>
+//         <Text style={styles.summaryTitle}>Estimate Details</Text>
+//         {job.additionalCharge > 0 && (
+//           <Text style={{ textAlign: "center" }}>
+//             Extra charge: ${job.additionalCharge.toFixed(2)}
+//           </Text>
+//         )}
+//         <Text style={styles.totalLine}>
+//           Total: ${job.estimatedTotal.toFixed(2)}
+//         </Text>
+//         <Text style={styles.sectionTitle}>What’s Covered:</Text>
+//         <Text style={styles.descriptionText}>{description}</Text>
+//       </View>
 
-      <TouchableOpacity
-        style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
-        onPress={handlePay}
-        disabled={!paymentReady}
-      >
-        <Text style={styles.payButtonText}>Pay & Book</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
+//       {job.additionalCharge > 0 && (
+//         <View style={styles.additionalCard}>
+//           <Text style={styles.additionalCardTitle}>Additional Charge</Text>
+//           <Text style={styles.additionalCardText}>
+//             Amount: ${job.additionalCharge.toFixed(2)}
+//           </Text>
+//           {job.additionalChargeReason && (
+//             <Text style={styles.additionalCardText}>
+//               Description: {job.additionalChargeReason}
+//             </Text>
+//           )}
+//         </View>
+//       )}
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  payButton: {
-    backgroundColor: "#1976d2",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  payButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  summaryCard: {
-    width: "90%",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    marginBottom: 24,
-  },
-  summaryTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  totalLine: {
-    marginTop: 8,
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  sectionTitle: {
-    fontWeight: "bold",
-    marginTop: 20,
-    fontSize: 18,
-    textAlign: "center",
-  },
-  descriptionText: {
-    color: "red",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  additionalCard: {
-    width: "90%",
-    backgroundColor: "#fdf6ec",
-    borderLeftWidth: 4,
-    borderLeftColor: "#ffa726",
-    padding: 16,
-    borderRadius: 10,
-    marginTop: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-  },
-  additionalCardTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#e65100",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  additionalCardText: {
-    fontSize: 15,
-    color: "#5d4037",
-    fontWeight: "600",
-    marginBottom: 2,
-    textAlign: "center",
-  },
-});
+//       <TouchableOpacity
+//         style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
+//         onPress={handlePay}
+//         disabled={!paymentReady}
+//       >
+//         <Text style={styles.payButtonText}>Pay & Book</Text>
+//       </TouchableOpacity>
+//     </View>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1, justifyContent: "center", alignItems: "center" },
+//   payButton: {
+//     backgroundColor: "#1976d2",
+//     paddingVertical: 14,
+//     paddingHorizontal: 24,
+//     borderRadius: 8,
+//     marginTop: 16,
+//   },
+//   payButtonText: {
+//     color: "#fff",
+//     fontWeight: "bold",
+//     fontSize: 16,
+//   },
+//   summaryCard: {
+//     width: "90%",
+//     backgroundColor: "#fff",
+//     padding: 16,
+//     borderRadius: 10,
+//     shadowColor: "#000",
+//     shadowOpacity: 0.1,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowRadius: 4,
+//     marginBottom: 24,
+//   },
+//   summaryTitle: {
+//     fontSize: 24,
+//     fontWeight: "700",
+//     marginBottom: 8,
+//     textAlign: "center",
+//   },
+//   totalLine: {
+//     marginTop: 8,
+//     fontSize: 20,
+//     fontWeight: "700",
+//     textAlign: "center",
+//   },
+//   sectionTitle: {
+//     fontWeight: "bold",
+//     marginTop: 20,
+//     fontSize: 18,
+//     textAlign: "center",
+//   },
+//   descriptionText: {
+//     color: "red",
+//     fontSize: 16,
+//     textAlign: "center",
+//   },
+//   additionalCard: {
+//     width: "90%",
+//     backgroundColor: "#fdf6ec",
+//     borderLeftWidth: 4,
+//     borderLeftColor: "#ffa726",
+//     padding: 16,
+//     borderRadius: 10,
+//     marginTop: 16,
+//     shadowColor: "#000",
+//     shadowOpacity: 0.05,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowRadius: 4,
+//   },
+//   additionalCardTitle: {
+//     fontSize: 24,
+//     fontWeight: "700",
+//     color: "#e65100",
+//     marginBottom: 4,
+//     textAlign: "center",
+//   },
+//   additionalCardText: {
+//     fontSize: 15,
+//     color: "#5d4037",
+//     fontWeight: "600",
+//     marginBottom: 2,
+//     textAlign: "center",
+//   },
+// });
+
+
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   TouchableOpacity,
+//   Text,
+//   ActivityIndicator,
+//   Alert,
+//   StyleSheet,
+// } from "react-native";
+// import { useStripe } from "@stripe/stripe-react-native";
+// import { useNavigation, useRoute } from "@react-navigation/native";
+// import api from "../api/client";
+// import Constants from "expo-constants";
+// import LoadingScreen from "./LoadingScreen";
+// import { getCoveredDescription } from "../utils/serviceMatrix";
+
+// const FEE_RATE = 0.07;
+
+// export default function PaymentScreen() {
+//   const navigation = useNavigation();
+//   const { jobId } = useRoute().params;
+//   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+//   const [loadingSheet, setLoadingSheet] = useState(false);
+//   const [paymentReady, setPaymentReady] = useState(false);
+//   const [showAnimation, setShowAnimation] = useState(false);
+//   const [job, setJob] = useState(null);
+
+//   const validateSheetParams = (params) => {
+//     if (!params?.customer?.startsWith("cus_")) return false;
+//     if (!params?.ephemeralKey?.startsWith("ek_")) return false;
+//     if (!params?.paymentIntentClientSecret?.includes("_secret_")) return false;
+//     return true;
+//   };
+
+//   useEffect(() => {
+//     const preparePayment = async () => {
+//       setLoadingSheet(true);
+//       try {
+//         const { data: jobData } = await api.get(`/jobs/${jobId}`);
+//         setJob(jobData);
+
+//         const customerName = `${jobData?.customer?.name || jobData?.firstName || ""} ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
+//         const customerEmail = jobData?.customer?.email || jobData?.email || jobData?.customerEmail || "";
+
+//         const { data: sheetParams } = await api.post("/payments/payment-sheet", {
+//           jobId,
+//           customerName,
+//           customerEmail,
+//         });
+
+//         if (!validateSheetParams(sheetParams)) {
+//           Alert.alert("Stripe Error", "Invalid payment session returned.");
+//           return;
+//         }
+
+//         const { error: initError } = await initPaymentSheet({
+//           merchantDisplayName: "BlinqFix",
+//           customerId: sheetParams.customer,
+//           customerEphemeralKeySecret: sheetParams.ephemeralKey,
+//           paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
+//           allowsDelayedPaymentMethods: true,
+//           returnURL: "https://blinqfix.com/onboarding-complete",
+//         });
+
+//         if (initError) {
+//           Alert.alert("Stripe Error", initError.message || "Could not initialize payment sheet.");
+//           return;
+//         }
+
+//         setPaymentReady(true);
+//       } catch (err) {
+//         Alert.alert("Stripe Error", "Could not initialize payment sheet.");
+//       } finally {
+//         setLoadingSheet(false);
+//       }
+//     };
+
+//     preparePayment();
+//   }, [jobId]);
+
+//   const handlePay = async () => {
+//     if (!paymentReady) return Alert.alert("Payment not ready", "Please wait while we prepare your payment.");
+//     try {
+//       const { error } = await presentPaymentSheet();
+//       if (error) return Alert.alert("Payment Failed", error.message || "Unknown error occurred.");
+
+//       setShowAnimation(true);
+//       await api.put(`/jobs/complete-payment/${jobId}`);
+//     } catch (err) {
+//       Alert.alert("Error", "Failed to complete payment.");
+//     }
+//   };
+
+//   const description = getCoveredDescription(job?.details?.issue);
+
+//   if (loadingSheet || !job) {
+//     return (
+//       <View style={styles.container} key="loading">
+//         <ActivityIndicator size="large" />
+//       </View>
+//     );
+//   }
+
+//   if (showAnimation) {
+//     return (
+//       <LoadingScreen
+//         animationOnly
+//         enterDuration={800}
+//         holdDuration={400}
+//         exitDuration={800}
+//         onAnimationEnd={() => navigation.navigate("CustomerJobStatus", { jobId })}
+//       />
+//     );
+//   }
+
+//   return (
+//     <View key={jobId} style={styles.container}>
+//       <View style={styles.summaryCard}>
+//         <Text style={styles.summaryTitle}>Estimate Details</Text>
+//         {job.additionalCharge > 0 && (
+//           <Text style={{ textAlign: "center" }}>
+//             Extra charge: ${job.additionalCharge.toFixed(2)}
+//           </Text>
+//         )}
+//         <Text style={styles.totalLine}>Total: ${job.estimatedTotal.toFixed(2)}</Text>
+//         <Text style={styles.sectionTitle}>What’s Covered:</Text>
+//         <Text style={styles.descriptionText}>{description}</Text>
+//       </View>
+
+//       {job.additionalCharge > 0 && (
+//         <View style={styles.additionalCard}>
+//           <Text style={styles.additionalCardTitle}>Additional Charge</Text>
+//           <Text style={styles.additionalCardText}>
+//             Amount: ${job.additionalCharge.toFixed(2)}
+//           </Text>
+//           {job.additionalChargeReason && (
+//             <Text style={styles.additionalCardText}>
+//               Description: {job.additionalChargeReason}
+//             </Text>
+//           )}
+//         </View>
+//       )}
+
+//       <TouchableOpacity
+//         style={[styles.payButton, !paymentReady && { backgroundColor: "#ccc" }]}
+//         onPress={handlePay}
+//         disabled={!paymentReady}
+//       >
+//         <Text style={styles.payButtonText}>Pay & Book</Text>
+//       </TouchableOpacity>
+//     </View>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1, justifyContent: "center", alignItems: "center" },
+//   payButton: {
+//     backgroundColor: "#1976d2",
+//     paddingVertical: 14,
+//     paddingHorizontal: 24,
+//     borderRadius: 8,
+//     marginTop: 16,
+//   },
+//   payButtonText: {
+//     color: "#fff",
+//     fontWeight: "bold",
+//     fontSize: 16,
+//   },
+//   summaryCard: {
+//     width: "90%",
+//     backgroundColor: "#fff",
+//     padding: 16,
+//     borderRadius: 10,
+//     shadowColor: "#000",
+//     shadowOpacity: 0.1,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowRadius: 4,
+//     marginBottom: 24,
+//   },
+//   summaryTitle: {
+//     fontSize: 24,
+//     fontWeight: "700",
+//     marginBottom: 8,
+//     textAlign: "center",
+//   },
+//   totalLine: {
+//     marginTop: 8,
+//     fontSize: 20,
+//     fontWeight: "700",
+//     textAlign: "center",
+//   },
+//   sectionTitle: {
+//     fontWeight: "bold",
+//     marginTop: 20,
+//     fontSize: 18,
+//     textAlign: "center",
+//   },
+//   descriptionText: {
+//     color: "red",
+//     fontSize: 16,
+//     textAlign: "center",
+//   },
+//   additionalCard: {
+//     width: "90%",
+//     backgroundColor: "#fdf6ec",
+//     borderLeftWidth: 4,
+//     borderLeftColor: "#ffa726",
+//     padding: 16,
+//     borderRadius: 10,
+//     marginTop: 16,
+//     shadowColor: "#000",
+//     shadowOpacity: 0.05,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowRadius: 4,
+//   },
+//   additionalCardTitle: {
+//     fontSize: 24,
+//     fontWeight: "700",
+//     color: "#e65100",
+//     marginBottom: 4,
+//     textAlign: "center",
+//   },
+//   additionalCardText: {
+//     fontSize: 15,
+//     color: "#5d4037",
+//     fontWeight: "600",
+//     marginBottom: 2,
+//     textAlign: "center",
+//   },
+// });
