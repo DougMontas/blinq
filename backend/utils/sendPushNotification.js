@@ -55,7 +55,7 @@
 
 
 // utils/pushNotifications.js
-const { Expo } = require("expo-server-sdk");
+import { Expo } from "expo-server-sdk";
 const expo = new Expo();
 
 export async function sendPushNotification(pushToken, message, data = {}) {
