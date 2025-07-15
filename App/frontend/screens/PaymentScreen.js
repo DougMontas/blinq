@@ -305,7 +305,7 @@ export default function PaymentScreen() {
           customerEphemeralKeySecret: sheetParams.ephemeralKey,
           paymentIntentClientSecret: sheetParams.paymentIntentClientSecret,
           allowsDelayedPaymentMethods: true,
-          returnURL: "https://blinqfix.com/onboarding-complete",
+          returnURL: "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/app/stripe/onboarding-success",
         });
 
         if (initError) {

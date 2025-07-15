@@ -490,6 +490,19 @@ router.post("/push-token", auth, async (req, res) => {
   }
 });
 
+
+router.post("/save-push-token", auth, async (req, res) => {
+  try {
+    req.user.pushToken = req.body.token;
+    await req.user.save();
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("❌ Saving push token failed:", err);
+    res.status(500).send("Error saving push token");
+  }
+});
+
+
 // router.get("/invitation-stats", auth, async (req, res) => {
 //   try {
 //     const providerId = req.user._id || req.user.id

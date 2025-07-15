@@ -242,17 +242,239 @@
 //   }
 // }
 
-// invitePhaseOne.js
+// // invitePhaseOne.js
+// import { getEligibleProviders } from "../utils/providerFilters.js";
+// import sendInAppInvite from "../invites/sendInAppInvite.js";
+// import sendTeaserInvite from "../invites/sendTeaserInvite.js";
+// import sendSMS from "../utils/sendSMS.js";
+// import Users from "../models/Users.js";
+// import mongoose from "mongoose";
+
+// const MILES_TO_METERS = 1609.34;
+// const RADIUS_TIERS = [
+//   { miles: 5, durationMs: .1 * .1 * 10 },
+//   { miles: 15, durationMs: 5 * 60 * 1000 },
+//   { miles: 30, durationMs: 5 * 60 * 1000 },
+// ];
+
+// export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
+//   console.log(`🚀 Inviting providers for job ${job._id} – Phase ${phase}`);
+
+//   if (job.acceptedProvider || job.status === "accepted") {
+//     console.warn(`Job ${job._id} is already accepted. Skipping invites.`);
+//     return;
+//   }
+
+//   let hybrid = [],
+//     profit = [],
+//     allProviders = [];
+
+//   const location = job.location; // { type: 'Point', coordinates: [lng, lat] }
+//   console.log("📍 Raw job.location:", location);
+
+//   if (
+//     !location ||
+//     !Array.isArray(location.coordinates) ||
+//     location.coordinates.length !== 2 ||
+//     location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
+//   ) {
+//     console.error("❌ Missing or invalid job location", location);
+//     return;
+//   }
+
+//   // if (typeof location?.coordinates === "string") {
+//   //   try {
+//   //     location.coordinates = JSON.parse(location.coordinates);
+//   //     console.log("✅ Parsed stringified coordinates:", location.coordinates);
+//   //   } catch {
+//   //     console.warn("⚠️ Failed to parse coordinates string.");
+//   //   }
+//   // }
+
+//   console.log("📍 Type:", typeof location);
+//   console.log("📍 location.coordinates:", location?.coordinates);
+//   console.log(
+//     "📍 Coordinates valid array?",
+//     Array.isArray(location?.coordinates)
+//   );
+//   console.log("📍 Coordinates length:", location?.coordinates?.length);
+//   console.log(
+//     "📍 Coordinate types:",
+//     Array.isArray(location?.coordinates)
+//       ? location.coordinates.map((n, i) => `index ${i}: ${n} (${typeof n})`)
+//       : "N/A"
+//   );
+//   console.log("✅ Final coordinates used in invitePhaseOne:", location.coordinates);
+
+
+//   if (
+//     !location ||
+//     !Array.isArray(location.coordinates) ||
+//     location.coordinates.length !== 2 ||
+//     location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
+//   ) {
+//     console.error("❌ Missing or invalid job location", location);
+//     return;
+//   }
+
+//   const jobId = job._id.toString();
+//   const tier = RADIUS_TIERS[Math.min(phase - 1, RADIUS_TIERS.length - 1)];
+//   const expiresAt = new Date(Date.now() + tier.durationMs);
+//   console.log(`📆 Phase ${phase} will expire at: ${expiresAt.toISOString()}`);
+
+//   if (phase === 1) {
+//     console.log("🔍 Matching providers by zipcode...");
+//     allProviders = await Users.find({
+//       role: "serviceProvider",
+//       isActive: true,
+//       serviceType: job.serviceType,
+//       serviceZipcode: job.serviceZipcode,
+//       _id: { $nin: job.cancelledProviders || [] },
+//     }).lean();
+//   } else if (phase >= 2 && phase <= 4) {
+//     const radiusMiles = tier.miles;
+//     const maxMeters = radiusMiles * MILES_TO_METERS;
+//     console.log(
+//       `📍 Searching within ${radiusMiles} miles (${maxMeters} meters)...`
+//     );
+//     allProviders = await Users.find({
+//       role: "serviceProvider",
+//       isActive: true,
+//       serviceType: job.serviceType,
+//       location: {
+//         $nearSphere: {
+//           $geometry: location,
+//           $maxDistance: maxMeters,
+//         },
+//       },
+//       _id: { $nin: job.cancelledProviders || [] },
+//     }).lean();
+//   } else {
+//     console.log("🛑 Final fallback – inviting all active providers");
+//     allProviders = await Users.find({
+//       role: "serviceProvider",
+//       isActive: true,
+//       serviceType: job.serviceType,
+//       _id: { $nin: job.cancelledProviders || [] },
+//     }).lean();
+//   }
+
+//   hybrid = getEligibleProviders(allProviders, "hybrid", job.serviceZipcode);
+//   profit = getEligibleProviders(
+//     allProviders,
+//     "profit_sharing",
+//     job.serviceZipcode
+//   );
+
+//   console.log(
+//     `📦 Hybrid count: ${hybrid.length}, Profit-sharing count: ${profit.length}`
+//   );
+
+//   job.invitedProviders = [...hybrid, ...profit].map((p) => p._id);
+//   job.invitationPhase = phase;
+//   job.invitationExpiresAt = expiresAt;
+//   await job.save();
+//   console.log(
+//     `💾 Job updated with ${job.invitedProviders.length} invited providers.`
+//   );
+
+//   const jobIdStr = job._id.toString();
+//   const inviteTasks = [];
+
+//   // for (const p of profit) {
+//   //   const teaserPayload = {
+//   //     jobId: jobIdStr,
+//   //     invitationExpiresAt: expiresAt,
+//   //     clickable: phase >= 5, // round 5 and later get real invites
+//   //   };
+//   //   io.to(p._id.toString()).emit("jobInvitation", teaserPayload);
+//   //   console.log(`📨 Sent teaser invite to profit-sharing ${p._id}`);
+//   //   const redactedJob = { ...job.toObject(), address: "[Address Hidden]" };
+//   //   inviteTasks.push(sendTeaserInvite(p, redactedJob));
+//   // }
+
+//   for (const p of profit) {
+//     const teaserPayload = {
+//       jobId: jobIdStr,
+//       invitationExpiresAt: expiresAt,
+//       clickable: phase >= 5,
+//     };
+  
+//     io.to(p._id.toString()).emit("jobInvitation", teaserPayload);
+//     console.log(`📨 Sent teaser invite to profit-sharing ${p._id}`);
+  
+//     const redactedJob = { ...job.toObject(), address: "[Address Hidden]" };
+//     inviteTasks.push(sendTeaserInvite(p, redactedJob));
+  
+//     if (p.expoPushToken) {
+//       inviteTasks.push(
+//         sendPushNotification({
+//           to: p.expoPushToken,
+//           sound: "default",
+//           title: "New Emergency Job",
+//           body: "Open BlinqFix to view the job details.",
+//           data: { jobId: jobIdStr, clickable: teaserPayload.clickable },
+//         })
+//       );
+//     }
+//   }
+
+//   for (const p of hybrid) {
+//     io.to(p._id.toString()).emit("jobInvitation", {
+//       jobId: jobIdStr,
+//       invitationExpiresAt: expiresAt,
+//       clickable: true,
+//     });
+//     console.log(`📨 Sent real invite to hybrid ${p._id}`);
+//     inviteTasks.push(sendInAppInvite(p, job));
+//     if (p.phone) {
+//       inviteTasks.push(sendSMS(p.phone, job));
+//     }
+//   }
+
+//   await Promise.allSettled(inviteTasks);
+//   console.log(`✅ Phase ${phase} invites dispatched for job ${job._id}`);
+
+//   // 🔁 Schedule next phase if needed
+//   if (phase < 5) {
+//     console.log(
+//       `⏳ Scheduling next phase (${phase + 1}) in ${tier.durationMs / 1000}s`
+//     );
+//     setTimeout(async () => {
+//       const latest = await mongoose.model("Job").findById(job._id);
+//       if (!latest || latest.status === "accepted" || latest.acceptedProvider) {
+//         console.log(`🛑 Job ${job._id} already accepted. Stopping escalation.`);
+//         return;
+//       }
+//       invitePhaseOne(latest, null, io, phase + 1); // ✅ use passed-in io
+//     }, tier.durationMs);
+//     // setTimeout(async () => {
+//     //   const latest = await mongoose.model("Job").findById(job._id);
+//     //   if (!latest || latest.status === "accepted" || latest.acceptedProvider) {
+//     //     console.log(`🛑 Job ${job._id} already accepted. Stopping escalation.`);
+//     //     return;
+//     //   }
+//     //   invitePhaseOne(latest, null, req.io, phase + 1);
+//     // }, tier.durationMs);
+//   } else {
+//     console.log(
+//       `🎯 Final phase reached for job ${job._id}. No further escalation.`
+//     );
+//   }
+// }
+
+
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
 import sendSMS from "../utils/sendSMS.js";
+import sendPushNotification from "../utils/sendPushNotification.js";
 import Users from "../models/Users.js";
 import mongoose from "mongoose";
 
 const MILES_TO_METERS = 1609.34;
 const RADIUS_TIERS = [
-  { miles: 5, durationMs: .1 * .1 * 10 },
+  { miles: 5, durationMs: 0.1 * 0.1 * 10 },
   { miles: 15, durationMs: 5 * 60 * 1000 },
   { miles: 30, durationMs: 5 * 60 * 1000 },
 ];
@@ -269,50 +491,8 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
     profit = [],
     allProviders = [];
 
-  const location = job.location; // { type: 'Point', coordinates: [lng, lat] }
-  console.log("📍 Raw job.location:", location);
-
-  if (
-    !location ||
-    !Array.isArray(location.coordinates) ||
-    location.coordinates.length !== 2 ||
-    location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
-  ) {
-    console.error("❌ Missing or invalid job location", location);
-    return;
-  }
-
-  // if (typeof location?.coordinates === "string") {
-  //   try {
-  //     location.coordinates = JSON.parse(location.coordinates);
-  //     console.log("✅ Parsed stringified coordinates:", location.coordinates);
-  //   } catch {
-  //     console.warn("⚠️ Failed to parse coordinates string.");
-  //   }
-  // }
-
-  console.log("📍 Type:", typeof location);
-  console.log("📍 location.coordinates:", location?.coordinates);
-  console.log(
-    "📍 Coordinates valid array?",
-    Array.isArray(location?.coordinates)
-  );
-  console.log("📍 Coordinates length:", location?.coordinates?.length);
-  console.log(
-    "📍 Coordinate types:",
-    Array.isArray(location?.coordinates)
-      ? location.coordinates.map((n, i) => `index ${i}: ${n} (${typeof n})`)
-      : "N/A"
-  );
-  console.log("✅ Final coordinates used in invitePhaseOne:", location.coordinates);
-
-
-  if (
-    !location ||
-    !Array.isArray(location.coordinates) ||
-    location.coordinates.length !== 2 ||
-    location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
-  ) {
+  const location = job.location;
+  if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2 || location.coordinates.some((n) => typeof n !== "number" || isNaN(n))) {
     console.error("❌ Missing or invalid job location", location);
     return;
   }
@@ -334,9 +514,6 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
   } else if (phase >= 2 && phase <= 4) {
     const radiusMiles = tier.miles;
     const maxMeters = radiusMiles * MILES_TO_METERS;
-    console.log(
-      `📍 Searching within ${radiusMiles} miles (${maxMeters} meters)...`
-    );
     allProviders = await Users.find({
       role: "serviceProvider",
       isActive: true,
@@ -350,7 +527,6 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
       _id: { $nin: job.cancelledProviders || [] },
     }).lean();
   } else {
-    console.log("🛑 Final fallback – inviting all active providers");
     allProviders = await Users.find({
       role: "serviceProvider",
       isActive: true,
@@ -360,38 +536,15 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
   }
 
   hybrid = getEligibleProviders(allProviders, "hybrid", job.serviceZipcode);
-  profit = getEligibleProviders(
-    allProviders,
-    "profit_sharing",
-    job.serviceZipcode
-  );
-
-  console.log(
-    `📦 Hybrid count: ${hybrid.length}, Profit-sharing count: ${profit.length}`
-  );
+  profit = getEligibleProviders(allProviders, "profit_sharing", job.serviceZipcode);
 
   job.invitedProviders = [...hybrid, ...profit].map((p) => p._id);
   job.invitationPhase = phase;
   job.invitationExpiresAt = expiresAt;
   await job.save();
-  console.log(
-    `💾 Job updated with ${job.invitedProviders.length} invited providers.`
-  );
 
   const jobIdStr = job._id.toString();
   const inviteTasks = [];
-
-  // for (const p of profit) {
-  //   const teaserPayload = {
-  //     jobId: jobIdStr,
-  //     invitationExpiresAt: expiresAt,
-  //     clickable: phase >= 5, // round 5 and later get real invites
-  //   };
-  //   io.to(p._id.toString()).emit("jobInvitation", teaserPayload);
-  //   console.log(`📨 Sent teaser invite to profit-sharing ${p._id}`);
-  //   const redactedJob = { ...job.toObject(), address: "[Address Hidden]" };
-  //   inviteTasks.push(sendTeaserInvite(p, redactedJob));
-  // }
 
   for (const p of profit) {
     const teaserPayload = {
@@ -399,13 +552,10 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
       invitationExpiresAt: expiresAt,
       clickable: phase >= 5,
     };
-  
     io.to(p._id.toString()).emit("jobInvitation", teaserPayload);
-    console.log(`📨 Sent teaser invite to profit-sharing ${p._id}`);
-  
     const redactedJob = { ...job.toObject(), address: "[Address Hidden]" };
     inviteTasks.push(sendTeaserInvite(p, redactedJob));
-  
+
     if (p.expoPushToken) {
       inviteTasks.push(
         sendPushNotification({
@@ -413,7 +563,11 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
           sound: "default",
           title: "New Emergency Job",
           body: "Open BlinqFix to view the job details.",
-          data: { jobId: jobIdStr, clickable: teaserPayload.clickable },
+          data: {
+            jobId: jobIdStr,
+            clickable: teaserPayload.clickable,
+            type: "jobInvite",
+          },
         })
       );
     }
@@ -425,40 +579,41 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
       invitationExpiresAt: expiresAt,
       clickable: true,
     });
-    console.log(`📨 Sent real invite to hybrid ${p._id}`);
     inviteTasks.push(sendInAppInvite(p, job));
     if (p.phone) {
       inviteTasks.push(sendSMS(p.phone, job));
+    }
+    if (p.expoPushToken) {
+      inviteTasks.push(
+        sendPushNotification({
+          to: p.expoPushToken,
+          sound: "default",
+          title: "New Emergency Job",
+          body: "Check BlinqFix for the details.",
+          data: {
+            jobId: jobIdStr,
+            clickable: true,
+            type: "jobInvite",
+          },
+        })
+      );
     }
   }
 
   await Promise.allSettled(inviteTasks);
   console.log(`✅ Phase ${phase} invites dispatched for job ${job._id}`);
 
-  // 🔁 Schedule next phase if needed
   if (phase < 5) {
-    console.log(
-      `⏳ Scheduling next phase (${phase + 1}) in ${tier.durationMs / 1000}s`
-    );
+    console.log(`⏳ Scheduling next phase (${phase + 1}) in ${tier.durationMs / 1000}s`);
     setTimeout(async () => {
       const latest = await mongoose.model("Job").findById(job._id);
       if (!latest || latest.status === "accepted" || latest.acceptedProvider) {
         console.log(`🛑 Job ${job._id} already accepted. Stopping escalation.`);
         return;
       }
-      invitePhaseOne(latest, null, io, phase + 1); // ✅ use passed-in io
+      invitePhaseOne(latest, null, io, phase + 1);
     }, tier.durationMs);
-    // setTimeout(async () => {
-    //   const latest = await mongoose.model("Job").findById(job._id);
-    //   if (!latest || latest.status === "accepted" || latest.acceptedProvider) {
-    //     console.log(`🛑 Job ${job._id} already accepted. Stopping escalation.`);
-    //     return;
-    //   }
-    //   invitePhaseOne(latest, null, req.io, phase + 1);
-    // }, tier.durationMs);
   } else {
-    console.log(
-      `🎯 Final phase reached for job ${job._id}. No further escalation.`
-    );
+    console.log(`🎯 Final phase reached for job ${job._id}. No further escalation.`);
   }
 }

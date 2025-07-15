@@ -263,8 +263,8 @@ router.post("/register", async (req, res) => {
       const baseUrl = process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com";
       const accountLink = await stripeInstance.accountLinks.create({
         account: newUser.stripeAccountId,
-        refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL || `${baseUrl}/onboarding-refresh`,
-        return_url: process.env.STRIPE_ONBOARDING_RETURN_URL || `${baseUrl}/onboarding-complete`,
+        refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL || `${baseUrl}/onboarding-success`,
+        return_url: process.env.STRIPE_ONBOARDING_RETURN_URL || `${baseUrl}/onboarding-success`,
         type: "account_onboarding",
       });
 
