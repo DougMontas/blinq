@@ -462,21 +462,23 @@
 //     );
 //   }
 // }
-
-
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
 import sendSMS from "../utils/sendSMS.js";
-import {sendPushNotification} from "../utils/sendPushNotification.js";
+import sendPushNotification from "../utils/sendPushNotification.js";
 import Users from "../models/Users.js";
 import mongoose from "mongoose";
+import { Expo } from "expo-server-sdk";
+
+const expo = new Expo();
 
 const MILES_TO_METERS = 1609.34;
 const RADIUS_TIERS = [
   { miles: 5, durationMs: 0.1 * 0.1 * 10 },
   { miles: 15, durationMs: 5 * 60 * 1000 },
   { miles: 30, durationMs: 5 * 60 * 1000 },
+  { miles: 50, durationMs: 5 * 60 * 1000 },
 ];
 
 export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
@@ -561,7 +563,7 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
         sendPushNotification({
           to: p.expoPushToken,
           sound: "default",
-          title: "New Emergency Job",
+          title: "Blinqfix sent you a New Emergency Job",
           body: "Open BlinqFix to view the job details.",
           data: {
             jobId: jobIdStr,
@@ -569,6 +571,16 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
             type: "jobInvite",
           },
         })
+      );
+    }
+
+    if (p.phone) {
+      inviteTasks.push(
+        sendSMS(
+          p.phone,
+          `🚨 Blinqfix sent you a New Emergency Job Nearby!
+Open the BlinqFix app to review and accept the job (ID: ${jobIdStr}).`
+        )
       );
     }
   }
@@ -580,15 +592,13 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
       clickable: true,
     });
     inviteTasks.push(sendInAppInvite(p, job));
-    if (p.phone) {
-      inviteTasks.push(sendSMS(p.phone, job));
-    }
+
     if (p.expoPushToken) {
       inviteTasks.push(
         sendPushNotification({
           to: p.expoPushToken,
           sound: "default",
-          title: "New Emergency Job",
+          title: "Blinqfix sent you a New Emergency Job",
           body: "Check BlinqFix for the details.",
           data: {
             jobId: jobIdStr,
@@ -596,6 +606,16 @@ export async function invitePhaseOne(job, allProvidersFromZip, io, phase = 1) {
             type: "jobInvite",
           },
         })
+      );
+    }
+
+    if (p.phone) {
+      inviteTasks.push(
+        sendSMS(
+          p.phone,
+          `🚨 Blinqfix sent you a Emergency Job Alert!
+A new job (ID: ${jobIdStr}) is available. Open BlinqFix to view and accept.`
+        )
       );
     }
   }
