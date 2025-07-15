@@ -468,7 +468,7 @@ import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
 import sendSMS from "../utils/sendSMS.js";
-import sendPushNotification from "../utils/sendPushNotification.js";
+import {sendPushNotification} from "../utils/sendPushNotification.js";
 import Users from "../models/Users.js";
 import mongoose from "mongoose";
 

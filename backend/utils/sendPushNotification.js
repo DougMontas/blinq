@@ -58,7 +58,7 @@
 const { Expo } = require("expo-server-sdk");
 const expo = new Expo();
 
-async function sendPushNotification(pushToken, message, data = {}) {
+export async function sendPushNotification(pushToken, message, data = {}) {
   if (!Expo.isExpoPushToken(pushToken)) {
     console.error(`❌ Invalid Expo push token: ${pushToken}`);
     return;
@@ -81,5 +81,3 @@ async function sendPushNotification(pushToken, message, data = {}) {
     console.error("❌ Failed to send push notification:", err);
   }
 }
-
-module.exports = { sendPushNotification };
