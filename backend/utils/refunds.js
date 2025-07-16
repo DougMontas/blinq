@@ -1,4 +1,4 @@
-import stripe from "./stripeClient";
+import stripe from "./stripeClient.js";
 
 export async function issueRefund(paymentIntentId, reason = "Customer cancelled quickly") {
   try {
