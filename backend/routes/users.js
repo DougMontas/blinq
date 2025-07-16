@@ -522,6 +522,24 @@ router.post("/push-token", auth, async (req, res) => {
   }
 });
 
+router.post("/save-session", auth, async (req, res) => {
+  try {
+    const { jobId } = req.body;
+    if (!jobId) return res.status(400).json({ msg: "Missing jobId." });
+
+    const user = await Users.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    user.lastActiveJobId = jobId;
+    await user.save();
+
+    res.status(200).json({ msg: "Session saved." });
+  } catch (err) {
+    console.error("Error saving session:", err);
+    res.status(500).json({ msg: "Server error saving session." });
+  }
+});
+
 
 // router.get("/invitation-stats", auth, async (req, res) => {
 //   try {
