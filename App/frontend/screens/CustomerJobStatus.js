@@ -4170,13 +4170,73 @@ export default function CustomerJobStatus() {
   );
 }
 
+// const styles = StyleSheet.create({
+//   container: { flexGrow: 1, padding: 24, backgroundColor: "#fff" },
+//   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+//   title: {
+//     fontSize: 20,
+//     fontWeight: "bold",
+//     marginBottom: 12,
+//     textAlign: "center",
+//   },
+// });
+
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 24, backgroundColor: "#fff" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-});
+   container: { flexGrow: 1, padding: 24, backgroundColor: "#fff" },
+   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+   title: {
+     fontSize: 20,
+     fontWeight: "bold",
+     marginBottom: 12,
+     textAlign: "center",
+   },
+   containerLogo: { justifyContent: "center", alignItems: "center" },
+   sectionTitle: {
+     fontSize: 16,
+     fontWeight: "600",
+     marginTop: 20,
+     marginBottom: 4,
+     textAlign: "center",
+   },
+   descriptionText: {
+     fontSize: 14,
+     color: "#555",
+     lineHeight: 20,
+     textAlign: "center",
+   },
+   card: {
+     backgroundColor: "#f0f0f0",
+     padding: 12,
+     borderRadius: 8,
+     marginBottom: 16,
+     alignItems: "center",
+   },
+   waiting: {
+     padding: 12,
+     backgroundColor: "#e3f2fd",
+     borderRadius: 6,
+     marginVertical: 16,
+   },
+   heading: {
+     fontSize: 18,
+     fontWeight: "600",
+     marginBottom: 8,
+     textAlign: "center",
+   },
+   confirm: {
+     padding: 12,
+     backgroundColor: "#e8f5e9",
+     borderRadius: 6,
+     marginTop: 16,
+   },
+   confirmText: { marginBottom: 10, fontSize: 15 },
+   confirmButton: {
+     backgroundColor: "#1976d2",
+     paddingVertical: 12,
+     borderRadius: 6,
+     alignItems: "center",
+     marginVertical: 5,
+   },
+   confirmButtonDisabled: { backgroundColor: "#999" },
+   confirmButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+ });
