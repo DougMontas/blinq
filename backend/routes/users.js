@@ -478,27 +478,47 @@ router.put("/location", auth, async (req, res) => {
 //   }
 // });
 
+// router.post("/push-token", auth, async (req, res) => {
+//   try {
+//     const user = await Users.findById(req.user.id);
+//     user.expoPushToken = req.body.expoPushToken;
+//     await user.save();
+//     res.json({ msg: "Push token saved." });
+//   } catch (err) {
+//     console.error("Error saving push token:", err);
+//     res.status(500).json({ msg: "Failed to save push token." });
+//   }
+// });
+
+
+// router.post("/save-push-token", auth, async (req, res) => {
+//   try {
+//     req.user.pushToken = req.body.token;
+//     await req.user.save();
+//     res.sendStatus(200);
+//   } catch (err) {
+//     console.error("❌ Saving push token failed:", err);
+//     res.status(500).send("Error saving push token");
+//   }
+// });
+
 router.post("/push-token", auth, async (req, res) => {
   try {
+    const { token } = req.body;
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ msg: "Invalid or missing push token." });
+    }
+
     const user = await Users.findById(req.user.id);
-    user.expoPushToken = req.body.expoPushToken;
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    user.expoPushToken = token;
     await user.save();
-    res.json({ msg: "Push token saved." });
+
+    res.status(200).json({ msg: "Push token saved." });
   } catch (err) {
-    console.error("Error saving push token:", err);
+    console.error("❌ Error saving push token:", err);
     res.status(500).json({ msg: "Failed to save push token." });
-  }
-});
-
-
-router.post("/save-push-token", auth, async (req, res) => {
-  try {
-    req.user.pushToken = req.body.token;
-    await req.user.save();
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("❌ Saving push token failed:", err);
-    res.status(500).send("Error saving push token");
   }
 });
 
