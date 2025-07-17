@@ -1048,64 +1048,148 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 //   }
 // });
 
+// router.put("/:jobId/cancelled", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.params;
+//     const { cancelledBy } = req.body; // 'customer' or 'serviceProvider'
+//     const userId = req.user._id;
+
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//     const now = new Date();
+//     const acceptedAt = job.acceptedAt || job.updatedAt || job.createdAt;
+//     const minutesSinceAcceptance = (now - new Date(acceptedAt)) / (1000 * 60);
+
+//     job.status =
+//     cancelledBy === "customer"
+//       ? "cancelled-by-customer"
+//       : "cancelled-by-serviceProvider";
+  
+//     job.cancelledBy = cancelledBy;
+//     job.updatedAt = now;
+//     job.invitationActive = false;
+
+//     await job.save();
+
+//     const io = req.app.get("io");
+//     if (io) io.to(jobId).emit("jobUpdated", job);
+
+//     if (cancelledBy === "customer") {
+//       if (minutesSinceAcceptance <= 5) {
+//         console.log("💰 Customer cancelled within 5 minutes – full refund");
+//         await issueRefund(job.paymentIntentId, "Full refund due to quick cancellation");
+//       } else {
+//         console.log("💰 Customer cancelled after 5 minutes – applying travel fee");
+//         await chargeTravelFee(job);
+//       }
+
+//       return res.json({ msg: "Job cancelled by customer", fee: minutesSinceAcceptance > 5 });
+//     }
+
+//     if (cancelledBy === "serviceProvider") {
+//       console.log("🔁 Reopening job after provider cancellation");
+//       job.status = "invited";
+//       job.cancelledBy = "serviceProvider";
+//       await job.save();
+
+//       if (io) io.to(jobId).emit("jobUpdated", job);
+
+//       invitePhaseOne(job, null, io, 1); // re-trigger invites
+//       return res.json({ msg: "Job reopened and reinvited", status: "invited" });
+//     }
+
+//     return res.json({ msg: "Job cancelled", job });
+
+//   } catch (err) {
+//     console.error("❌ Error cancelling job:", err);
+//     res.status(500).json({ msg: "Server error cancelling job" });
+//   }
+// });
+
 router.put("/:jobId/cancelled", auth, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { cancelledBy } = req.body; // 'customer' or 'serviceProvider'
-    const userId = req.user._id;
+    const userId = req.user?._id;
+
+    console.log("🚨 /:jobId/cancelled HIT", { jobId, cancelledBy, userId });
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      console.warn("❌ Invalid jobId");
+      return res.status(400).json({ msg: "Invalid job ID format" });
+    }
 
     const job = await Job.findById(jobId);
-    if (!job) return res.status(404).json({ msg: "Job not found" });
+    if (!job) {
+      console.warn("❌ Job not found");
+      return res.status(404).json({ msg: "Job not found" });
+    }
 
     const now = new Date();
     const acceptedAt = job.acceptedAt || job.updatedAt || job.createdAt;
     const minutesSinceAcceptance = (now - new Date(acceptedAt)) / (1000 * 60);
 
+    console.log("🕒 Minutes since acceptance:", minutesSinceAcceptance);
+
+    // Set basic cancellation metadata
     job.status =
-    cancelledBy === "customer"
-      ? "cancelled-by-customer"
-      : "cancelled-by-serviceProvider";
-  
+      cancelledBy === "customer"
+        ? "cancelled-by-customer"
+        : "cancelled-by-serviceProvider";
+
     job.cancelledBy = cancelledBy;
     job.updatedAt = now;
     job.invitationActive = false;
 
     await job.save();
+    console.log("✅ Job cancelled:", job._id, job.status);
 
     const io = req.app.get("io");
     if (io) io.to(jobId).emit("jobUpdated", job);
 
     if (cancelledBy === "customer") {
       if (minutesSinceAcceptance <= 5) {
-        console.log("💰 Customer cancelled within 5 minutes – full refund");
-        await issueRefund(job.paymentIntentId, "Full refund due to quick cancellation");
+        console.log("💰 Customer cancelled within 5 minutes — issuing refund");
+        await issueRefund(job.paymentIntentId, "Quick cancel within 5 min");
       } else {
-        console.log("💰 Customer cancelled after 5 minutes – applying travel fee");
+        console.log("💰 Customer cancelled after 5 min — applying travel fee");
         await chargeTravelFee(job);
       }
 
-      return res.json({ msg: "Job cancelled by customer", fee: minutesSinceAcceptance > 5 });
+      return res.json({
+        msg: "Job cancelled by customer",
+        fee: minutesSinceAcceptance > 5,
+      });
     }
 
     if (cancelledBy === "serviceProvider") {
       console.log("🔁 Reopening job after provider cancellation");
+
       job.status = "invited";
       job.cancelledBy = "serviceProvider";
+      job.invitationPhase = 1;
       await job.save();
 
       if (io) io.to(jobId).emit("jobUpdated", job);
 
-      invitePhaseOne(job, null, io, 1); // re-trigger invites
+      try {
+        await invitePhaseOne(job, null, io, 1); // Re-trigger invitations
+        console.log("📣 Re-invitation triggered");
+      } catch (inviteErr) {
+        console.error("🔥 invitePhaseOne error:", inviteErr);
+      }
+
       return res.json({ msg: "Job reopened and reinvited", status: "invited" });
     }
 
     return res.json({ msg: "Job cancelled", job });
-
   } catch (err) {
     console.error("❌ Error cancelling job:", err);
-    res.status(500).json({ msg: "Server error cancelling job" });
+    return res.status(500).json({ msg: "Server error cancelling job" });
   }
 });
+
 
 cron.schedule("0 * * * *", async () => {
   const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
