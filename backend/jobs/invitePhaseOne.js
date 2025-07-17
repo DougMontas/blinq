@@ -640,8 +640,7 @@
 //   }
 // }
 
-
-
+// invitePhaseOne.js (restored original logic + corrected timer + Android token logging + cancelled provider skip fix)
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
@@ -652,7 +651,7 @@ import mongoose from "mongoose";
 
 const MILES_TO_METERS = 1609.34;
 const RADIUS_TIERS = [
-  { miles: 5, durationMs: 1 * 1 * 1 },       // ⏱️ Restored to 5 min
+  { miles: 5, durationMs: .1 * .1 * .1 },
   { miles: 15, durationMs: 5 * 60 * 1000 },
   { miles: 30, durationMs: 5 * 60 * 1000 },
   { miles: 50, durationMs: 5 * 60 * 1000 },
@@ -677,7 +676,7 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
     const expiresAt = new Date(Date.now() + tier.durationMs);
 
     let allProviders = [];
-    const excludeIds = job.cancelledProviders?.map(id => id.toString()) || []; // ✅ Exclude previous cancellers
+    const excludeIds = job.cancelledProviders?.map(id => id.toString()) || [];
 
     if (phase === 1) {
       allProviders = await Users.find({
@@ -715,6 +714,8 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
     const tasks = [];
 
     for (const p of profit) {
+      if (excludeIds.includes(p._id.toString())) continue; // 🧠 Skip cancelled providers
+
       const redactedJob = { ...job.toObject(), address: "[Hidden]" };
       const teaserPayload = {
         jobId: jobIdStr,
@@ -723,16 +724,21 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
       };
       io.to(p._id.toString()).emit("jobInvitation", teaserPayload);
       tasks.push(sendTeaserInvite(p, redactedJob));
+
       if (p.expoPushToken) {
-        tasks.push(
-          sendPushNotification({
-            to: p.expoPushToken,
-            sound: "default",
-            title: "🚨 New Emergency Job",
-            body: "Tap to review job opportunity.",
-            data: { jobId: jobIdStr, type: "jobInvite", clickable: teaserPayload.clickable },
-          })
-        );
+        if (typeof p.expoPushToken === "object") {
+          console.warn("❌ Invalid Expo push token:", p.expoPushToken);
+        } else {
+          tasks.push(
+            sendPushNotification({
+              to: p.expoPushToken,
+              sound: "default",
+              title: "🚨 New Emergency Job",
+              body: "Tap to review job opportunity.",
+              data: { jobId: jobIdStr, type: "jobInvite", clickable: teaserPayload.clickable },
+            })
+          );
+        }
       }
       if (p.phone) {
         tasks.push(sendSMS(p.phone, `BlinqFix Alert: Emergency job ID ${jobIdStr} nearby! Open the app to view.`));
@@ -740,6 +746,8 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
     }
 
     for (const p of hybrid) {
+      if (excludeIds.includes(p._id.toString())) continue; // 🧠 Skip cancelled providers
+
       const hybridPayload = {
         jobId: jobIdStr,
         invitationExpiresAt: expiresAt,
@@ -747,16 +755,21 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
       };
       io.to(p._id.toString()).emit("jobInvitation", hybridPayload);
       tasks.push(sendInAppInvite(p, job));
+
       if (p.expoPushToken) {
-        tasks.push(
-          sendPushNotification({
-            to: p.expoPushToken,
-            sound: "default",
-            title: "🚨 New Emergency Job",
-            body: "Tap to view and accept.",
-            data: { jobId: jobIdStr, type: "jobInvite", clickable: true },
-          })
-        );
+        if (typeof p.expoPushToken === "object") {
+          console.warn("❌ Invalid Expo push token:", p.expoPushToken);
+        } else {
+          tasks.push(
+            sendPushNotification({
+              to: p.expoPushToken,
+              sound: "default",
+              title: "🚨 New Emergency Job",
+              body: "Tap to view and accept.",
+              data: { jobId: jobIdStr, type: "jobInvite", clickable: true },
+            })
+          );
+        }
       }
       if (p.phone) {
         tasks.push(sendSMS(p.phone, `🚨 Emergency job alert! ID ${jobIdStr} available. Check BlinqFix now.`));
