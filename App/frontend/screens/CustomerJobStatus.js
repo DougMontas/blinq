@@ -3864,25 +3864,25 @@ const styles = StyleSheet.create({
 
 //nope
 // import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Image,
-  Dimensions,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-} from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
-import io from "socket.io-client";
-import api from "../api/client";
-import { getCoveredDescription } from "../utils/serviceMatrix";
-import { saveSession } from "../utils/sessionManager";
-import StarRating from "../components/StarRating";
+// import {
+//   View,
+//   Text,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Image,
+//   Dimensions,
+//   StyleSheet,
+//   TouchableOpacity,
+//   Platform,
+// } from "react-native";
+// import { useRoute, useNavigation } from "@react-navigation/native";
+// import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+// import io from "socket.io-client";
+// import api from "../api/client";
+// import { getCoveredDescription } from "../utils/serviceMatrix";
+// import { saveSession } from "../utils/sessionManager";
+// import StarRating from "../components/StarRating";
 
 // const { width } = Dimensions.get("window");
 // const LOGO_SIZE = width * 0.55;
