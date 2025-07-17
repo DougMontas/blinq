@@ -975,78 +975,78 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 //   }
 // });
 
-// router.put("/:jobId/cancelled", async (req, res) => {
-//   try {
-//     const job = await Job.findById(req.params.jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found" });
-
-//     const { cancelledBy } = req.body;
-
-//     if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
-//       return res.status(400).json({ msg: 'Invalid cancellation source' });
-//     }
-
-//     // Log cancellation
-//     job.auditLog.push({
-//       action: "cancel",
-//       by: cancelledBy,
-//       user: req.user?._id, // If available
-//       timestamp: new Date(),
-//     });
-
-//     if (cancelledBy === "serviceProvider") {
-//       job.acceptedProvider = null;
-//       job.status = "invited"; // ✅ Reset status for reinvite
-//       job.invitationPhase = 1;
-//       job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
-
-//       await job.save();
-
-//       if (req.io) {
-//         invitePhaseOne(job, null, req.io, 1);
-//       } else {
-//         console.warn("⚠️ Socket.io instance (req.io) is missing");
-//       }
-//     } else {
-//       job.status = "cancelled-by-customer";
-//       await job.save();
-//     }
-
-//     res.json(job);
-//   } catch (err) {
-//     console.error("❌ Job cancel error:", err);
-//     res.status(500).json({ msg: "Server error during cancellation" });
-//   }
-// });
-
-// PUT /jobs/:jobId/cancelled
-router.put("/:jobId/cancelled", auth, async (req, res) => {
+router.put("/:jobId/cancelled", async (req, res) => {
   try {
-    const { jobId } = req.params;
-    const { cancelledBy } = req.body; // Expect 'customer' or 'serviceProvider'
-
-    const job = await Job.findById(jobId);
+    const job = await Job.findById(req.params.jobId);
     if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    job.status = "cancelled";
-    job.cancelledBy = cancelledBy;
-    job.updatedAt = new Date();
+    const { cancelledBy } = req.body;
 
-    // Optional: stop invitation logic if needed
-    job.invitationActive = false;
+    if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
+      return res.status(400).json({ msg: 'Invalid cancellation source' });
+    }
 
-    await job.save();
+    // Log cancellation
+    job.auditLog.push({
+      action: "cancel",
+      by: cancelledBy,
+      user: req.user?._id, // If available
+      timestamp: new Date(),
+    });
 
-    // Emit update via socket (optional)
-    const io = req.app.get("io");
-    if (io) io.to(jobId).emit("jobUpdated", job);
+    if (cancelledBy === "serviceProvider") {
+      job.acceptedProvider = null;
+      job.status = "invited"; // ✅ Reset status for reinvite
+      job.invitationPhase = 1;
+      job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
 
-    return res.json(job);
+      await job.save();
+
+      if (req.io) {
+        invitePhaseOne(job, null, req.io, 1);
+      } else {
+        console.warn("⚠️ Socket.io instance (req.io) is missing");
+      }
+    } else {
+      job.status = "cancelled-by-customer";
+      await job.save();
+    }
+
+    res.json(job);
   } catch (err) {
-    console.error("❌ Error cancelling job:", err);
-    res.status(500).json({ msg: "Server error cancelling job" });
+    console.error("❌ Job cancel error:", err);
+    res.status(500).json({ msg: "Server error during cancellation" });
   }
 });
+
+// PUT /jobs/:jobId/cancelled
+// router.put("/:jobId/cancelled", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.params;
+//     const { cancelledBy } = req.body; // Expect 'customer' or 'serviceProvider'
+
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//     job.status = "cancelled";
+//     job.cancelledBy = cancelledBy;
+//     job.updatedAt = new Date();
+
+//     // Optional: stop invitation logic if needed
+//     job.invitationActive = false;
+
+//     await job.save();
+
+//     // Emit update via socket (optional)
+//     const io = req.app.get("io");
+//     if (io) io.to(jobId).emit("jobUpdated", job);
+
+//     return res.json(job);
+//   } catch (err) {
+//     console.error("❌ Error cancelling job:", err);
+//     res.status(500).json({ msg: "Server error cancelling job" });
+//   }
+// });
 
 //nope
 // router.put("/:jobId/cancelled", auth, async (req, res) => {
