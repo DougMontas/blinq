@@ -394,6 +394,42 @@ router.get("/onboard", auth, async (req, res) => {
   }
 });
 
+// router.post("/update-billing", auth, async (req, res) => {
+//   try {
+//     const { billingTier } = req.body;
+
+//     if (!["profit_sharing", "hybrid"].includes(billingTier)) {
+//       return res.status(400).json({ msg: "Invalid billing tier." });
+//     }
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found." });
+
+//     // Cancel subscription if downgrading
+//     if (billingTier === "profit_sharing" && user.stripeCustomerId) {
+//       const subs = await stripe.subscriptions.list({
+//         customer: user.stripeCustomerId,
+//         status: "active",
+//         limit: 1,
+//       });
+
+//       if (subs.data.length) {
+//         await stripe.subscriptions.del(subs.data[0].id);
+//         console.log(`📉 Cancelled hybrid subscription for user ${user._id}`);
+//       }
+//     }
+
+//     user.billingTier = billingTier;
+//     await user.save();
+
+//     return res.status(200).json({ msg: "Billing updated", billingTier });
+//   } catch (err) {
+//     console.error("Error updating billing tier:", err);
+//     res.status(500).json({ msg: "Internal server error" });
+//   }
+// });
+
+// routes/stripe.js
 router.post("/update-billing", auth, async (req, res) => {
   try {
     const { billingTier } = req.body;
@@ -405,7 +441,7 @@ router.post("/update-billing", auth, async (req, res) => {
     const user = await Users.findById(req.user.id);
     if (!user) return res.status(404).json({ msg: "User not found." });
 
-    // Cancel subscription if downgrading
+    // ⛔ Downgrade: cancel active hybrid subscription if it exists
     if (billingTier === "profit_sharing" && user.stripeCustomerId) {
       const subs = await stripe.subscriptions.list({
         customer: user.stripeCustomerId,
@@ -417,17 +453,48 @@ router.post("/update-billing", auth, async (req, res) => {
         await stripe.subscriptions.del(subs.data[0].id);
         console.log(`📉 Cancelled hybrid subscription for user ${user._id}`);
       }
+
+      user.billingTier = billingTier;
+      await user.save();
+      return res.status(200).json({ msg: "Downgraded to profit sharing", billingTier });
     }
 
-    user.billingTier = billingTier;
-    await user.save();
+    // ✅ Upgrade to hybrid: Create subscription if needed
+    if (billingTier === "hybrid") {
+      if (!user.stripeCustomerId) {
+        const customer = await stripe.customers.create({ email: user.email });
+        user.stripeCustomerId = customer.id;
+        await user.save();
+      }
 
-    return res.status(200).json({ msg: "Billing updated", billingTier });
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "subscription",
+        customer: user.stripeCustomerId,
+        line_items: [
+          {
+            price: process.env.STRIPE_HYBRID_SUBSCRIPTION_PRICE_ID, // set in your .env
+            quantity: 1,
+          },
+        ],
+        success_url: `${process.env.BASE_URL}/onboarding-success`,
+        cancel_url: `${process.env.BASE_URL}/onboarding-cancelled`,
+      });
+
+      user.billingTier = billingTier;
+      await user.save();
+
+      // ⏩ Return Stripe Checkout URL to frontend
+      return res.status(200).json({ url: session.url });
+    }
+
+    return res.status(400).json({ msg: "No update performed" });
   } catch (err) {
-    console.error("Error updating billing tier:", err);
+    console.error("❌ Error updating billing tier:", err);
     res.status(500).json({ msg: "Internal server error" });
   }
 });
+
 
 export default router;
 
