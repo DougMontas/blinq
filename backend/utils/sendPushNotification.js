@@ -55,29 +55,53 @@
 
 
 // utils/pushNotifications.js
-import { Expo } from "expo-server-sdk";
-const expo = new Expo();
+// import { Expo } from "expo-server-sdk";
+// const expo = new Expo();
 
-export default async function sendPushNotification(pushToken, message, data = {}) {
-  if (!Expo.isExpoPushToken(pushToken)) {
-    console.error(`❌ Invalid Expo push token: ${pushToken}`);
-    return;
-  }
+// export default async function sendPushNotification(pushToken, message, data = {}) {
+//   if (!Expo.isExpoPushToken(pushToken)) {
+//     console.error(`❌ Invalid Expo push token: ${pushToken}`);
+//     return;
+//   }
 
-  const notification = {
-    to: pushToken,
-    sound: "default",
-    body: message,
-    data,
-  };
+//   const notification = {
+//     to: pushToken,
+//     sound: "default",
+//     body: message,
+//     data,
+//   };
 
+//   try {
+//     const chunks = expo.chunkPushNotifications([notification]);
+//     for (let chunk of chunks) {
+//       await expo.sendPushNotificationsAsync(chunk);
+//     }
+//     console.log("✅ Push notification sent to:", pushToken);
+//   } catch (err) {
+//     console.error("❌ Failed to send push notification:", err);
+//   }
+// }
+
+export default async function sendPushNotification(message) {
   try {
-    const chunks = expo.chunkPushNotifications([notification]);
-    for (let chunk of chunks) {
-      await expo.sendPushNotificationsAsync(chunk);
+    const token = message.to;
+    if (!Expo.isExpoPushToken(token)) {
+      console.warn(`❌ Invalid Expo push token: ${JSON.stringify(token)}`);
+      return;
     }
-    console.log("✅ Push notification sent to:", pushToken);
+
+    const payload = {
+      to: token,
+      sound: message.sound || "default",
+      title: message.title,
+      body: message.body,
+      data: message.data || {},
+    };
+
+    const expo = new Expo();
+    const ticketChunk = await expo.sendPushNotificationsAsync([payload]);
+    console.log("✅ Push sent:", ticketChunk);
   } catch (err) {
-    console.error("❌ Failed to send push notification:", err);
+    console.error("❌ Push notification error:", err.message);
   }
 }
