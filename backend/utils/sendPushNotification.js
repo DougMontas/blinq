@@ -81,9 +81,9 @@
 //     console.error("❌ Failed to send push notification:", err);
 //   }
 // }
-// utils/sendPushNotification.js
-import { Expo } from "expo-server-sdk";
 
+// old utils/sendPushNotification.js
+import { Expo } from "expo-server-sdk";
 const expo = new Expo();
 
 export default async function sendPushNotification({ to, title, body, data }) {

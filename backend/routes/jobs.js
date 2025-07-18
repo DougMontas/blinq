@@ -1019,6 +1019,34 @@ router.put("/:jobId/cancelled", async (req, res) => {
   }
 });
 
+router.post("/:jobId/dispute", async (req, res) => {
+  const { jobId, message = "Customer has disputed this job." } = req.body;
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.SUPPORT_EMAIL_USER, // e.g. blinqfixmailer@gmail.com
+        pass: process.env.SUPPORT_EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"BlinqFix Support" <${process.env.SUPPORT_EMAIL_USER}>`,
+      to: "support@blinqfix.com",
+      subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
+      text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
+    });
+
+    res.status(200).json({ msg: "Support email sent." });
+  } catch (err) {
+    console.error("❌ Failed to send dispute email:", err);
+    res.status(500).json({ msg: "Failed to send email" });
+  }
+});
+
+
+
 // PUT /jobs/:jobId/cancelled
 // router.put("/:jobId/cancelled", auth, async (req, res) => {
 //   try {

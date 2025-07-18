@@ -30,13 +30,11 @@
 //   }
 // }
 
-
 // middlewares/auth.js
 import jwt from "jsonwebtoken";
 import Users from "../models/Users.js";
 
 export const auth = async (req, res, next) => {
-  // Get token from headers: support both 'Authorization' and 'x-auth-token'
   const token =
     req.headers["x-auth-token"] ||
     (req.headers["authorization"]?.startsWith("Bearer ")
@@ -50,25 +48,29 @@ export const auth = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await Users.findById(decoded.id);
 
-    // Optionally fetch full user (if needed later)
-    const user = await Users.findById(decoded.id).select("-password");
     if (!user) {
-      console.log("🔒 AUTH MIDDLEWARE: User not found for decoded ID.");
+      console.log("🔒 AUTH MIDDLEWARE: User not found.");
       return res.status(401).json({ msg: "User not found." });
     }
 
-    // Attach full user or just essentials
-    req.user = { id: user._id.toString(), role: user.role };
+    req.user = {
+      id: user._id.toString(),
+      role: user.role,
+      billingTier: user.billingTier, // ✅ ensure billing tier is accessible
+      serviceZipcode: user.serviceZipcode, // ✅ added to support invitation logic
+      location: user.location // ✅ added to support geospatial invites
+    };
 
     next();
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      console.warn("🔐 TokenExpiredError at:", err.expiredAt);
-      return res.status(401).json({ msg: "Token expired." });
+      console.error("🔒 AUTH ERROR: Token expired at", err.expiredAt);
+      return res.status(401).json({ msg: "Session expired. Please log in again." });
     }
-
-    console.error("🔐 Token verification error:", err.message);
+    console.error("🔒 AUTH ERROR:", err.message);
     return res.status(401).json({ msg: "Invalid token." });
   }
 };
+
