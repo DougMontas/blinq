@@ -6655,7 +6655,7 @@ export default function CustomerJobStatus() {
     const fetchJob = async () => {
       try {
         const { data } = await api.get(`/jobs/${jobId}`);
-        console.log("[Fetch] job:", data);
+        console.log("[Fetch] job:", data?._id);
         if (!alive) return;
         setJob(data);
 
@@ -6673,7 +6673,7 @@ export default function CustomerJobStatus() {
         if (data.acceptedProvider) {
           const res = await api.get(`/users/${data.acceptedProvider}`);
           const provider = res.data;
-          console.log("[Fetch] provider:", provider);
+          // console.log("[Fetch] provider:", provider);
           setProviderInfo({
             name: provider.name,
             businessName: provider.businessName,
@@ -6707,7 +6707,7 @@ export default function CustomerJobStatus() {
     setConfirming(true);
     try {
       const { data } = await api.put(`/jobs/${jobId}/complete/customer`);
-      console.log("[CustomerComplete] response:", data);
+      console.log("[CustomerComplete] response:", data?._id);
       setJob(data);
     } catch (err) {
       console.error("[CustomerComplete Error]:", err);
@@ -6720,7 +6720,7 @@ export default function CustomerJobStatus() {
   const handleProviderComplete = async () => {
     try {
       const { data } = await api.put(`/jobs/${jobId}/complete/provider`);
-      console.log("[ProviderComplete] response:", data);
+      console.log("[ProviderComplete] response:", data?._id);
       setJob(data);
       Alert.alert("Done", "You’ve marked the job complete. Waiting for customer confirmation.");
     } catch (err) {
