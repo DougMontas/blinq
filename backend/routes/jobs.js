@@ -1350,6 +1350,27 @@ router.post("/:jobId/dispute", async (req, res) => {
   }
 });
 
+// POST /jobs/:jobId/notify-not-complete
+router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.jobId);
+    if (!job || !job.acceptedProvider) {
+      return res.status(404).json({ msg: "Job or provider not found" });
+    }
+
+    req.io.to(job.acceptedProvider.toString()).emit("jobNotComplete", {
+      jobId: job._id.toString(),
+      msg: "The customer marked the job as not complete.",
+    });
+
+    res.json({ msg: "Notification sent" });
+  } catch (err) {
+    console.error("notify-not-complete error:", err);
+    res.status(500).json({ msg: "Failed to notify provider" });
+  }
+});
+
+
 
 cron.schedule("0 * * * *", async () => {
   const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
