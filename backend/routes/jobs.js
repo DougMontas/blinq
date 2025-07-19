@@ -1026,13 +1026,13 @@ router.post("/:jobId/dispute", async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.SUPPORT_EMAIL_USER, // e.g. blinqfixmailer@gmail.com
-        pass: process.env.SUPPORT_EMAIL_PASS,
+        user: process.env.GODADDY_EMAIL_USER, // e.g. blinqfixmailer@gmail.com
+        pass: process.env.GODADDY_EMAIL_PASS,
       },
     });
 
     await transporter.sendMail({
-      from: `"BlinqFix Support" <${process.env.SUPPORT_EMAIL_USER}>`,
+      from: `"BlinqFix Support" <${process.env.GODADDY_EMAIL_USER}>`,
       to: "support@blinqfix.com",
       subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
       text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
