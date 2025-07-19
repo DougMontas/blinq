@@ -294,6 +294,7 @@ const jobSchema = new Schema(
         "cancelled-auto",
         "completed",
         "canceled",
+        "disputed",
       ],
       default: "pending",
     },

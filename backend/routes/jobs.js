@@ -14,6 +14,7 @@ import { invitePhaseOne } from "../jobs/invitePhaseOne.js";
 import { invitePhaseTwo } from "../jobs/invitePhaseTwo.js";
 import cron from "node-cron";
 import { chargeTravelFee, issueRefund } from "../utils/refunds.js"; // add these helpers if needed
+const nodemailer = require("nodemailer");
 
 const router = express.Router();
 const storage = multer.memoryStorage();
@@ -1019,31 +1020,31 @@ router.put("/:jobId/cancelled", async (req, res) => {
   }
 });
 
-router.post("/:jobId/dispute", async (req, res) => {
-  const { jobId, message = "Customer has disputed this job." } = req.body;
+// router.post("/:jobId/dispute", async (req, res) => {
+//   const { jobId, message = "Customer has disputed this job." } = req.body;
 
-  try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.GODADDY_EMAIL_USER, // e.g. blinqfixmailer@gmail.com
-        pass: process.env.GODADDY_EMAIL_PASS,
-      },
-    });
+//   try {
+//     const transporter = nodemailer.createTransport({
+//       service: "gmail",
+//       auth: {
+//         user: process.env.GODADDY_EMAIL_USER, // e.g. blinqfixmailer@gmail.com
+//         pass: process.env.GODADDY_EMAIL_PASS,
+//       },
+//     });
 
-    await transporter.sendMail({
-      from: `"BlinqFix Support" <${process.env.GODADDY_EMAIL_USER}>`,
-      to: "support@blinqfix.com",
-      subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
-      text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
-    });
+//     await transporter.sendMail({
+//       from: `"BlinqFix Support" <${process.env.GODADDY_EMAIL_USER}>`,
+//       to: "support@blinqfix.com",
+//       subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
+//       text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
+//     });
 
-    res.status(200).json({ msg: "Support email sent." });
-  } catch (err) {
-    console.error("❌ Failed to send dispute email:", err);
-    res.status(500).json({ msg: "Failed to send email" });
-  }
-});
+//     res.status(200).json({ msg: "Support email sent." });
+//   } catch (err) {
+//     console.error("❌ Failed to send dispute email:", err);
+//     res.status(500).json({ msg: "Failed to send email" });
+//   }
+// });
 
 
 
@@ -1218,6 +1219,136 @@ router.post("/:jobId/dispute", async (req, res) => {
 //     return res.status(500).json({ msg: "Server error cancelling job" });
 //   }
 // });
+
+// router.put('/:jobId/status', auth, async (req, res) => {
+//   const { jobId } = req.params;
+//   const { status, inDispute } = req.body;
+
+//   if (!status) return res.status(400).json({ msg: "Missing status." });
+
+//   try {
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//     job.status = status;
+
+//     if (typeof inDispute === "boolean") {
+//       job.inDispute = inDispute;
+//     }
+
+//     await job.save();
+//     req.io.to(job._id.toString()).emit("jobUpdated", job);
+
+//     res.json({ msg: "Status updated.", job });
+//   } catch (err) {
+//     console.error("PUT /:jobId/status error:", err);
+//     res.status(500).json({ msg: "Server error updating job status" });
+//   }
+// });
+
+
+
+// router.post("/:jobId/dispute", async (req, res) => {
+//   const { jobId } = req.params;
+//   const { message = "Customer has disputed this job." } = req.body;
+
+//   try {
+//     // Create transporter using SMTP (not 'service') to support any provider
+//     const transporter = nodemailer.createTransport({
+//       host: process.env.EMAIL_SMTP_HOST,         // e.g., "smtp.secureserver.net" for GoDaddy
+//       port: parseInt(process.env.EMAIL_SMTP_PORT), // typically 465 or 587
+//       secure: process.env.EMAIL_SMTP_SECURE === "true", // true for port 465, false for 587
+//       auth: {
+//         user: process.env.GODADDY_EMAIL_USER,
+//         pass: process.env.GODADDY_EMAIL_PASS,
+//       },
+//     });
+
+//     // Send support email
+//     await transporter.sendMail({
+//       from: `"BlinqFix Support" <${process.env.EMAIL_USER}>`,
+//       to: "support@blinqfix.com",
+//       subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
+//       text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
+//     });
+
+//     // Mark the job in dispute
+//     const job = await Job.findByIdAndUpdate(
+//       jobId,
+//       { inDispute: true, status: "disputed" },
+//       { new: true }
+//     );
+
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//     res.status(200).json({ msg: "Dispute submitted and job flagged." });
+//   } catch (err) {
+//     console.error("❌ Failed to process dispute:", err);
+//     res.status(500).json({ msg: "Failed to process dispute." });
+//   }
+// });
+
+router.put("/:jobId/status", auth, async (req, res) => {
+  const { jobId } = req.params;
+  const { status, inDispute } = req.body;
+
+  if (!status && inDispute === undefined) {
+    return res.status(400).json({ msg: "Nothing to update." });
+  }
+
+  try {
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found." });
+
+    if (status) job.status = status;
+    if (inDispute !== undefined) job.inDispute = inDispute;
+
+    await job.save();
+    req.io.to(job._id.toString()).emit("jobUpdated", job); // optional
+
+    res.json(job);
+  } catch (err) {
+    console.error("PUT /jobs/:jobId/status error:", err);
+    res.status(500).json({ msg: "Server error updating job status." });
+  }
+});
+
+
+router.post("/:jobId/dispute", async (req, res) => {
+  const { jobId } = req.params;
+  const { message = "Customer has disputed this job." } = req.body;
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_SMTP_HOST,
+      port: parseInt(process.env.EMAIL_SMTP_PORT),
+      secure: process.env.EMAIL_SMTP_SECURE === "true",
+      auth: {
+        user: process.env.GODADDY_EMAIL_USER,
+        pass: process.env.GODADDY_EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"BlinqFix Support" <${process.env.GODADDY_EMAIL_USER}>`,
+      to: "support@blinqfix.com",
+      subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
+      text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
+    });
+
+    const job = await Job.findByIdAndUpdate(
+      jobId,
+      { inDispute: true, status: "disputed" },
+      { new: true }
+    );
+
+    if (!job) return res.status(404).json({ msg: "Job not found." });
+    res.status(200).json({ msg: "Dispute submitted and job flagged." });
+  } catch (err) {
+    console.error("❌ Failed to process dispute:", err);
+    res.status(500).json({ msg: "Failed to process dispute." });
+  }
+});
 
 
 cron.schedule("0 * * * *", async () => {
