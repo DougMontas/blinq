@@ -240,7 +240,7 @@ export default function ProviderJobStatus() {
 
   const handleFinalize = async () => {
     try {
-      const { data } = await api.put(`/jobs/${jobId}/provider`);
+      const { data } = await api.put(`/jobs/${jobId}/finalize`);
       setJob(data);
       Alert.alert("Done", "You’ve marked the job complete. Waiting for customer confirmation.");
     } catch (err) {
@@ -272,6 +272,7 @@ export default function ProviderJobStatus() {
             resizeMode="contain"
           />
         </View>
+        <Text style={styles.bold}>Emergency Job Awarded. Customer has been notified you are in route shortly.</Text>
 
         {job.paymentStatus !== "paid" && (
           <Text style={styles.alert}>** Status will update live **</Text>

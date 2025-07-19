@@ -1974,7 +1974,7 @@ export default function MyAccountScreen() {
             <Text style={styles.buttonText}>Free Subscription</Text>
           </TouchableOpacity>
 
-          {/* <Text style={styles.label}>Delete Account i Below:</Text> */}
+          {/* <Text style={styles.label}>Delete Account  Below:</Text> */}
 
           <TouchableOpacity
             style={[styles.button, styles.danger]}

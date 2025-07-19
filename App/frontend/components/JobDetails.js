@@ -64,7 +64,7 @@ export default function JobDetails({ job, onAccept, isTeaser = false }) {
 
   return (
     <View style={styles.container}>
-        <Text style={styles.bold}>Emergency Job Awarded. Customer has been notified you are in route shortly.</Text>
+        {/* <Text style={styles.bold}>Emergency Job Awarded. Customer has been notified you are in route shortly.</Text> */}
       <Text></Text>
       <Text style={styles.header}>Job Details</Text>
       <Text>
