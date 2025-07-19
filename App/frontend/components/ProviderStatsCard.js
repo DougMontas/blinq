@@ -686,7 +686,7 @@ export default function ProviderStatsCard() {
         Completed Jobs: {stats.completedJobsCount}
       </Text>
       <Text style={styles.info}>
-        Total Earnings (Provider): ${stats.totalAmountPaid.toFixed(2)}
+        Total Earnings: ${stats.totalAmountPaid.toFixed(2)}
       </Text>
       <Text style={styles.info}>
         Invitations Received: {stats.invitationsSent}
@@ -704,6 +704,26 @@ export default function ProviderStatsCard() {
         * Total earnings reflect full job payouts (excluding BlinqFix’s 7% fee)
       </Text>
       {stats.reviews.length > 0 && (
+  <View style={{ marginTop: 16 }}>
+    <Text style={styles.subheader}>Customer Reviews</Text>
+    {stats.reviews
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 3) // Limit to 3 most recent
+      .map((r, idx) => (
+        <View key={idx} style={styles.reviewBox}>
+          <Text style={styles.reviewText}>"{r.comment}"</Text>
+          {r.rating && <StarRating rating={r.rating} />}
+          {r.date && (
+            <Text style={styles.reviewMeta}>
+              Completed: {new Date(r.date).toLocaleDateString()}
+            </Text>
+          )}
+        </View>
+      ))}
+  </View>
+)}
+
+      {/* {stats.reviews.length > 0 && (
         <View style={{ marginTop: 16 }}>
           <Text style={styles.subheader}>Customer Reviews</Text>
           {stats.reviews
@@ -720,7 +740,7 @@ export default function ProviderStatsCard() {
               </View>
             ))}
         </View>
-      )}
+      )} */}
     </ScrollView>
   );
 }

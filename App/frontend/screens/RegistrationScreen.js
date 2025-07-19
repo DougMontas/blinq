@@ -2637,7 +2637,7 @@ export default function RegistrationScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.label}>Property Address</Text>
+      <Text style={styles.label}>Address</Text>
       <TextInput style={styles.input} value={formData.address} onChangeText={(val) => onChange("address", val)} />
 
       <Text style={styles.label}>Phone Number</Text>
@@ -2673,7 +2673,7 @@ export default function RegistrationScreen() {
           <View style={styles.selectRow}>
             {BILLING.map((tier) => (
               <TouchableOpacity key={tier} style={[styles.selectOptionSmall, formData.billingTier === tier && styles.selectOptionSelected]} onPress={() => onChange("billingTier", tier)}>
-                <Text style={styles.selectOptionText}>{tier === "hybrid" ? "BlinqFix Gold" : "BlinqFix Go (Free)"}</Text>
+                <Text style={styles.selectOptionText}>{tier === "hybrid" ? "BlinqFix Priority" : "BlinqFix Go (Free)"}</Text>
               </TouchableOpacity>
             ))}
           </View>

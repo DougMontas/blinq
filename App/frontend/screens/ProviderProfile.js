@@ -328,10 +328,10 @@ Date: ________________________           Date: ________________________`;
 {renderUploadSection("W-9", "w9")}
 {renderUploadSection("Business License", "businessLicense")}
 {renderUploadSection("Proof of Insurance", "proofOfInsurance")}
-
+{/* 
 {renderUploadSection("W-9", "w9")}
 {renderUploadSection("Business License", "businessLicense")}
-{renderUploadSection("Proof of Insurance", "proofOfInsurance")}
+{renderUploadSection("Proof of Insurance", "proofOfInsurance")} */}
 
       <View style={{ marginTop: 20 }}>
         <TouchableOpacity style={s.downloadBtn} onPress={() => setModalVisible(true)}>

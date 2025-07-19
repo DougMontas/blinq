@@ -1963,7 +1963,7 @@ export default function MyAccountScreen() {
             onPress={() => confirmAndUpdateTier("hybrid")}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>Gold Subscription</Text>
+            <Text style={styles.buttonText}>Priority Subscription</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1971,10 +1971,10 @@ export default function MyAccountScreen() {
             onPress={() => confirmAndUpdateTier("profit_sharing")}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>Profit Sharing</Text>
+            <Text style={styles.buttonText}>Free Subscription</Text>
           </TouchableOpacity>
 
-          <Text style={styles.label}>Delete Account Below:</Text>
+          {/* <Text style={styles.label}>Delete Account i Below:</Text> */}
 
           <TouchableOpacity
             style={[styles.button, styles.danger]}

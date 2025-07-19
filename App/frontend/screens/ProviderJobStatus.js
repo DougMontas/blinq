@@ -222,21 +222,33 @@ export default function ProviderJobStatus() {
     }
   };
 
+  // const handleFinalize = async () => {
+  //   try {
+  //     const { data } = await api.put(`/jobs/${jobId}/complete/provider`);
+  //     setJob(data);
+  //     Alert.alert("Done", "You’ve marked the job complete.", [
+  //       {
+  //         text: "OK",
+  //         onPress: () => navigation.navigate("ServiceProviderDashboard"),
+  //       },
+  //     ]);
+  //   } catch (err) {
+  //     console.error("Finalize error:", err);
+  //     Alert.alert("Error", "Could not finalize job.");
+  //   }
+  // };
+
   const handleFinalize = async () => {
     try {
-      const { data } = await api.put(`/jobs/${jobId}/complete/provider`);
+      const { data } = await api.put(`/jobs/${jobId}/provider`);
       setJob(data);
-      Alert.alert("Done", "You’ve marked the job complete.", [
-        {
-          text: "OK",
-          onPress: () => navigation.navigate("ServiceProviderDashboard"),
-        },
-      ]);
+      Alert.alert("Done", "You’ve marked the job complete. Waiting for customer confirmation.");
     } catch (err) {
       console.error("Finalize error:", err);
       Alert.alert("Error", "Could not finalize job.");
     }
   };
+  
 
   if (loading) return <ActivityIndicator style={styles.center} size="large" />;
   if (!job) return <Text style={styles.center}>No job found.</Text>;
