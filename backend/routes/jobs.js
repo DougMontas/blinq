@@ -14,7 +14,7 @@ import { invitePhaseOne } from "../jobs/invitePhaseOne.js";
 import { invitePhaseTwo } from "../jobs/invitePhaseTwo.js";
 import cron from "node-cron";
 import { chargeTravelFee, issueRefund } from "../utils/refunds.js"; // add these helpers if needed
-const nodemailer = require("nodemailer");
+import nodemailer from "nodemailer"
 
 const router = express.Router();
 const storage = multer.memoryStorage();
