@@ -6578,7 +6578,6 @@
 // });
 
 // updated CustomerJobStatus.js to delay provider redirect and allow re-confirmation
-// updated CustomerJobStatus.js to delay provider redirect and allow re-confirmation
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -6619,8 +6618,21 @@ const convertToBase64Uri = (input) => {
 };
 
 export default function CustomerJobStatus() {
-  const { jobId } = useRoute().params;
+  const route = useRoute();
+  const { jobId } = route?.params || {};
   const navigation = useNavigation();
+
+  if (!jobId) {
+    console.warn("❌ No jobId found in route params.");
+    Alert.alert("Navigation Error", "Missing job ID. Returning to dashboard.", [
+      {
+        text: "OK",
+        onPress: () => navigation.navigate("CustomerDashboard"),
+      },
+    ]);
+    return null;
+  }
+
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
@@ -6634,6 +6646,20 @@ export default function CustomerJobStatus() {
   const [notifiedComplete, setNotifiedComplete] = useState(false);
   const mapRef = useRef(null);
 
+  const handleNotComplete = async () => {
+    try {
+      console.log("[NotComplete] marking status accepted");
+      await api.put(`/jobs/${jobId}/status`, { status: "accepted", providerCompleted: false });
+      console.log("[NotComplete] notifying service pro");
+      await api.post(`/jobs/${jobId}/notify-not-complete`);
+      Alert.alert("Noted", "The service pro has been notified. Please await their update.");
+      setJob((prev) => ({ ...prev, providerCompleted: false }));
+    } catch (err) {
+      console.error("[NotComplete Error]:", err);
+      Alert.alert("Error", "Failed to update status");
+    }
+  };
+
   useEffect(() => {
     if (job && job.status !== "completed") {
       saveSession({ role: "customer", jobId: job._id });
@@ -6644,7 +6670,6 @@ export default function CustomerJobStatus() {
     const socket = io(api.defaults.baseURL?.replace("/api", ""), { transports: ["websocket"] });
     socket.emit("join", jobId);
     socket.on("jobUpdated", (updatedJob) => {
-      console.log("[Socket] jobUpdated:", updatedJob);
       if (updatedJob._id === jobId) setJob(updatedJob);
     });
     return () => socket.disconnect();
@@ -6654,9 +6679,10 @@ export default function CustomerJobStatus() {
     let alive = true;
     const fetchJob = async () => {
       try {
+        console.log("📦 Fetching job", jobId);
         const { data } = await api.get(`/jobs/${jobId}`);
-        console.log("[Fetch] job:", data?._id);
         if (!alive) return;
+        console.log("✅ Job data loaded", data.status);
         setJob(data);
 
         if (data.customerCompleted && data.providerCompleted && !notifiedComplete) {
@@ -6673,7 +6699,6 @@ export default function CustomerJobStatus() {
         if (data.acceptedProvider) {
           const res = await api.get(`/users/${data.acceptedProvider}`);
           const provider = res.data;
-          // console.log("[Fetch] provider:", provider);
           setProviderInfo({
             name: provider.name,
             businessName: provider.businessName,
@@ -6690,7 +6715,7 @@ export default function CustomerJobStatus() {
         }
       } catch (err) {
         console.error("[FetchJob Error]:", err);
-        if (alive) Alert.alert("Error", "Unable to load job status.");
+        Alert.alert("Error", "Unable to load job status.");
       } finally {
         if (alive) setLoading(false);
       }
@@ -6729,19 +6754,42 @@ export default function CustomerJobStatus() {
     }
   };
 
-  const handleNotComplete = async () => {
-    try {
-      console.log("[NotComplete] marking status accepted");
-      await api.put(`/jobs/${jobId}/status`, { status: "accepted" });
-      console.log("[NotComplete] notifying service pro");
-      await api.post(`/jobs/${jobId}/notify-not-complete`);
-      Alert.alert("Noted", "The service pro has been notified. Please await their update.");
-      navigation.goBack();
-    } catch (err) {
-      console.error("[NotComplete Error]:", err);
-      Alert.alert("Error", "Failed to update status");
-    }
-  };
+  // const handleNotComplete = async () => {
+  //   try {
+  //     console.log("[NotComplete] marking status accepted");
+  //     await api.put(`/jobs/${jobId}/status`, { status: "accepted" });
+  //     console.log("[NotComplete] notifying service pro");
+  //     await api.post(`/jobs/${jobId}/notify-not-complete`);
+  //     Alert.alert("Noted", "The service pro has been notified. Please await their update.");
+  //     navigation.replace("CustomerJobStatus");
+  //   } catch (err) {
+  //     console.error("[NotComplete Error]:", err);
+  //     Alert.alert("Error", "Failed to update status");
+  //   }
+  // };
+
+  // const handleNotComplete = async () => {
+  //   try {
+  //     console.log("[NotComplete] marking status accepted");
+  //     await api.put(`/jobs/${jobId}/status`, { status: "accepted" });
+  
+  //     console.log("[NotComplete] notifying service pro");
+  //     await api.post(`/jobs/${jobId}/notify-not-complete`);
+  
+  //     Alert.alert("Noted", "The service pro has been notified. Please await their update.", [
+  //       {
+  //         text: "OK",
+  //         onPress: () => {
+  //           navigation.navigate("CustomerJobStatus", { jobId });
+  //         },
+  //       },
+  //     ]);
+  //   } catch (err) {
+  //     console.error("[NotComplete Error]:", err);
+  //     Alert.alert("Error", "Failed to update status");
+  //   }
+  // };
+  
 
   const handleDisputeSubmit = async () => {
     if (!disputeMessage) return;
