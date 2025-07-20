@@ -601,28 +601,64 @@ router.post("/payments/payment-sheet", async (req, res) => {
  * PUT /api/jobs/:jobId/finalize
  * Customer confirms the job is done.
  */
+// router.put("/:jobId/finalize", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.params;
+//     if (!mongoose.Types.ObjectId.isValid(jobId))
+//       return res.status(400).json({ msg: "Invalid job id." });
+
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//     // flag customer done
+//     job.customerCompleted = true;
+
+//     // if provider already marked done, complete the workflow
+//     if (job.providerCompleted) {
+//       job.status = "completed";
+//     }
+
+//     await job.save();
+
+//     // notify the provider if you want:
+//     if (job.acceptedProvider) {
+//       req.io.to(job.acceptedProvider.toString()).emit("jobFinalized", {
+//         jobId: job._id.toString(),
+//       });
+//     }
+
+//     return res.json(job);
+//   } catch (err) {
+//     console.error("PUT /api/jobs/:jobId/finalize error:", err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
 router.put("/:jobId/finalize", auth, async (req, res) => {
   try {
     const { jobId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(jobId))
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
       return res.status(400).json({ msg: "Invalid job id." });
+    }
 
     const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found." });
 
-    // flag customer done
-    job.customerCompleted = true;
+    // ✅ Mark provider completion only (not customer)
+    job.providerCompleted = true;
 
-    // if provider already marked done, complete the workflow
-    if (job.providerCompleted) {
+    // ✅ If both parties confirmed, mark job as completed
+    if (job.customerCompleted) {
       job.status = "completed";
+    } else {
+      job.status = "provider_completed";
     }
 
     await job.save();
 
-    // notify the provider if you want:
-    if (job.acceptedProvider) {
-      req.io.to(job.acceptedProvider.toString()).emit("jobFinalized", {
+    // ✅ Notify the customer via socket
+    if (job.customer) {
+      req.io.to(job.customer.toString()).emit("providerCompleted", {
         jobId: job._id.toString(),
       });
     }
@@ -633,6 +669,8 @@ router.put("/:jobId/finalize", auth, async (req, res) => {
     return res.status(500).json({ msg: "Server error" });
   }
 });
+
+
 
 router.put("/:jobId/complete/provider", auth, async (req, res) => {
   const job = await Job.findById(req.params.jobId);
