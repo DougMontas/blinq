@@ -240,7 +240,7 @@ export default function ProviderJobStatus() {
 
   const handleFinalize = async () => {
     try {
-      const { data } = await api.put(`/jobs/${jobId}/finalize`);
+      const { data } = await api.put(`/jobs/${jobId}/complete/provider`);
       setJob(data);
       Alert.alert("Done", "You’ve marked the job complete. Waiting for customer confirmation.");
     } catch (err) {
