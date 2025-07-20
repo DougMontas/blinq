@@ -1284,6 +1284,38 @@ router.put("/:jobId/cancelled", async (req, res) => {
 //   }
 // });
 
+router.put("/:jobId/status", auth, async (req, res) => {
+  const { jobId } = req.params;
+  const { status, inDispute, providerCompleted } = req.body;
+
+  if (!status && inDispute === undefined && providerCompleted === undefined) {
+    return res.status(400).json({ msg: "Nothing to update." });
+  }
+
+  try {
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found." });
+
+    if (status) job.status = status;
+    if (inDispute !== undefined) job.inDispute = inDispute;
+    if (typeof providerCompleted === "boolean") job.providerCompleted = providerCompleted;
+
+    await job.save();
+
+    // Broadcast to customer and provider (if available)
+    if (job.customer) {
+      req.io.to(job.customer.toString()).emit("jobUpdated", job);
+    }
+    if (job.acceptedProvider) {
+      req.io.to(job.acceptedProvider.toString()).emit("jobUpdated", job);
+    }
+
+    res.json(job);
+  } catch (err) {
+    console.error("PUT /jobs/:jobId/status error:", err);
+    res.status(500).json({ msg: "Server error updating job status." });
+  }
+});
 
 
 // router.post("/:jobId/dispute", async (req, res) => {
@@ -1326,30 +1358,30 @@ router.put("/:jobId/cancelled", async (req, res) => {
 //   }
 // });
 
-router.put("/:jobId/status", auth, async (req, res) => {
-  const { jobId } = req.params;
-  const { status, inDispute } = req.body;
+// router.put("/:jobId/status", auth, async (req, res) => {
+//   const { jobId } = req.params;
+//   const { status, inDispute } = req.body;
 
-  if (!status && inDispute === undefined) {
-    return res.status(400).json({ msg: "Nothing to update." });
-  }
+//   if (!status && inDispute === undefined) {
+//     return res.status(400).json({ msg: "Nothing to update." });
+//   }
 
-  try {
-    const job = await Job.findById(jobId);
-    if (!job) return res.status(404).json({ msg: "Job not found." });
+//   try {
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
 
-    if (status) job.status = status;
-    if (inDispute !== undefined) job.inDispute = inDispute;
+//     if (status) job.status = status;
+//     if (inDispute !== undefined) job.inDispute = inDispute;
 
-    await job.save();
-    req.io.to(job._id.toString()).emit("jobUpdated", job); // optional
+//     await job.save();
+//     req.io.to(job._id.toString()).emit("jobUpdated", job); // optional
 
-    res.json(job);
-  } catch (err) {
-    console.error("PUT /jobs/:jobId/status error:", err);
-    res.status(500).json({ msg: "Server error updating job status." });
-  }
-});
+//     res.json(job);
+//   } catch (err) {
+//     console.error("PUT /jobs/:jobId/status error:", err);
+//     res.status(500).json({ msg: "Server error updating job status." });
+//   }
+// });
 
 
 router.post("/:jobId/dispute", async (req, res) => {
@@ -1389,6 +1421,25 @@ router.post("/:jobId/dispute", async (req, res) => {
 });
 
 // POST /jobs/:jobId/notify-not-complete
+// router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
+//   try {
+//     const job = await Job.findById(req.params.jobId);
+//     if (!job || !job.acceptedProvider) {
+//       return res.status(404).json({ msg: "Job or provider not found" });
+//     }
+
+//     req.io.to(job.acceptedProvider.toString()).emit("jobNotComplete", {
+//       jobId: job._id.toString(),
+//       msg: "The customer marked the job as not complete.",
+//     });
+
+//     res.json({ msg: "Notification sent" });
+//   } catch (err) {
+//     console.error("notify-not-complete error:", err);
+//     res.status(500).json({ msg: "Failed to notify provider" });
+//   }
+// });
+
 router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
   try {
     const job = await Job.findById(req.params.jobId);
@@ -1398,15 +1449,16 @@ router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
 
     req.io.to(job.acceptedProvider.toString()).emit("jobNotComplete", {
       jobId: job._id.toString(),
-      msg: "The customer marked the job as not complete.",
+      msg: "The customer marked the job as not complete. Please review and mark complete again if ready.",
     });
 
-    res.json({ msg: "Notification sent" });
+    res.json({ msg: "Notification sent to service pro" });
   } catch (err) {
     console.error("notify-not-complete error:", err);
     res.status(500).json({ msg: "Failed to notify provider" });
   }
 });
+
 
 
 
