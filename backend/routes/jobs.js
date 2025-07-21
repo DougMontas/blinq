@@ -1440,12 +1440,37 @@ router.post("/:jobId/dispute", async (req, res) => {
 //   }
 // });
 
+// router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
+//   try {
+//     const job = await Job.findById(req.params.jobId);
+//     if (!job || !job.acceptedProvider) {
+//       return res.status(404).json({ msg: "Job or provider not found" });
+//     }
+
+//     req.io.to(job.acceptedProvider.toString()).emit("jobNotComplete", {
+//       jobId: job._id.toString(),
+//       msg: "The customer marked the job as not complete. Please review and mark complete again if ready.",
+//     });
+
+//     res.json({ msg: "Notification sent to service pro" });
+//   } catch (err) {
+//     console.error("notify-not-complete error:", err);
+//     res.status(500).json({ msg: "Failed to notify provider" });
+//   }
+// });
+
+// ✅ Updated route: store event in job doc
 router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
   try {
     const job = await Job.findById(req.params.jobId);
     if (!job || !job.acceptedProvider) {
       return res.status(404).json({ msg: "Job or provider not found" });
     }
+
+    // ✅ Add this logic
+    job.customerMarkedIncomplete = true;
+    job.lastNotCompleteAt = new Date();
+    await job.save();
 
     req.io.to(job.acceptedProvider.toString()).emit("jobNotComplete", {
       jobId: job._id.toString(),
