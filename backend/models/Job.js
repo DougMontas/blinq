@@ -367,7 +367,7 @@ const jobSchema = new Schema(
 
     invitationPhase: { type: Number, default: 1 },
     invitationExpiresAt: { type: Date },
-    
+
     customerMarkedIncomplete: { type: Boolean, default: false },
     lastNotCompleteAt: { type: Date, default: null },
 

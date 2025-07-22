@@ -1484,6 +1484,29 @@ router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
   }
 });
 
+router.post("/:jobId/log", auth, async (req, res) => {
+  const { jobId } = req.params;
+  const { event, timestamp, triggeredBy } = req.body;
+
+  try {
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    console.log("📘 Modal Log Event:", { jobId, event, timestamp, triggeredBy });
+
+    // Optional: append to logs array if you want to persist it
+    // job.logs = job.logs || [];
+    // job.logs.push({ event, timestamp, triggeredBy });
+    // await job.save();
+
+    res.status(200).json({ msg: "Log received" });
+  } catch (err) {
+    console.error("❌ Failed to log job event:", err);
+    res.status(500).json({ msg: "Logging failed" });
+  }
+});
+
+
 
 
 
