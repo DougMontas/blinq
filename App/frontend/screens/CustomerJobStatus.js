@@ -6791,20 +6791,43 @@ export default function CustomerJobStatus() {
   // };
   
 
+  // const handleDisputeSubmit = async () => {
+  //   if (!disputeMessage) return;
+  //   try {
+  //     console.log("[Dispute] submitting message:", disputeMessage);
+  //     await api.post(`/jobs/${jobId}/dispute`, { message: disputeMessage });
+  //     await api.put(`/jobs/${jobId}/status`, { status: "disputed", inDispute: true });
+  //     setModalVisible(false);
+  //     setDisputeMessage("");
+  //     Alert.alert("Dispute Submitted", "Our support team has been notified.");
+  //   } catch (err) {
+  //     console.error("[Dispute Error]:", err);
+  //     Alert.alert("Error", "Failed to send dispute. Try again later.");
+  //   }
+  // };
+
   const handleDisputeSubmit = async () => {
     if (!disputeMessage) return;
     try {
       console.log("[Dispute] submitting message:", disputeMessage);
-      await api.post(`/jobs/${jobId}/dispute`, { message: disputeMessage });
-      await api.put(`/jobs/${jobId}/status`, { status: "disputed", inDispute: true });
+      const res1 = await api.post(`/jobs/${jobId}/dispute`, { message: disputeMessage });
+      console.log("[Dispute] POST result:", res1?.data);
+  
+      const res2 = await api.put(`/jobs/${jobId}/status`, {
+        status: "disputed",
+        inDispute: true,
+      });
+      console.log("[Dispute] PUT status result:", res2?.data);
+  
       setModalVisible(false);
       setDisputeMessage("");
       Alert.alert("Dispute Submitted", "Our support team has been notified.");
     } catch (err) {
-      console.error("[Dispute Error]:", err);
+      console.error("[Dispute Error]:", err?.response?.data || err.message || err);
       Alert.alert("Error", "Failed to send dispute. Try again later.");
     }
   };
+  
 
   const renderConfirmationButtons = () => (
     <View style={styles.confirm}>
