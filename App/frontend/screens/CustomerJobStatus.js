@@ -3056,10 +3056,10 @@
 //           setConfirming(false);
 //         }
 //       };
-    
+
 //       if (loading) return <ActivityIndicator style={styles.center} size="large" />;
 //       if (!job) return <Text style={styles.center}>Job not found.</Text>;
-    
+
 //       const subtotal =
 //         (job.baseAmount || 0) +
 //         (job.adjustmentAmount || 0) +
@@ -3135,7 +3135,7 @@
 //         </View>
 //       )}
 
-// {/* {jobLocation?.latitude && jobLocation?.longitude && ( 
+// {/* {jobLocation?.latitude && jobLocation?.longitude && (
 //         //// //<MapView
 //         //   ref={mapRef}
 //         //   provider={Platform.OS === "ios" ? PROVIDER_GOOGLE : undefined}
@@ -3156,7 +3156,7 @@
 //         //   }}
 //         // >
 //         //   <Marker coordinate={jobLocation} title="Customer" />
-//         //   {/* Provider Marker 
+//         //   {/* Provider Marker
 //         //   {providerCoords &&
 //         //     providerCoords.latitude &&
 //         //     providerCoords.longitude && (
@@ -3243,7 +3243,7 @@
 //       //       />
 //       //     )}
 //       //   </MapView>
-      
+
 //       // {jobLocation && jobLocation.latitude && jobLocation.longitude && providerCoords && (
 //       //   <View style={{ height: 220, borderRadius: 10, marginVertical: 12, overflow: "hidden" }}>
 //       //     <MapView
@@ -3339,8 +3339,7 @@
 //             </MapView>
 //           </View>
 //       )}
-      
-      
+
 //       {eta && (
 //         <Text style={{ textAlign: "center", marginBottom: 10 }}>
 //           Estimated Arrival: {eta} min
@@ -3861,7 +3860,6 @@
 //   confirmButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 // });
 
-
 // updated CustomerJobStatus.js with Not Complete, Dispute buttons, image preview, and redirect
 // import React, { useEffect, useState, useRef } from "react";
 // import {
@@ -3900,7 +3898,6 @@
 //   const [eta, setEta] = useState(null);
 //   const mapRef = useRef(null);
 //   const description = getCoveredDescription(job?.details?.issue);
-
 
 //   useEffect(() => {
 //     if (job && job.status !== "completed") {
@@ -4694,7 +4691,6 @@
 //   },
 // });
 
-
 //almost there
 // import React, { useEffect, useState, useRef } from "react";
 // import {
@@ -4985,7 +4981,6 @@
 //     textAlign: "center",
 //   },
 // });
-
 
 // almost working updated CustomerJobStatus.js with working dispute, not complete nav, and image rendering
 // import React, { useEffect, useState, useRef } from "react";
@@ -5291,7 +5286,6 @@
 //   },
 // });
 
-
 //picture are working -- updated CustomerJobStatus.js to apply same image handling as ProviderProfile
 // import React, { useEffect, useState, useRef } from "react";
 // import {
@@ -5315,7 +5309,6 @@
 // import StarRating from "../components/StarRating";
 // import { Buffer } from "buffer";
 
-
 // const { width } = Dimensions.get("window");
 // const LOGO_SIZE = width * 0.55;
 
@@ -5337,7 +5330,6 @@
 
 //   return null; // fallback if unknown format
 // };
-
 
 // export default function CustomerJobStatus() {
 //   const { jobId } = useRoute().params;
@@ -5605,7 +5597,6 @@
 //     textAlign: "center",
 //   },
 // });
-
 
 //working better dispute is working better still not sending -  updated CustomerJobStatus.js with enhanced dispute and not-complete handling
 // import React, { useEffect, useState, useRef } from "react";
@@ -6772,10 +6763,10 @@
 //   //   try {
 //   //     console.log("[NotComplete] marking status accepted");
 //   //     await api.put(`/jobs/${jobId}/status`, { status: "accepted" });
-  
+
 //   //     console.log("[NotComplete] notifying service pro");
 //   //     await api.post(`/jobs/${jobId}/notify-not-complete`);
-  
+
 //   //     Alert.alert("Noted", "The service pro has been notified. Please await their update.", [
 //   //       {
 //   //         text: "OK",
@@ -6789,7 +6780,6 @@
 //   //     Alert.alert("Error", "Failed to update status");
 //   //   }
 //   // };
-  
 
 //   // const handleDisputeSubmit = async () => {
 //   //   if (!disputeMessage) return;
@@ -6812,13 +6802,13 @@
 //       console.log("[Dispute] submitting message:", disputeMessage);
 //       const res1 = await api.post(`/jobs/${jobId}/dispute`, { message: disputeMessage });
 //       console.log("[Dispute] POST result:", res1?.data);
-  
+
 //       const res2 = await api.put(`/jobs/${jobId}/status`, {
 //         status: "disputed",
 //         inDispute: true,
 //       });
 //       console.log("[Dispute] PUT status result:", res2?.data);
-  
+
 //       setModalVisible(false);
 //       setDisputeMessage("");
 //       Alert.alert("Dispute Submitted", "Our support team has been notified.");
@@ -6827,7 +6817,6 @@
 //       Alert.alert("Error", "Failed to send dispute. Try again later.");
 //     }
 //   };
-  
 
 //   const renderConfirmationButtons = () => (
 //     <View style={styles.confirm}>
@@ -7007,10 +6996,189 @@
 //     textAlignVertical: "top",
 //   },
 // });
-  // The rest of the component remains unchanged including renderConfirmationButtons and UI layout...
+// The rest of the component remains unchanged including renderConfirmationButtons and UI layout...
+
+// import React, { useEffect, useState, useRef } from "react";
+// import {
+//   View,
+//   Text,
+//   TouchableOpacity,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Image,
+//   Dimensions,
+//   StyleSheet,
+//   Platform,
+//   TextInput,
+//   Modal,
+//   Linking,
+// } from "react-native";
+// import { useRoute, useNavigation } from "@react-navigation/native";
+// import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+// import io from "socket.io-client";
+// import api from "../api/client";
+// import { getCoveredDescription } from "../utils/serviceMatrix";
+// import { saveSession, clearSession } from "../utils/sessionManager";
+// import StarRating from "../components/StarRating";
+// import { Buffer } from "buffer";
+
+// const { width } = Dimensions.get("window");
+// const LOGO_SIZE = width * 0.55;
+
+// const convertToBase64Uri = (input) => {
+//   if (!input) return null;
+//   if (typeof input === "string") {
+//     if (input.startsWith("data:image")) return input;
+//     return `data:image/jpeg;base64,${input}`;
+//   }
+//   if (input?.type === "Buffer" && Array.isArray(input.data)) {
+//     return `data:image/jpeg;base64,${Buffer.from(input.data).toString(
+//       "base64"
+//     )}`;
+//   }
+//   return null;
+// };
+
+// export default function CustomerJobStatus() {
+//   const route = useRoute();
+//   const { jobId } = route?.params || {};
+//   const navigation = useNavigation();
+
+//   const [job, setJob] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [modalVisible, setModalVisible] = useState(false);
+//   const [notifiedComplete, setNotifiedComplete] = useState(false);
+
+//   useEffect(() => {
+//     const fetchJob = async () => {
+//       try {
+//         const { data } = await api.get(`/jobs/${jobId}`);
+//         setJob(data);
+//         if (
+//           data.customerCompleted &&
+//           data.providerCompleted &&
+//           !notifiedComplete
+//         ) {
+//           setNotifiedComplete(true);
+//           Alert.alert("Job Complete", "This job is now fully completed.", [
+//             {
+//               text: "OK",
+//               onPress: () => navigation.navigate("ServiceProviderDashboard"),
+//             },
+//           ]);
+//           await clearSession();
+//         }
+//       } catch (err) {
+//         console.error("[FetchJob Error]:", err);
+//         Alert.alert("Error", "Unable to load job status.");
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+//     fetchJob();
+//   }, [jobId, navigation, notifiedComplete]);
+
+//   if (loading) return <ActivityIndicator style={styles.center} size="large" />;
+//   if (!job) return <Text style={styles.center}>Job not found.</Text>;
+
+//   return (
+//     <View style={styles.container}>
+//       <TouchableOpacity
+//         style={styles.button}
+//         onPress={() => setModalVisible(true)}
+//       >
+//         <Text style={styles.buttonText}>Dispute Job</Text>
+//       </TouchableOpacity>
+
+//       <Text
+//         style={{
+//           marginTop: 12,
+//           textAlign: "center",
+//           fontSize: 12,
+//           color: "#555",
+//         }}
+//       >
+//         Please describe your issue clearly in the email body.
+//       </Text>
+
+//       <Text style={styles.jobIdText}>Job ID: {jobId}</Text>
+
+//       <Modal visible={modalVisible} animationType="slide" transparent>
+//         <View style={styles.modalOverlay}>
+//           <View style={styles.modalContent}>
+//             <Text style={styles.title}>Dispute Job</Text>
+//             <Text style={{ marginBottom: 10 }}>
+//               This will prepare an email to support. Please describe your
+//               concern.
+//             </Text>
+//             <TouchableOpacity
+//               style={styles.button}
+//               onPress={() => {
+//                 setModalVisible(false);
+//                 Linking.openURL(
+//                   `mailto:support@blinqfix.com?subject=Job%20Dispute&body=Job%20ID:%20${jobId}%0A%0AI%20would%20like%20to%20dispute%20this%20job%20because...`
+//                 );
+//               }}
+//             >
+//               <Text style={styles.buttonText}>Send Email</Text>
+//             </TouchableOpacity>
+//             <TouchableOpacity
+//               style={[styles.button, { backgroundColor: "gray" }]}
+//               onPress={() => setModalVisible(false)}
+//             >
+//               <Text style={styles.buttonText}>Cancel</Text>
+//             </TouchableOpacity>
+//           </View>
+//         </View>
+//       </Modal>
+//     </View>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+//   jobIdText: { fontSize: 12, color: "#999", marginTop: 4 },
+//   container: { flex: 1, justifyContent: "center", alignItems: "center" },
+//   modalOverlay: {
+//     flex: 1,
+//     justifyContent: "center",
+//     alignItems: "center",
+//     backgroundColor: "rgba(0,0,0,0.5)",
+//   },
+//   modalContent: {
+//     backgroundColor: "white",
+//     padding: 20,
+//     borderRadius: 10,
+//     width: "90%",
+//   },
+//   input: {
+//     borderColor: "#ccc",
+//     borderWidth: 1,
+//     borderRadius: 6,
+//     padding: 10,
+//     minHeight: 100,
+//     marginBottom: 12,
+//     textAlignVertical: "top",
+//   },
+//   button: {
+//     backgroundColor: "#d32f2f",
+//     padding: 12,
+//     borderRadius: 6,
+//     alignItems: "center",
+//     marginVertical: 6,
+//   },
+//   buttonText: { color: "white", fontWeight: "bold" },
+//   title: {
+//     fontSize: 20,
+//     fontWeight: "bold",
+//     marginBottom: 12,
+//     textAlign: "center",
+//   },
+// });
 
 
-  import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7022,9 +7190,7 @@ import {
   Dimensions,
   StyleSheet,
   Platform,
-  TextInput,
-  Modal,
-  Linking,
+  Linking
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
@@ -7057,14 +7223,17 @@ export default function CustomerJobStatus() {
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
   const [notifiedComplete, setNotifiedComplete] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   useEffect(() => {
     const fetchJob = async () => {
       try {
         const { data } = await api.get(`/jobs/${jobId}`);
         setJob(data);
+        if (data.providerCompleted && !data.customerCompleted && !notifiedComplete) {
+          setShowCompletionModal(true);
+        }
         if (data.customerCompleted && data.providerCompleted && !notifiedComplete) {
           setNotifiedComplete(true);
           Alert.alert("Job Complete", "This job is now fully completed.", [
@@ -7085,15 +7254,27 @@ export default function CustomerJobStatus() {
     fetchJob();
   }, [jobId, navigation, notifiedComplete]);
 
+  const handleDisputeEmail = async () => {
+    const url = `mailto:support@blinqfix.com?subject=Job%20Dispute&body=Job%20ID:%20${jobId}%0A%0AI%20would%20like%20to%20dispute%20this%20job%20because...`;
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Error", "No email client available.");
+      }
+    } catch (error) {
+      console.error("Error opening dispute email:", error);
+      Alert.alert("Error", "Something went wrong while preparing your email.");
+    }
+  };
+
   if (loading) return <ActivityIndicator style={styles.center} size="large" />;
   if (!job) return <Text style={styles.center}>Job not found.</Text>;
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => setModalVisible(true)}
-      >
+      <TouchableOpacity style={styles.button} onPress={handleDisputeEmail}>
         <Text style={styles.buttonText}>Dispute Job</Text>
       </TouchableOpacity>
 
@@ -7102,44 +7283,56 @@ export default function CustomerJobStatus() {
       </Text>
 
       <Text style={styles.jobIdText}>Job ID: {jobId}</Text>
-
-      <Modal visible={modalVisible} animationType="slide" transparent>
+    {showCompletionModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.title}>Dispute Job</Text>
-            <Text style={{ marginBottom: 10 }}>
-              This will prepare an email to support. Please describe your concern.
-            </Text>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => {
-                setModalVisible(false);
-                Linking.openURL(`mailto:support@blinqfix.com?subject=Job%20Dispute&body=Job%20ID:%20${jobId}%0A%0AI%20would%20like%20to%20dispute%20this%20job%20because...`);
-              }}
-            >
-              <Text style={styles.buttonText}>Send Email</Text>
+            <Text style={styles.title}>Please Confirm</Text>
+            <Text style={{ marginBottom: 16 }}>The service provider marked this job as complete. Please confirm your next step.</Text>
+            <TouchableOpacity style={styles.button} onPress={() => {
+              setShowCompletionModal(false);
+              navigation.navigate("ServiceProviderDashboard");
+            }}>
+              <Text style={styles.buttonText}>Confirm Job Complete</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: 'gray' }]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
+            <TouchableOpacity style={[styles.button, { backgroundColor: "#aaa" }]} onPress={() => {
+              setShowCompletionModal(false);
+              Alert.alert("Job Marked Incomplete", "We've noted your concern. The provider will be notified.");
+            }}>
+              <Text style={styles.buttonText}>Job Not Complete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, { backgroundColor: "#d32f2f" }]} onPress={() => {
+              setShowCompletionModal(false);
+              handleDisputeEmail();
+            }}>
+              <Text style={styles.buttonText}>Dispute</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "100%",
+    maxWidth: 400,
+    alignItems: "center",
+  },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   jobIdText: { fontSize: 12, color: "#999", marginTop: 4 },
   container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
-  modalContent: { backgroundColor: "white", padding: 20, borderRadius: 10, width: "90%" },
-  input: { borderColor: "#ccc", borderWidth: 1, borderRadius: 6, padding: 10, minHeight: 100, marginBottom: 12, textAlignVertical: "top" },
-  button: { backgroundColor: "#d32f2f", padding: 12, borderRadius: 6, alignItems: "center", marginVertical: 6 },
+        button: { backgroundColor: "#d32f2f", padding: 12, borderRadius: 6, alignItems: "center", marginVertical: 6 },
   buttonText: { color: "white", fontWeight: "bold" },
   title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
 });
