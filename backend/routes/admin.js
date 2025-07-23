@@ -6,7 +6,7 @@ import { auth } from "../middlewares/auth.js";
 import Users from "../models/Users.js";
 import Job from "../models/Job.js";
 import Configuration from "../models/Configuration.js";
-const { isAdmin } = require("../middleware/auth");
+import { isAdmin } from "../middleware/auth"
 
 const FEE_RATE = parseFloat(process.env.CONVENIENCE_FEE_RATE) || 0.07;
 
