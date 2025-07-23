@@ -6822,10 +6822,10 @@ export default function CustomerJobStatus() {
     if (!job) return;
   
     const jobDetails = `Job ID: ${job._id}\n` +
-      `Category: ${job.category || "N/A"}\n` +
-      `Subcategory: ${job.subcategory || "N/A"}\n` +
-      `Location: ${job.address || "Unknown location"}\n` +
-      `Customer Notes: ${job.notes || "None"}`;
+    `Location: ${job.address || "Unknown location"}\n`
+      // `Category: ${job.category || "N/A"}\n` +
+      // `Subcategory: ${job.subcategory || "N/A"}\n` +
+      // `Customer Notes: ${job.notes || "None"}`;
   
     const emailBody = encodeURIComponent(
       `${jobDetails}\n\nPlease describe the reason for the dispute below:`
@@ -6862,7 +6862,7 @@ export default function CustomerJobStatus() {
       >
         <Text style={styles.confirmButtonText}>{confirming ? "Confirming…" : "Confirm Job Complete"}</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.confirmButton, { backgroundColor: "#aaa" }]} onPress={handleNotComplete}>
+      <TouchableOpacity style={[styles.confirmButton, { backgroundColor: "#aaa" }]} onPress={() => handleNotComplete()}>
         <Text style={styles.confirmButtonText}>Not Complete</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.confirmButton, { backgroundColor: "red" }]} onPress={() => setModalVisible(true)}>
