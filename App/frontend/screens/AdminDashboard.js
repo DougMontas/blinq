@@ -225,6 +225,16 @@ export default function AdminDashboard() {
     }
   };
 
+  const cancelStaleJobs = async () => {
+    try {
+      const res = await api.put("/admin/jobs/cancel-stale");
+      Alert.alert("Success", res.data?.message || "Pending jobs cancelled.");
+    } catch (err) {
+      console.error("Error cancelling jobs:", err);
+      Alert.alert("Error", "Failed to cancel pending jobs.");
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <LogoutButton />
@@ -258,6 +268,10 @@ export default function AdminDashboard() {
           <Text>No convenience fees found.</Text>
         )}
       </View>
+
+      <TouchableOpacity style={styles.updateBtn} onPress={cancelStaleJobs}>
+        <Text style={styles.updateBtnText}>Cancel All Stale Jobs</Text>
+      </TouchableOpacity>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Global Config</Text>

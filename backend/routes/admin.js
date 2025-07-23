@@ -6,6 +6,7 @@ import { auth } from "../middlewares/auth.js";
 import Users from "../models/Users.js";
 import Job from "../models/Job.js";
 import Configuration from "../models/Configuration.js";
+const { isAdmin } = require("../middleware/auth");
 
 const FEE_RATE = parseFloat(process.env.CONVENIENCE_FEE_RATE) || 0.07;
 
@@ -119,6 +120,30 @@ router.get("/convenience-fees", auth, async (req, res) => {
   } catch (err) {
     console.error("GET /admin/convenience-fees error:", err);
     res.status(500).json({ msg: "Server error fetching fees." });
+  }
+});
+
+router.put("/jobs/cancel-stale", isAdmin, async (req, res) => {
+  try {
+    const result = await Job.updateMany(
+      {
+        status: { $nin: ["completed", "cancelled", "cancelled_by_provider"] },
+      },
+      {
+        $set: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+          cancelledBy: "admin",
+        },
+      }
+    );
+
+    res.status(200).json({
+      message: `${result.modifiedCount} stale jobs marked as cancelled.`,
+    });
+  } catch (err) {
+    console.error("Error cancelling stale jobs:", err);
+    res.status(500).json({ message: "Failed to cancel stale jobs." });
   }
 });
 
