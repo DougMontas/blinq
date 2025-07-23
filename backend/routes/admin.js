@@ -123,7 +123,7 @@ router.get("/convenience-fees", auth, async (req, res) => {
   }
 });
 
-router.put("/jobs/cancel-stale", auth, async (req, res) => {
+router.put("/jobs/cancel-stale", async (req, res) => {
   try {
     const result = await Job.updateMany(
       {
