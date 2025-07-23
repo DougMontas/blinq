@@ -6,7 +6,7 @@ import { auth } from "../middlewares/auth.js";
 import Users from "../models/Users.js";
 import Job from "../models/Job.js";
 import Configuration from "../models/Configuration.js";
-import { isAdmin } from "../middleware/auth"
+// import { isAdmin } from "../middleware/auth"
 
 const FEE_RATE = parseFloat(process.env.CONVENIENCE_FEE_RATE) || 0.07;
 
@@ -123,7 +123,7 @@ router.get("/convenience-fees", auth, async (req, res) => {
   }
 });
 
-router.put("/jobs/cancel-stale", isAdmin, async (req, res) => {
+router.put("/jobs/cancel-stale", auth, async (req, res) => {
   try {
     const result = await Job.updateMany(
       {
