@@ -228,7 +228,12 @@ router.post('/request-password-reset', async (req, res) => {
     await user.save();
 
     const resetLink = `https://your-app.com/reset-password/${token}`;
+    console.log("📬 Attempting to send reset email to:", user.email);
+    if (!user.email || typeof user.email !== "string") {
+      throw new Error("No valid email address on user object.");
+    }
     await sendEmail(user.email, resetLink);
+    
 
     return res.json({ msg: "If your account exists, a reset link has been sent." });
   } catch (err) {
