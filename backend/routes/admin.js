@@ -187,8 +187,7 @@ router.get("/jobs", auth, async (req, res) => {
   }
 });
 
-router.put(
-  "/provider/:providerId/active",
+router.put("/provider/:providerId/active",
   auth,
   checkAdmin,
   async (req, res) => {
@@ -215,6 +214,7 @@ router.put(
     }
   }
 );
+
 //old
 // router.put("/provider/:providerId/zipcodes",
 //   auth,
@@ -261,8 +261,7 @@ router.put(
 //   }
 // );
 
-router.put(
-  "/provider/:providerId/zipcodes",
+router.put("/provider/:providerId/zipcodes",
   auth,
   checkAdmin,
   async (req, res) => {

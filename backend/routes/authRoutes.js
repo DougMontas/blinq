@@ -450,63 +450,138 @@ router.post("/login", async (req, res) => {
 
 // POST /request-password-reset
 
-router.post("/request-password-reset", async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await Users.findOne({ email });
+// router.post("/request-password-reset", async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     const user = await Users.findOne({ email });
 
-    if (!user) {
-      return res.status(200).json({ msg: "If the email is valid, a reset link was sent." });
-    }
+//     if (!user) {
+//       return res.status(200).json({ msg: "If the email is valid, a reset link was sent." });
+//     }
+
+//     const token = crypto.randomBytes(32).toString("hex");
+//     user.resetPasswordToken = token;
+//     user.resetPasswordExp = Date.now() + 3600000; // 1 hour
+//     await user.save();
+
+//     const resetUrl = `https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/reset-password/${token}`;
+//     const message = `To reset your password, tap here: ${resetUrl}`;
+
+//     await sendEmail({
+//       to: user.email,
+//       subject: "Password Reset",
+//       text: message,
+//     });
+
+//     res.json({ msg: "Password reset link sent." });
+//   } catch (err) {
+//     console.error("Reset request error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// routes/auth.js
+// router.post('/request-password-reset', async (req, res) => {
+//   const { email } = req.body;
+//   if (!email) return res.status(400).json({ msg: 'Email is required' });
+
+//   try {
+//     const user = await Users.findOne({ email });
+//     if (!user) return res.status(404).json({ msg: 'User not found' });
+
+//     const token = crypto.randomBytes(32).toString("hex");
+//     user.resetToken = token;
+//     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
+//     await user.save();
+
+//     const resetLink = `https://your-app.com/reset-password/${token}`;
+//     // send email with nodemailer or SendGrid
+//     await sendResetEmail(user.email, resetLink);
+
+//     res.json({ msg: "Password reset link sent to your email." });
+//   } catch (err) {
+//     console.error("Reset request error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+router.post('/request-password-reset', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ msg: 'Email is required' });
+
+  try {
+    const user = await Users.findOne({ email });
+    if (!user) return res.status(200).json({ msg: 'If your account exists, a reset link has been sent.' }); 
+    // Prevent email enumeration
 
     const token = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = token;
-    user.resetPasswordExp = Date.now() + 3600000; // 1 hour
+
+    user.resetToken = token;
+    user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour from now
     await user.save();
 
-    const resetUrl = `https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/reset-password/${token}`;
-    const message = `To reset your password, tap here: ${resetUrl}`;
+    const resetLink = `https://your-app.com/reset-password/${token}`;
+    await sendResetEmail(user.email, resetLink);
 
-    await sendEmail({
-      to: user.email,
-      subject: "Password Reset",
-      text: message,
-    });
-
-    res.json({ msg: "Password reset link sent." });
+    return res.json({ msg: "If your account exists, a reset link has been sent." });
   } catch (err) {
     console.error("Reset request error:", err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: "Server error. Please try again later." });
   }
 });
 
 // POST /reset-password/:token
-router.post("/reset-password/:token", async (req, res) => {
-  try {
-    const { token } = req.params;
-    const { password } = req.body;
+// router.post("/reset-password/:token", async (req, res) => {
+//   try {
+//     const { token } = req.params;
+//     const { password } = req.body;
 
+//     const user = await Users.findOne({
+//       resetPasswordToken: token,
+//       resetPasswordExp: { $gt: Date.now() },
+//     });
+
+//     if (!user) {
+//       return res.status(400).json({ msg: "Invalid or expired reset token." });
+//     }
+
+//     const hashed = await bcrypt.hash(password, 12);
+//     user.password = hashed;
+//     user.resetPasswordToken = undefined;
+//     user.resetPasswordExp = undefined;
+
+//     await user.save();
+//     res.json({ msg: "Password has been reset successfully." });
+//   } catch (err) {
+//     console.error("Reset error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+router.post('/reset-password/:token', async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  try {
     const user = await Users.findOne({
-      resetPasswordToken: token,
-      resetPasswordExp: { $gt: Date.now() },
+      resetToken: token,
+      resetTokenExpires: { $gt: Date.now() },
     });
 
-    if (!user) {
-      return res.status(400).json({ msg: "Invalid or expired reset token." });
-    }
+    if (!user) return res.status(400).json({ msg: "Token is invalid or expired." });
 
-    const hashed = await bcrypt.hash(password, 12);
-    user.password = hashed;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExp = undefined;
-
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = undefined;
+    user.resetTokenExpires = undefined;
     await user.save();
-    res.json({ msg: "Password has been reset successfully." });
+
+    res.json({ msg: "Password has been reset." });
   } catch (err) {
     console.error("Reset error:", err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: "Failed to reset password." });
   }
 });
+
 
 router.post("/refresh-token", async (req, res) => {
   try {
