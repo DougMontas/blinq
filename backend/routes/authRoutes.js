@@ -251,6 +251,53 @@ router.post("/login", async (req, res) => {
 //   }
 // });
 
+// router.post("/request-password-reset", async (req, res) => {
+//   const { email } = req.body;
+//   if (!email) return res.status(400).json({ msg: "Email is required" });
+
+//   try {
+//     const user = await Users.findOne({ email });
+//     if (!user) {
+//       console.warn("🔍 No user found for:", email);
+//       return res
+//         .status(200)
+//         .json({ msg: "If your account exists, a reset link has been sent." });
+//     }
+
+//     const token = crypto.randomBytes(32).toString("hex");
+//     user.resetToken = token;
+//     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
+//     await user.save();
+
+//     // const resetLink = `https://blinqfix.com/reset-password/${token}`;
+
+//     // Add safe fallback logging
+//     if (!user.email || typeof user.email !== "string") {
+//       console.error("❌ Invalid user.email:", user.email);
+//       return res.status(500).json({ msg: "User email is invalid." });
+//     }
+
+//     console.log("📬 Sending password reset to:", user.email);
+//     console.log("🔗 Reset link:", resetLink);
+
+//     const resetLink = `https://blinqfix.com/reset-password/${token}`;
+//     console.log("📬 Attempting to send reset email to:", user.email);
+
+//     await sendEmail({
+//       to: user.email,
+//       subject: "Reset Your BlinqFix Password",
+//       text: `To reset your password, tap the link below:\n\n${resetLink}\n\nIf you didn’t request this, please ignore this email.`,
+//     });
+
+//     return res.json({
+//       msg: "If your account exists, a reset link has been sent.",
+//     });
+//   } catch (err) {
+//     console.error("Reset request error:", err);
+//     res.status(500).json({ msg: "Server error. Please try again later." });
+//   }
+// });
+
 router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ msg: "Email is required" });
@@ -265,13 +312,12 @@ router.post("/request-password-reset", async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString("hex");
+    const resetLink = `https://blinqfix.com/reset-password/${token}`;
+
     user.resetToken = token;
     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
     await user.save();
 
-    // const resetLink = `https://blinqfix.com/reset-password/${token}`;
-
-    // Add safe fallback logging
     if (!user.email || typeof user.email !== "string") {
       console.error("❌ Invalid user.email:", user.email);
       return res.status(500).json({ msg: "User email is invalid." });
@@ -279,9 +325,6 @@ router.post("/request-password-reset", async (req, res) => {
 
     console.log("📬 Sending password reset to:", user.email);
     console.log("🔗 Reset link:", resetLink);
-
-    const resetLink = `https://blinqfix.com/reset-password/${token}`;
-    console.log("📬 Attempting to send reset email to:", user.email);
 
     await sendEmail({
       to: user.email,
@@ -297,6 +340,7 @@ router.post("/request-password-reset", async (req, res) => {
     res.status(500).json({ msg: "Server error. Please try again later." });
   }
 });
+
 
 router.post("/reset-password/:token", async (req, res) => {
   const { token } = req.params;
