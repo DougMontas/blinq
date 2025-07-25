@@ -10,13 +10,12 @@ const router = express.Router();
 const baseUrl = process.env.FRONTEND_BASE_URL;
 
 const refreshUrl = process.env.STRIPE_ONBOARDING_REFRESH_URL?.startsWith("http")
-? process.env.STRIPE_ONBOARDING_REFRESH_URL
-: "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
+  ? process.env.STRIPE_ONBOARDING_REFRESH_URL
+  : "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
 
 const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
-? process.env.STRIPE_ONBOARDING_RETURN_URL
-: "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
-
+  ? process.env.STRIPE_ONBOARDING_RETURN_URL
+  : "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
 
 router.post("/register", async (req, res) => {
   try {
@@ -68,12 +67,18 @@ router.post("/register", async (req, res) => {
     let dobDate;
     if (role === "serviceProvider") {
       if (!ssnLast4 || !dob) {
-        return res.status(400).json({ msg: "SSN last 4 digits and DOB are required for providers." });
+        return res
+          .status(400)
+          .json({
+            msg: "SSN last 4 digits and DOB are required for providers.",
+          });
       }
 
       dobDate = new Date(dob);
       if (isNaN(dobDate.getTime())) {
-        return res.status(400).json({ msg: "Invalid DOB format. Use YYYY-MM-DD." });
+        return res
+          .status(400)
+          .json({ msg: "Invalid DOB format. Use YYYY-MM-DD." });
       }
 
       Object.assign(userData, {
@@ -141,11 +146,16 @@ router.post("/register", async (req, res) => {
       const stripe = await import("stripe").then((m) => m.default);
       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
-      const baseUrl = process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com";
+      const baseUrl =
+        process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com";
       const accountLink = await stripeInstance.accountLinks.create({
         account: newUser.stripeAccountId,
-        refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL || `${baseUrl}/onboarding-success`,
-        return_url: process.env.STRIPE_ONBOARDING_RETURN_URL || `${baseUrl}/onboarding-success`,
+        refresh_url:
+          process.env.STRIPE_ONBOARDING_REFRESH_URL ||
+          `${baseUrl}/onboarding-success`,
+        return_url:
+          process.env.STRIPE_ONBOARDING_RETURN_URL ||
+          `${baseUrl}/onboarding-success`,
         type: "account_onboarding",
       });
 
@@ -218,7 +228,7 @@ router.post("/login", async (req, res) => {
 
 //   try {
 //     const user = await Users.findOne({ email });
-//     if (!user) return res.status(200).json({ msg: 'If your account exists, a reset link has been sent.' }); 
+//     if (!user) return res.status(200).json({ msg: 'If your account exists, a reset link has been sent.' });
 //     // Prevent email enumeration
 
 //     const token = crypto.randomBytes(32).toString("hex");
@@ -233,7 +243,6 @@ router.post("/login", async (req, res) => {
 //       throw new Error("No valid email address on user object.");
 //     }
 //     await sendEmail(user.email, resetLink);
-    
 
 //     return res.json({ msg: "If your account exists, a reset link has been sent." });
 //   } catch (err) {
@@ -242,15 +251,17 @@ router.post("/login", async (req, res) => {
 //   }
 // });
 
-router.post('/request-password-reset', async (req, res) => {
+router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ msg: 'Email is required' });
+  if (!email) return res.status(400).json({ msg: "Email is required" });
 
   try {
     const user = await Users.findOne({ email });
     if (!user) {
       console.warn("🔍 No user found for:", email);
-      return res.status(200).json({ msg: 'If your account exists, a reset link has been sent.' });
+      return res
+        .status(200)
+        .json({ msg: "If your account exists, a reset link has been sent." });
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -258,7 +269,7 @@ router.post('/request-password-reset', async (req, res) => {
     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
     await user.save();
 
-    const resetLink = `https://blinqfix.com/reset-password/${token}`;
+    // const resetLink = `https://blinqfix.com/reset-password/${token}`;
 
     // Add safe fallback logging
     if (!user.email || typeof user.email !== "string") {
@@ -269,17 +280,25 @@ router.post('/request-password-reset', async (req, res) => {
     console.log("📬 Sending password reset to:", user.email);
     console.log("🔗 Reset link:", resetLink);
 
-    await sendEmail(user.email, resetLink);
+    const resetLink = `https://blinqfix.com/reset-password/${token}`;
+    console.log("📬 Attempting to send reset email to:", user.email);
 
-    return res.json({ msg: "If your account exists, a reset link has been sent." });
+    await sendEmail({
+      to: user.email,
+      subject: "Reset Your BlinqFix Password",
+      text: `To reset your password, tap the link below:\n\n${resetLink}\n\nIf you didn’t request this, please ignore this email.`,
+    });
+
+    return res.json({
+      msg: "If your account exists, a reset link has been sent.",
+    });
   } catch (err) {
     console.error("Reset request error:", err);
     res.status(500).json({ msg: "Server error. Please try again later." });
   }
 });
 
-
-router.post('/reset-password/:token', async (req, res) => {
+router.post("/reset-password/:token", async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
 
@@ -289,7 +308,8 @@ router.post('/reset-password/:token', async (req, res) => {
       resetTokenExpires: { $gt: Date.now() },
     });
 
-    if (!user) return res.status(400).json({ msg: "Token is invalid or expired." });
+    if (!user)
+      return res.status(400).json({ msg: "Token is invalid or expired." });
 
     user.password = await bcrypt.hash(password, 10);
     user.resetToken = undefined;
