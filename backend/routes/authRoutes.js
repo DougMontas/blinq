@@ -212,6 +212,8 @@ router.post("/login", async (req, res) => {
 
 router.post('/request-password-reset', async (req, res) => {
   const { email } = req.body;
+  console.log("📨 Incoming password reset for:", email);
+
   if (!email) return res.status(400).json({ msg: 'Email is required' });
 
   try {
