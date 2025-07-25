@@ -312,7 +312,7 @@ router.post("/request-password-reset", async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString("hex");
-    const resetLink = `https://blinqfix.com/reset-password/${token}`;
+    const resetLink = `https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/reset-password/${token}`;
 
     user.resetToken = token;
     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
