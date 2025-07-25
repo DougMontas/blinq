@@ -6568,7 +6568,7 @@
 //   },
 // });
 
-// working base to continue updated CustomerJobStatus.js to delay provider redirect and allow re-confirmation
+
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -6611,20 +6611,10 @@ const convertToBase64Uri = (input) => {
 
 export default function CustomerJobStatus() {
   const route = useRoute();
-  const { jobId } = route?.params || {};
+  const { jobId: routeJobId } = route?.params || {};
   const navigation = useNavigation();
 
-  if (!jobId) {
-    console.warn("❌ No jobId found in route params.");
-    Alert.alert("Navigation Error", "Missing job ID. Returning to dashboard.", [
-      {
-        text: "OK",
-        onPress: () => navigation.navigate("CustomerDashboard"),
-      },
-    ]);
-    return null;
-  }
-
+  const [jobId, setJobId] = useState(routeJobId);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
@@ -6634,14 +6624,29 @@ export default function CustomerJobStatus() {
   const [jobLocation, setJobLocation] = useState(null);
   const [eta, setEta] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [notCompletePressed, setNotCompletePressed] = useState(false);
   const [disputeMessage, setDisputeMessage] = useState("");
   const [notifiedComplete, setNotifiedComplete] = useState(false);
   const mapRef = useRef(null);
 
+  useEffect(() => {
+    if (!routeJobId) {
+      Alert.alert("Navigation Error", "Missing job ID. Returning to dashboard.", [
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("CustomerDashboard"),
+        },
+      ]);
+    }
+  }, [routeJobId]);
+
   const handleNotComplete = async () => {
     try {
       console.log("[NotComplete] marking status accepted");
-      await api.put(`/jobs/${jobId}/status`, { status: "accepted", providerCompleted: false });
+      await api.put(`/jobs/${jobId}/status`, {
+        status: "accepted",
+        providerCompleted: false,
+      });
       console.log("[NotComplete] notifying service pro");
       await api.post(`/jobs/${jobId}/notify-not-complete`);
       Alert.alert("Noted", "The service pro has been notified. Please await their update.");
@@ -6659,7 +6664,10 @@ export default function CustomerJobStatus() {
   }, [job]);
 
   useEffect(() => {
-    const socket = io(api.defaults.baseURL?.replace("/api", ""), { transports: ["websocket"] });
+    if (!jobId) return;
+    const socket = io(api.defaults.baseURL?.replace("/api", ""), {
+      transports: ["websocket"],
+    });
     socket.emit("join", jobId);
     socket.on("jobUpdated", (updatedJob) => {
       if (updatedJob._id === jobId) setJob(updatedJob);
@@ -6677,15 +6685,15 @@ export default function CustomerJobStatus() {
         console.log("✅ Job data loaded", data.status);
         setJob(data);
 
+        // ✅ Fix: store jobId in state in case it's missing from route
+        if (!jobId) {
+          setJobId(data._id);
+        }
+
         if (data.customerCompleted && data.providerCompleted && !notifiedComplete) {
           setNotifiedComplete(true);
-          Alert.alert("Job Complete", "This job is now fully completed.", [
-            {
-              text: "OK",
-              onPress: () => navigation.navigate("ServiceProviderDashboard"),
-            },
-          ]);
           await clearSession();
+          navigation.replace("RateProvider", { jobId: data._id });
         }
 
         if (data.acceptedProvider) {
@@ -6712,7 +6720,7 @@ export default function CustomerJobStatus() {
         if (alive) setLoading(false);
       }
     };
-    fetchJob();
+    if (jobId) fetchJob();
     const iv = setInterval(fetchJob, 25000);
     return () => {
       alive = false;
@@ -6746,149 +6754,44 @@ export default function CustomerJobStatus() {
     }
   };
 
-  // const handleNotComplete = async () => {
-  //   try {
-  //     console.log("[NotComplete] marking status accepted");
-  //     await api.put(`/jobs/${jobId}/status`, { status: "accepted" });
-  //     console.log("[NotComplete] notifying service pro");
-  //     await api.post(`/jobs/${jobId}/notify-not-complete`);
-  //     Alert.alert("Noted", "The service pro has been notified. Please await their update.");
-  //     navigation.replace("CustomerJobStatus");
-  //   } catch (err) {
-  //     console.error("[NotComplete Error]:", err);
-  //     Alert.alert("Error", "Failed to update status");
-  //   }
-  // };
-
-  // const handleNotComplete = async () => {
-  //   try {
-  //     console.log("[NotComplete] marking status accepted");
-  //     await api.put(`/jobs/${jobId}/status`, { status: "accepted" });
-
-  //     console.log("[NotComplete] notifying service pro");
-  //     await api.post(`/jobs/${jobId}/notify-not-complete`);
-
-  //     Alert.alert("Noted", "The service pro has been notified. Please await their update.", [
-  //       {
-  //         text: "OK",
-  //         onPress: () => {
-  //           navigation.navigate("CustomerJobStatus", { jobId });
-  //         },
-  //       },
-  //     ]);
-  //   } catch (err) {
-  //     console.error("[NotComplete Error]:", err);
-  //     Alert.alert("Error", "Failed to update status");
-  //   }
-  // };
-
-  // const handleDisputeSubmit = async () => {
-  //   if (!disputeMessage) return;
-  //   try {
-  //     console.log("[Dispute] submitting message:", disputeMessage);
-  //     await api.post(`/jobs/${jobId}/dispute`, { message: disputeMessage });
-  //     await api.put(`/jobs/${jobId}/status`, { status: "disputed", inDispute: true });
-  //     setModalVisible(false);
-  //     setDisputeMessage("");
-  //     Alert.alert("Dispute Submitted", "Our support team has been notified.");
-  //   } catch (err) {
-  //     console.error("[Dispute Error]:", err);
-  //     Alert.alert("Error", "Failed to send dispute. Try again later.");
-  //   }
-  // };
-
-  // const handleDisputeSubmit = async () => {
-  //   if (!disputeMessage) return;
-  //   try {
-  //     console.log("[Dispute] submitting message:", disputeMessage);
-  //     const res1 = await api.post(`/jobs/${jobId}/dispute`, { message: disputeMessage });
-  //     console.log("[Dispute] POST result:", res1?.data);
-
-  //     const res2 = await api.put(`/jobs/${jobId}/status`, {
-  //       status: "disputed",
-  //       inDispute: true,
-  //     });
-  //     console.log("[Dispute] PUT status result:", res2?.data);
-
-  //     setModalVisible(false);
-  //     setDisputeMessage("");
-  //     Alert.alert("Dispute Submitted", "Our support team has been notified.");
-  //   } catch (err) {
-  //     console.error("[Dispute Error]:", err?.response?.data || err.message || err);
-  //     Alert.alert("Error", "Failed to send dispute. Try again later.");
-  //   }
-  // };
-  const handleDisputeEmail = async () => {
-    if (!job) return;
-  
-    const jobDetails = `Job ID: ${job._id}\n` +
-    `Location: ${job.address || "Unknown location"}\n`
-      // `Category: ${job.category || "N/A"}\n` +
-      // `Subcategory: ${job.subcategory || "N/A"}\n` +
-      // `Customer Notes: ${job.notes || "None"}`;
-  
-    const emailBody = encodeURIComponent(
-      `${jobDetails}\n\nPlease describe the reason for the dispute below:`
-    );
-  
-    const url = `mailto:support@blinqfix.com?subject=Job%20Dispute&body=${emailBody}`;
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert("Error", "No email client available.");
-      }
-    } catch (error) {
-      console.error("Error opening dispute email:", error);
-      Alert.alert("Error", "Something went wrong while preparing your email.");
-    }
-  };
-
   const renderConfirmationButtons = () => (
     <View style={styles.confirm}>
       <Text style={styles.heading}>Confirm Job Complete</Text>
-      <Text style={styles.confirmText}>The provider marked this job complete. Please confirm below:</Text>
+      <Text style={styles.confirmText}>
+        The provider marked this job complete. Please confirm below:
+      </Text>
       {job.arrivalImage && (
-        <Image source={{ uri: convertToBase64Uri(job.arrivalImage) }} style={styles.image} />
+        <Image
+          source={{ uri: convertToBase64Uri(job.arrivalImage) }}
+          style={styles.image}
+        />
       )}
       {job.completionImage && (
-        <Image source={{ uri: convertToBase64Uri(job.completionImage) }} style={styles.image} />
+        <Image
+          source={{ uri: convertToBase64Uri(job.completionImage) }}
+          style={styles.image}
+        />
       )}
       <TouchableOpacity
         style={[styles.confirmButton, confirming && styles.confirmButtonDisabled]}
         onPress={handleCustomerComplete}
         disabled={confirming}
       >
-        <Text style={styles.confirmButtonText}>{confirming ? "Confirming…" : "Confirm Job Complete"}</Text>
+        <Text style={styles.confirmButtonText}>
+          {confirming ? "Confirming…" : "Confirm Job Complete"}
+        </Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.confirmButton, { backgroundColor: "#aaa" }]} onPress={() => handleNotComplete()}>
+      <TouchableOpacity
+        style={[styles.confirmButton, { backgroundColor: "red" }]}
+        onPress={() => {
+          if (!notCompletePressed) {
+            setNotCompletePressed(true);
+            handleNotComplete();
+          }
+        }}
+      >
         <Text style={styles.confirmButtonText}>Not Complete</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.confirmButton, { backgroundColor: "red" }]} onPress={() => setModalVisible(true)}>
-        <Text style={styles.confirmButtonText}>Dispute</Text>
-      </TouchableOpacity>
-
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.heading}>Dispute Job</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Describe your concern"
-              multiline
-              value={disputeMessage}
-              onChangeText={setDisputeMessage}
-            />
-            <TouchableOpacity style={styles.confirmButton} onPress={handleDisputeEmail}>
-              <Text style={styles.confirmButtonText}>Submit Dispute</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.confirmButton, { backgroundColor: "#ccc" }]} onPress={() => setModalVisible(false)}>
-              <Text style={styles.confirmButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 
@@ -6910,7 +6813,10 @@ export default function CustomerJobStatus() {
       {(job.status === "pending" || job.status === "invited") && (
         <View style={styles.confirm}>
           <Text style={styles.heading}>Please Wait…</Text>
-          <Text style={styles.confirmText}>We are locating an emergency Blinqfix Pro for your job. Leave this page open, this will not take long.</Text>
+          <Text style={styles.confirmText}>
+            We are locating an emergency Blinqfix Pro for your job. Leave this
+            page open, this will not take long.
+          </Text>
         </View>
       )}
       {providerInfo && (
@@ -6931,7 +6837,14 @@ export default function CustomerJobStatus() {
         </View>
       )}
       {jobLocation?.latitude && jobLocation?.longitude && (
-        <View style={{ height: 220, borderRadius: 10, marginVertical: 12, overflow: "hidden" }}>
+        <View
+          style={{
+            height: 220,
+            borderRadius: 10,
+            marginVertical: 12,
+            overflow: "hidden",
+          }}
+        >
           <MapView
             key={`map-${jobId}-${jobLocation.latitude}-${jobLocation.longitude}`}
             ref={mapRef}
@@ -6971,8 +6884,18 @@ export default function CustomerJobStatus() {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 24, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  heading: { fontSize: 18, fontWeight: "600", marginBottom: 8, textAlign: "center" },
-  confirm: { padding: 12, backgroundColor: "#e8f5e9", borderRadius: 6, marginTop: 16 },
+  heading: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  confirm: {
+    padding: 12,
+    backgroundColor: "#e8f5e9",
+    borderRadius: 6,
+    marginTop: 16,
+  },
   confirmText: { marginBottom: 10, fontSize: 15 },
   confirmButton: {
     backgroundColor: "#1976d2",
@@ -6984,7 +6907,11 @@ const styles = StyleSheet.create({
   confirmButtonDisabled: { backgroundColor: "#999" },
   confirmButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   image: { height: 160, width: "100%", marginBottom: 12, borderRadius: 8 },
-  containerLogo: { justifyContent: "center", alignItems: "center", marginBottom: 20 },
+  containerLogo: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
   card: {
     backgroundColor: "#f0f0f0",
     padding: 12,
@@ -7000,7 +6927,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: "center",
   },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, textAlign: "center" },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
@@ -7023,6 +6955,3 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
 });
-
-
-

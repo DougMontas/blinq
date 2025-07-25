@@ -1549,6 +1549,8 @@ import CustomerFAQScreen from "./screens/CustomerFAQScreen";
 import DeleteAccountScreen from "./screens/DeleteAccountScreen";
 import MyAccountScreen from "./screens/MyAccountScreen";
 import { saveSession, loadSession, clearSession } from "./utils/sessionManager";
+import MyAccountCustomer from "./screens/MyAccountCustomer";
+import RequestPasswordResetScreen from "./screens/RequestPasswordResetScreen";
 
 export const navigationRef = createNavigationContainerRef();
 const AuthContext = createContext();
@@ -1564,8 +1566,15 @@ const linking = {
   ],
   config: {
     screens: {
-      Login: "onboarding-success",
-    },
+      Login: "login",
+      RequestPasswordReset: "request-password-reset",
+      ResetPassword: {
+        path: "reset-password/:token",
+        parse: {
+          token: (token) => token,
+        },
+      },
+    }, 
   },
 };
 
@@ -1697,6 +1706,10 @@ export default function App() {
                 component={ResetPasswordScreen}
               />
               <Stack.Screen
+                name="RequestPasswordResetScreen"
+                component={RequestPasswordResetScreen}
+              />
+              <Stack.Screen
                 name="CustomerDashboard"
                 component={CustomerDashboard}
               />
@@ -1731,6 +1744,7 @@ export default function App() {
               <Stack.Screen name="WebViewScreen" component={WebViewScreen} />
               <Stack.Screen name="ProviderProfile" component={ProviderProfile} />
               <Stack.Screen name="RateProvider" component={RateProvider} />
+              <Stack.Screen name="MyAccountCustomer" component={MyAccountCustomer} />
               <Stack.Screen
                 name="TermsAndConditions"
                 component={TermsAndConditions}

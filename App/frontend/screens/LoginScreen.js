@@ -1445,7 +1445,7 @@ export default function LoginScreen() {
               <Text>Forgot Password? </Text>
               <Text
                 style={styles.linkText}
-                onPress={() => navigation.navigate("ResetPasswordScreen")}
+                onPress={() => navigation.navigate("RequestPasswordResetScreen")}
               >
                 Reset
               </Text>
