@@ -17,125 +17,6 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 ? process.env.STRIPE_ONBOARDING_RETURN_URL
 : "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
 
-// router.post("/register", async (req, res) => {
-//   try {
-//     let {
-//       name,
-//       email,
-//       password,
-//       role = "customer",
-//       address,
-//       phoneNumber,
-//       zipcode,
-//       serviceType,
-//       billingTier,
-//       ssnLast4,
-//       dob,
-//       location,
-//       isActive,
-//     } = req.body;
-
-//     if (!name || !email || !password || !address || !phoneNumber) {
-//       return res.status(400).json({
-//         msg: "Name, email, password, address and phoneNumber are required.",
-//       });
-//     }
-
-//     email = email.toLowerCase().trim();
-
-//     const existingUser = await Users.findOne({ email });
-//     if (existingUser) {
-//       return res.status(400).json({ msg: "User already exists" });
-//     }
-
-//     const zipArray = Array.isArray(zipcode)
-//       ? zipcode.map(Number)
-//       : [Number(zipcode)];
-
-//     const userData = {
-//       name,
-//       email,
-//       password, // let Mongoose pre-save hook hash it
-//       role,
-//       address,
-//       phoneNumber,
-//       zipcode: zipArray,
-//       location,
-//       isActive: role === "serviceProvider" ? false : true,
-//     };
-
-//     if (role === "serviceProvider") {
-//       Object.assign(userData, {
-//         serviceType,
-//         billingTier,
-//         serviceZipcode: zipArray,
-//         w9: "fill out",
-//         businessLicense: "fill out",
-//         proofOfInsurance: "fill out",
-//         independentContractorAgreement: "fill out",
-//         ssnLast4,
-//         dob,
-//       });
-
-//       const stripe = await import("stripe").then((m) => m.default);
-//       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
-
-//       const account = await stripeInstance.accounts.create({
-//         type: "express",
-//         country: "US",
-//         email,
-//         capabilities: { transfers: { requested: true } },
-//         business_type: "individual",
-//       });
-
-//       userData.stripeAccountId = account.id;
-//     }
-
-//     const newUser = await Users.create(userData);
-
-//     const token = jwt.sign(
-//       { id: newUser._id, role: newUser.role },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "15m" }
-//     );
-
-//     const refreshToken = jwt.sign(
-//       { id: newUser._id },
-//       process.env.REFRESH_SECRET,
-//       { expiresIn: "30d" }
-//     );
-
-//     newUser.refreshToken = refreshToken;
-//     await newUser.save();
-
-//     if (role === "serviceProvider") {
-//       const stripe = await import("stripe").then((m) => m.default);
-//       const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
-
-//       const baseUrl =
-//         process.env.FRONTEND_BASE_URL || "https://www.blinqfix.com"; // Use HTTPS!
-
-//       const accountLink = await stripeInstance.accountLinks.create({
-//         account: newUser.stripeAccountId,
-//         refresh_url: refreshUrl,
-//         return_url: returnUrl,
-//         type: "account_onboarding",
-//       });
-
-
-//       return res.json({
-//         token,
-//         refreshToken,
-//         stripeOnboardingUrl: accountLink.url,
-//       });
-//     }
-
-//     return res.json({ token, refreshToken });
-//   } catch (err) {
-//     console.error("Error in POST /register:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
 
 router.post("/register", async (req, res) => {
   try {
@@ -282,7 +163,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -330,181 +210,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// router.post("/login", async (req, res) => {
-//   console.log("📥 Received login request:", req.body);
-
-//   try {
-//     const { email, password } = req.body;
-
-//     if (!email || !password) {
-//       console.warn("❌ Missing email or password");
-//       return res.status(400).json({ msg: "Missing email or password" });
-//     }
-
-//     const user = await Users.findOne({ email });
-//     if (!user) {
-//       console.warn("❌ User not found for email:", email);
-//       return res.status(401).json({ msg: "Invalid credentials" });
-//     }
-
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     if (!isMatch) {
-//       console.warn("❌ Password mismatch for email:", email);
-//       return res.status(401).json({ msg: "Invalid credentials" });
-//     }
-
-//     const token = generateToken(user);
-//     const refreshToken = generateRefreshToken(user);
-
-//     console.log("✅ Auth successful:", user.email);
-//     res.json({ token, refreshToken });
-//   } catch (err) {
-//     console.error("🔥 Login route error:", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-
-
-/**
- * POST /api/auth/request-reset
- */
-// router.post("/request-reset", async (req, res) => {
-//   try {
-//     const { email } = req.body;
-//     const user = await Users.findOne({ email });
-//     if (!user) {
-//       return res.status(400).json({ msg: "No user with that email" });
-//     }
-//     const resetToken = crypto.randomBytes(32).toString("hex");
-//     const expiry = Date.now() + 60 * 60 * 1000; // 1h
-//     user.resetPasswordToken = resetToken;
-//     user.resetPasswordExp = expiry;
-//     await user.save();
-//     // In a real app: email the link containing resetToken
-//     return res.json({ msg: "Reset token set. Email user with this token." });
-//   } catch (err) {
-//     console.error("requestReset error:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// router.post("/request-password-reset", async (req, res) => {
-//   try {
-//     const { email } = req.body;
-//     const user = await Users.findOne({ email });
-
-//     if (!user) {
-//       return res
-//         .status(200)
-//         .json({ msg: "If the email is valid, a reset link was sent." });
-//     }
-
-//     // Generate secure token
-//     const token = crypto.randomBytes(32).toString("hex");
-//     user.resetPasswordToken = token;
-//     user.resetPasswordExp = Date.now() + 3600000; // 1 hour
-//     await user.save();
-
-//     const resetUrl = `https://yourfrontend.com/reset-password/${token}`;
-//     const message = `To reset your password, click here: ${resetUrl}`;
-
-//     await sendEmail({
-//       to: user.email,
-//       subject: "Password Reset",
-//       text: message,
-//     });
-
-//     res.json({ msg: "Password reset link sent." });
-//   } catch (err) {
-//     console.error("Reset request error:", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-// /**
-//  * PUT /api/auth/reset-password/:token
-//  */
-// router.put("/reset-password/:token", async (req, res) => {
-//   try {
-//     const { token } = req.params;
-//     const { email, password } = req.body;
-//     const user = await Users.findOne({
-//       email,
-//       resetPasswordToken: token,
-//       resetPasswordExp: { $gt: Date.now() },
-//     }).select("+password");
-//     if (!user) {
-//       return res.status(400).json({ msg: "Invalid or expired reset token" });
-//     }
-//     // Hash new password and clear reset fields
-//     user.password = await bcrypt.hash(password, 10);
-//     user.resetPasswordToken = undefined;
-//     user.resetPasswordExp = undefined;
-//     await user.save();
-//     return res.json({ msg: "Password reset successfully" });
-//   } catch (err) {
-//     console.error("Reset password error:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// POST /request-password-reset
-
-// router.post("/request-password-reset", async (req, res) => {
-//   try {
-//     const { email } = req.body;
-//     const user = await Users.findOne({ email });
-
-//     if (!user) {
-//       return res.status(200).json({ msg: "If the email is valid, a reset link was sent." });
-//     }
-
-//     const token = crypto.randomBytes(32).toString("hex");
-//     user.resetPasswordToken = token;
-//     user.resetPasswordExp = Date.now() + 3600000; // 1 hour
-//     await user.save();
-
-//     const resetUrl = `https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/reset-password/${token}`;
-//     const message = `To reset your password, tap here: ${resetUrl}`;
-
-//     await sendEmail({
-//       to: user.email,
-//       subject: "Password Reset",
-//       text: message,
-//     });
-
-//     res.json({ msg: "Password reset link sent." });
-//   } catch (err) {
-//     console.error("Reset request error:", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// routes/auth.js
-// router.post('/request-password-reset', async (req, res) => {
-//   const { email } = req.body;
-//   if (!email) return res.status(400).json({ msg: 'Email is required' });
-
-//   try {
-//     const user = await Users.findOne({ email });
-//     if (!user) return res.status(404).json({ msg: 'User not found' });
-
-//     const token = crypto.randomBytes(32).toString("hex");
-//     user.resetToken = token;
-//     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
-//     await user.save();
-
-//     const resetLink = `https://your-app.com/reset-password/${token}`;
-//     // send email with nodemailer or SendGrid
-//     await sendResetEmail(user.email, resetLink);
-
-//     res.json({ msg: "Password reset link sent to your email." });
-//   } catch (err) {
-//     console.error("Reset request error:", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
 router.post('/request-password-reset', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ msg: 'Email is required' });
@@ -521,7 +226,7 @@ router.post('/request-password-reset', async (req, res) => {
     await user.save();
 
     const resetLink = `https://your-app.com/reset-password/${token}`;
-    await sendResetEmail(user.email, resetLink);
+    await sendEmail(user.email, resetLink);
 
     return res.json({ msg: "If your account exists, a reset link has been sent." });
   } catch (err) {
@@ -530,33 +235,6 @@ router.post('/request-password-reset', async (req, res) => {
   }
 });
 
-// POST /reset-password/:token
-// router.post("/reset-password/:token", async (req, res) => {
-//   try {
-//     const { token } = req.params;
-//     const { password } = req.body;
-
-//     const user = await Users.findOne({
-//       resetPasswordToken: token,
-//       resetPasswordExp: { $gt: Date.now() },
-//     });
-
-//     if (!user) {
-//       return res.status(400).json({ msg: "Invalid or expired reset token." });
-//     }
-
-//     const hashed = await bcrypt.hash(password, 12);
-//     user.password = hashed;
-//     user.resetPasswordToken = undefined;
-//     user.resetPasswordExp = undefined;
-
-//     await user.save();
-//     res.json({ msg: "Password has been reset successfully." });
-//   } catch (err) {
-//     console.error("Reset error:", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
 
 router.post('/reset-password/:token', async (req, res) => {
   const { token } = req.params;
@@ -581,7 +259,6 @@ router.post('/reset-password/:token', async (req, res) => {
     res.status(500).json({ msg: "Failed to reset password." });
   }
 });
-
 
 router.post("/refresh-token", async (req, res) => {
   try {
