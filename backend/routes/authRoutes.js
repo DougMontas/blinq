@@ -210,30 +210,66 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// router.post('/request-password-reset', async (req, res) => {
+//   const { email } = req.body;
+//   console.log("📨 Incoming password reset for:", email);
+
+//   if (!email) return res.status(400).json({ msg: 'Email is required' });
+
+//   try {
+//     const user = await Users.findOne({ email });
+//     if (!user) return res.status(200).json({ msg: 'If your account exists, a reset link has been sent.' }); 
+//     // Prevent email enumeration
+
+//     const token = crypto.randomBytes(32).toString("hex");
+
+//     user.resetToken = token;
+//     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour from now
+//     await user.save();
+
+//     const resetLink = `https://your-app.com/reset-password/${token}`;
+//     console.log("📬 Attempting to send reset email to:", user.email);
+//     if (!user.email || typeof user.email !== "string") {
+//       throw new Error("No valid email address on user object.");
+//     }
+//     await sendEmail(user.email, resetLink);
+    
+
+//     return res.json({ msg: "If your account exists, a reset link has been sent." });
+//   } catch (err) {
+//     console.error("Reset request error:", err);
+//     res.status(500).json({ msg: "Server error. Please try again later." });
+//   }
+// });
+
 router.post('/request-password-reset', async (req, res) => {
   const { email } = req.body;
-  console.log("📨 Incoming password reset for:", email);
-
   if (!email) return res.status(400).json({ msg: 'Email is required' });
 
   try {
     const user = await Users.findOne({ email });
-    if (!user) return res.status(200).json({ msg: 'If your account exists, a reset link has been sent.' }); 
-    // Prevent email enumeration
+    if (!user) {
+      console.warn("🔍 No user found for:", email);
+      return res.status(200).json({ msg: 'If your account exists, a reset link has been sent.' });
+    }
 
     const token = crypto.randomBytes(32).toString("hex");
-
     user.resetToken = token;
-    user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour from now
+    user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
     await user.save();
 
-    const resetLink = `https://your-app.com/reset-password/${token}`;
-    console.log("📬 Attempting to send reset email to:", user.email);
+    const resetLink = `https://blinqfix.com/reset-password/${token}`;
+
+    // Add safe fallback logging
     if (!user.email || typeof user.email !== "string") {
-      throw new Error("No valid email address on user object.");
+      console.error("❌ Invalid user.email:", user.email);
+      return res.status(500).json({ msg: "User email is invalid." });
     }
+
+    console.log("📬 Sending password reset to:", user.email);
+    console.log("🔗 Reset link:", resetLink);
+
     await sendEmail(user.email, resetLink);
-    
 
     return res.json({ msg: "If your account exists, a reset link has been sent." });
   } catch (err) {
