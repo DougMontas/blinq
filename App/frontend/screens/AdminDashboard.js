@@ -116,16 +116,24 @@ export default function AdminDashboard() {
     const fetchJobs = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-  
-        const res = await api.get("/api/admin/jobs", {
+
+        const res = await api.get("/admin/jobs", {
           headers: { Authorization: `Bearer ${token}` },
         });
-  
+
         const jobs = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
-  
+
         const counts = jobs.reduce(
           (acc, job) => {
-            const status = (job.status || "").toLowerCase();
+            let status = (job.status || "").toLowerCase();
+
+            // Normalize status keys
+            if (status.startsWith("cancelled-by")) {
+              status = "cancelled_by_provider"; // Or split by who cancels if needed
+            } else if (status === "cancelled-auto") {
+              status = "canceled";
+            }
+
             if (acc[status] !== undefined) acc[status]++;
             return acc;
           },
@@ -137,22 +145,21 @@ export default function AdminDashboard() {
             cancelled_by_provider: 0,
           }
         );
-  
+
         setJobCounts(counts);
       } catch (err) {
-        console.error("❌ Error fetching jobs:", err?.response?.data || err.message);
+        console.error(
+          "❌ Error fetching jobs:",
+          err?.response?.data || err.message
+        );
       }
     };
-  
+
     fetchJobs();
     const id = setInterval(fetchJobs, 10000);
     return () => clearInterval(id);
   }, []);
-  
-  
-  
-  
-  
+
   useEffect(() => {
     const fetchProviders = async () => {
       try {
