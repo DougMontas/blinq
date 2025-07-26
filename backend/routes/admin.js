@@ -178,6 +178,7 @@ router.put("/configuration", auth, checkAdmin, async (req, res) => {
 
 // returns every job so your dashboard can count statuses
 router.get("/jobs", auth, async (req, res) => {
+  console.log("✅ /admin/jobs hit");
   try {
     const jobs = await Job.find().lean();
     res.json({jobs});

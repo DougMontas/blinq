@@ -121,7 +121,7 @@ export default function AdminDashboard() {
           headers: { Authorization: `Bearer ${token}` },
         });
   
-        const jobs = Array.isArray(res.data) ? res.data : [];
+        const jobs = Array.isArray(res.data.jobs) ? res.data.jobs : [];
   
         const counts = jobs.reduce(
           (acc, job) => {
