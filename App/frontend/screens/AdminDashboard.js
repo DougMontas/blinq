@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../api/client";
 import LogoutButton from "../components/LogoutButton";
 
@@ -82,11 +83,50 @@ export default function AdminDashboard() {
     fetchConfig();
   }, []);
 
+  // useEffect(() => {
+  //   const fetchJobs = async () => {
+  //     try {
+  //       const res = await api.get("/admin/jobs");
+  //       const jobs = Array.isArray(res.data) ? res.data : res.data.jobs || [];
+  //       const counts = jobs.reduce(
+  //         (acc, job) => {
+  //           const s = (job.status || "").toLowerCase();
+  //           if (acc[s] !== undefined) acc[s]++;
+  //           return acc;
+  //         },
+  //         {
+  //           completed: 0,
+  //           pending: 0,
+  //           invited: 0,
+  //           canceled: 0,
+  //           cancelled_by_provider: 0,
+  //         }
+  //       );
+  //       setJobCounts(counts);
+  //     } catch (err) {
+  //       console.error("Error fetching jobs:", err);
+  //     }
+  //   };
+  //   fetchJobs();
+  //   const id = setInterval(fetchJobs, 10000);
+  //   return () => clearInterval(id);
+  // }, []);
+
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const res = await api.get("/admin/jobs");
-        const jobs = Array.isArray(res.data) ? res.data : res.data.jobs || [];
+        const token = await AsyncStorage.getItem("token");
+        const res = await api.get("/admin/jobs", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+  
+        if (!res.data || !Array.isArray(res.data.jobs)) {
+          console.warn("⚠️ Unexpected job response:", res.data);
+          return;
+        }
+  
+        const jobs = res.data.jobs;
+  
         const counts = jobs.reduce(
           (acc, job) => {
             const s = (job.status || "").toLowerCase();
@@ -101,16 +141,19 @@ export default function AdminDashboard() {
             cancelled_by_provider: 0,
           }
         );
+  
         setJobCounts(counts);
       } catch (err) {
-        console.error("Error fetching jobs:", err);
+        console.error("❌ Error fetching jobs:", err?.response?.data || err.message);
       }
     };
+  
     fetchJobs();
     const id = setInterval(fetchJobs, 10000);
     return () => clearInterval(id);
   }, []);
-
+  
+  
   useEffect(() => {
     const fetchProviders = async () => {
       try {

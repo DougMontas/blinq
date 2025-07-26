@@ -1166,9 +1166,9 @@ export default function ServiceProviderDashboard() {
 
         <ProviderStatsCard />
 
-        <Text style={styles.subtitle}>Job Invitations:</Text>
+        <Text style={styles.subtitle}></Text>
         {jobInvitations.length === 0 ? (
-          <Text>No job invitations yet.</Text>
+          <Text></Text>
         ) : (
           jobInvitations.map((job) => (
             <View key={job._id} style={styles.inviteBox}>
