@@ -116,16 +116,12 @@ export default function AdminDashboard() {
     const fetchJobs = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
+  
         const res = await api.get("/admin/jobs", {
           headers: { Authorization: `Bearer ${token}` },
         });
   
-        if (!res.data || !Array.isArray(res.data.jobs)) {
-          console.warn("⚠️ Unexpected job response:", res.data);
-          return;
-        }
-  
-        const jobs = res.data.jobs;
+        const jobs = Array.isArray(res.data) ? res.data : [];
   
         const counts = jobs.reduce(
           (acc, job) => {
@@ -152,6 +148,7 @@ export default function AdminDashboard() {
     const id = setInterval(fetchJobs, 10000);
     return () => clearInterval(id);
   }, []);
+  
   
   
   useEffect(() => {
