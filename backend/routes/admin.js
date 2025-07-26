@@ -180,7 +180,7 @@ router.put("/configuration", auth, checkAdmin, async (req, res) => {
 router.get("/jobs", auth, async (req, res) => {
   try {
     const jobs = await Job.find().lean();
-    res.json(jobs);
+    res.json({jobs});
   } catch (err) {
     console.error("GET /admin/jobs error:", err);
     res.status(500).json({ msg: "Server error fetching jobs." });
