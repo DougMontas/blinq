@@ -127,20 +127,24 @@ router.put("/jobs/cancel-stale", async (req, res) => {
   try {
     const result = await Job.updateMany(
       {
-        status: { $nin: ["pending",
-        "invited",
-        "accepted",
-        "in_progress",
-        "awaiting-additional-payment",
-        "paid",
-        "provider_completed",
-        "cancelled-by-customer",
-        "cancelled-by-serviceProvider",
-        "cancelled-by-customer",
-        "cancelled-by-serviceProvider",
-        "cancelled-auto",
-        "canceled",
-        "disputed",] },
+        status: {
+          $nin: [
+            "pending",
+            "invited",
+            "accepted",
+            "in_progress",
+            "awaiting-additional-payment",
+            "paid",
+            "provider_completed",
+            "cancelled-by-customer",
+            "cancelled-by-serviceProvider",
+            "cancelled-by-customer",
+            "cancelled-by-serviceProvider",
+            "cancelled-auto",
+            "canceled",
+            "disputed",
+          ],
+        },
       },
       {
         $set: {
@@ -201,41 +205,74 @@ router.put("/configuration", auth, checkAdmin, async (req, res) => {
 //   }
 // });
 
+// router.get("/jobs", auth, async (req, res) => {
+//   console.log("✅ [ADMIN JOBS] /admin/jobs endpoint hit");
+
+//   try {
+//     // Diagnostic: log incoming user if available
+//     console.log("🔐 Authenticated User:", req.user?.id || "Unknown");
+
+//     // Diagnostic: log DB connection state
+//     console.log("📡 DB connection readyState:", mongoose.connection.readyState);
+
+//     // const jobs = await Job.find({}).lean();
+//     const jobs = await Job.find({}).sort({ createdAt: -1 }).limit(100).lean();
+
+//     // Diagnostic: log job count
+//     console.log("📦 Jobs fetched:", jobs.length);
+
+//     // Optional: reduce payload size to avoid crash
+//     const safeJobs = jobs.map((job) => ({
+//       _id: job._id,
+//       status: job.status,
+//       serviceType: job.serviceType,
+//       customer: job.customer,
+//       provider: job.serviceProvider,
+//       createdAt: job.createdAt,
+//     }));
+
+//     res.json({ jobs: safeJobs });
+//   } catch (err) {
+//     console.error("❌ GET /admin/jobs error:", err);
+//     res.status(500).json({ msg: "Server error fetching jobs." });
+//   }
+// });
+
 router.get("/jobs", auth, async (req, res) => {
-  console.log("✅ [ADMIN JOBS] /admin/jobs endpoint hit");
+  console.log("✅ /admin/jobs hit");
 
   try {
-    // Diagnostic: log incoming user if available
-    console.log("🔐 Authenticated User:", req.user?.id || "Unknown");
+    // Check DB connection
+    console.log(
+      "📡 Mongoose connection state:",
+      mongoose.connection.readyState
+    );
 
-    // Diagnostic: log DB connection state
-    console.log("📡 DB connection readyState:", mongoose.connection.readyState);
+    //
+    const jobs = await Job.find({})
+      .select("status createdAt serviceType") // Avoid large buffers
+      .limit(1000)
+      .lean();
 
-    // const jobs = await Job.find({}).lean();
-    const jobs = await Job.find({}).sort({ createdAt: -1 }).limit(100).lean();
+    console.log("📦 Total jobs found:", jobs.length);
 
-    // Diagnostic: log job count
-    console.log("📦 Jobs fetched:", jobs.length);
-
-    // Optional: reduce payload size to avoid crash
+    // Optional: limit fields to prevent large payload crashes
     const safeJobs = jobs.map((job) => ({
       _id: job._id,
       status: job.status,
-      serviceType: job.serviceType,
-      customer: job.customer,
-      provider: job.serviceProvider,
       createdAt: job.createdAt,
+      serviceType: job.serviceType,
     }));
 
-    res.json({ jobs: safeJobs });
+    return res.json({ jobs: safeJobs });
   } catch (err) {
     console.error("❌ GET /admin/jobs error:", err);
-    res.status(500).json({ msg: "Server error fetching jobs." });
+    return res.status(500).json({ msg: "Server error fetching jobs." });
   }
 });
 
-
-router.put("/provider/:providerId/active",
+router.put(
+  "/provider/:providerId/active",
   auth,
   checkAdmin,
   async (req, res) => {
@@ -309,7 +346,8 @@ router.put("/provider/:providerId/active",
 //   }
 // );
 
-router.put("/provider/:providerId/zipcodes",
+router.put(
+  "/provider/:providerId/zipcodes",
   auth,
   checkAdmin,
   async (req, res) => {
