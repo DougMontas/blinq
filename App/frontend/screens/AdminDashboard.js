@@ -164,13 +164,13 @@ export default function AdminDashboard() {
     const fetchJobs = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        console.log("🔐 Token fetched:", token);
+        // console.log("🔐 Token fetched:", token);
   
         const res = await api.get("/admin/jobs", {
           headers: { Authorization: `Bearer ${token}` },
         });
   
-        console.log("📥 Jobs response:", res.data);
+        // console.log("📥 Jobs response:", res.data);
   
         const jobs = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
   
