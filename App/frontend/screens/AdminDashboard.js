@@ -116,17 +116,28 @@ export default function AdminDashboard() {
     const fetchJobs = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-  
         const res = await api.get("/admin/jobs", {
           headers: { Authorization: `Bearer ${token}` },
         });
   
-        const jobs = Array.isArray(res.data.jobs) ? res.data.jobs : [];
+        const jobs = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
+  
+        if (!jobs.length) {
+          console.warn("ℹ️ No jobs found.");
+          setJobCounts({
+            completed: 0,
+            pending: 0,
+            invited: 0,
+            canceled: 0,
+            cancelled_by_provider: 0,
+          });
+          return;
+        }
   
         const counts = jobs.reduce(
           (acc, job) => {
-            const s = (job.status || "").toLowerCase();
-            if (acc[s] !== undefined) acc[s]++;
+            const status = (job.status || "").toLowerCase();
+            if (acc[status] !== undefined) acc[status]++;
             return acc;
           },
           {
@@ -148,6 +159,7 @@ export default function AdminDashboard() {
     const id = setInterval(fetchJobs, 10000);
     return () => clearInterval(id);
   }, []);
+  
   
   
   
