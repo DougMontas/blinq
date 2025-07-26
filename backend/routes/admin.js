@@ -127,7 +127,20 @@ router.put("/jobs/cancel-stale", async (req, res) => {
   try {
     const result = await Job.updateMany(
       {
-        status: { $nin: ["completed", "cancelled", "cancelled_by_provider"] },
+        status: { $nin: ["pending",
+        "invited",
+        "accepted",
+        "in_progress",
+        "awaiting-additional-payment",
+        "paid",
+        "provider_completed",
+        "cancelled-by-customer",
+        "cancelled-by-serviceProvider",
+        "cancelled-by-customer",
+        "cancelled-by-serviceProvider",
+        "cancelled-auto",
+        "canceled",
+        "disputed",] },
       },
       {
         $set: {
@@ -177,16 +190,50 @@ router.put("/configuration", auth, checkAdmin, async (req, res) => {
 });
 
 // returns every job so your dashboard can count statuses
+// router.get("/jobs", auth, async (req, res) => {
+//   console.log("✅ /admin/jobs hit");
+//   try {
+//     const jobs = await Job.find().lean();
+//     res.json({jobs});
+//   } catch (err) {
+//     console.error("GET /admin/jobs error:", err);
+//     res.status(500).json({ msg: "Server error fetching jobs." });
+//   }
+// });
+
 router.get("/jobs", auth, async (req, res) => {
-  console.log("✅ /admin/jobs hit");
+  console.log("✅ [ADMIN JOBS] /admin/jobs endpoint hit");
+
   try {
-    const jobs = await Job.find().lean();
-    res.json({jobs});
+    // Diagnostic: log incoming user if available
+    console.log("🔐 Authenticated User:", req.user?.id || "Unknown");
+
+    // Diagnostic: log DB connection state
+    console.log("📡 DB connection readyState:", mongoose.connection.readyState);
+
+    // const jobs = await Job.find({}).lean();
+    const jobs = await Job.find({}).sort({ createdAt: -1 }).limit(100).lean();
+
+    // Diagnostic: log job count
+    console.log("📦 Jobs fetched:", jobs.length);
+
+    // Optional: reduce payload size to avoid crash
+    const safeJobs = jobs.map((job) => ({
+      _id: job._id,
+      status: job.status,
+      serviceType: job.serviceType,
+      customer: job.customer,
+      provider: job.serviceProvider,
+      createdAt: job.createdAt,
+    }));
+
+    res.json({ jobs: safeJobs });
   } catch (err) {
-    console.error("GET /admin/jobs error:", err);
+    console.error("❌ GET /admin/jobs error:", err);
     res.status(500).json({ msg: "Server error fetching jobs." });
   }
 });
+
 
 router.put("/provider/:providerId/active",
   auth,
