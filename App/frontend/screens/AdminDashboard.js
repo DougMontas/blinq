@@ -117,7 +117,7 @@ export default function AdminDashboard() {
       try {
         const token = await AsyncStorage.getItem("token");
   
-        const res = await api.get("/admin/jobs", {
+        const res = await api.get("/api/admin/jobs", {
           headers: { Authorization: `Bearer ${token}` },
         });
   
