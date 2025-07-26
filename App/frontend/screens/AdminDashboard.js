@@ -55,7 +55,7 @@ export default function AdminDashboard() {
     const fetchFees = async () => {
       try {
         const res = await api.get("/admin/convenience-fees");
-        const payload = res.data.data || res.data.jobs || {};
+        const payload = res.data.data || res.data || {};
         setFeesData({
           monthlyFees: Array.isArray(payload.monthlyFees)
             ? payload.monthlyFees
