@@ -72,16 +72,17 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: "#fff",
     padding: 16,
-    marginTop: 50,
+    marginBottom: 0,
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 16,
     textAlign: "center",
+    marginVertical: 120
   },
   faqContainer: {
-    marginBottom: 20,
+    marginBottom: 120,
   },
   question: {
     fontSize: 16,

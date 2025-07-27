@@ -425,9 +425,11 @@ export default function CustomerDashboard() {
         style={{
           backgroundColor: "#1976d2",
           padding: 16,
-          marginHorizontal: 24,
-          marginTop: 32,
-          borderRadius: 6,
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 999,
         }}
         onPress={() => navigation.navigate("MyAccountCustomer")}
       >

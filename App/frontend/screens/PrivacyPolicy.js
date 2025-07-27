@@ -111,13 +111,14 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: "#fff",
-    marginVertical: 50,
+    marginVertical: 0,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 12,
     textAlign: "center",
+    marginVertical: 120
   },
   effectiveDate: {
     fontSize: 14,

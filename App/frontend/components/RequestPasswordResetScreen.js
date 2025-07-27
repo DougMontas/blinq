@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import api from "../api/client";
-import BackButton from "../components/BackButton";
+import BackButton from "./BackButton";
 
 export default function RequestPasswordResetScreen() {
   const [email, setEmail] = useState("");

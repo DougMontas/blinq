@@ -1977,6 +1977,21 @@ export default function MyAccountScreen() {
           {/* <Text style={styles.label}>Delete Account  Below:</Text> */}
 
           <TouchableOpacity
+            style={styles.button}
+            onPress={async () => {
+              const token = await AsyncStorage.getItem("token");
+              if (!token) {
+                Alert.alert("Missing Token", "You are not authorized to reset password this way.");
+                return;
+              }
+              navigation.navigate("ResetPasswordScreen", { token });
+            }}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>Reset Password</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
             style={[styles.button, styles.danger]}
             onPress={handleDeleteAccount}
             disabled={loading}

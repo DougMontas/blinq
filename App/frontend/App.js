@@ -1550,7 +1550,7 @@ import DeleteAccountScreen from "./screens/DeleteAccountScreen";
 import MyAccountScreen from "./screens/MyAccountScreen";
 import { saveSession, loadSession, clearSession } from "./utils/sessionManager";
 import MyAccountCustomer from "./screens/MyAccountCustomer";
-import RequestPasswordResetScreen from "./screens/RequestPasswordResetScreen";
+import RequestPasswordResetScreen from "./components/RequestPasswordResetScreen";
 
 export const navigationRef = createNavigationContainerRef();
 const AuthContext = createContext();

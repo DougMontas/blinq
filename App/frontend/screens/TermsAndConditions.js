@@ -235,13 +235,14 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: "#fff",
-    marginVertical: 45,
+    marginVertical: 0,
   },
   header: {
     fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 12,
+    marginTop: 120
   },
   subHeader: {
     fontSize: 14,

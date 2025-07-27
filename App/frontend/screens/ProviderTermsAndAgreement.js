@@ -6,6 +6,7 @@ export default function ProviderTermsAndAgreement() {
   return (
     <ScrollView style={styles.container}>
       <BackButton />
+
       <Text style={styles.heading}>
         1. Terms and Conditions for Service Providers
       </Text>
@@ -115,8 +116,8 @@ export default function ProviderTermsAndAgreement() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: "#fff", marginVertical: 40 },
-  heading: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
+  container: { padding: 20, backgroundColor: "#fff", marginVertical: 0 },
+  heading: { fontSize: 24, fontWeight: "bold", marginBottom: 20, marginVertical:120 },
   subHeading: {
     fontSize: 18,
     fontWeight: "bold",

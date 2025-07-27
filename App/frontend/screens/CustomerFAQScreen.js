@@ -112,13 +112,15 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: "#fff",
-    marginVertical: 50,
+    marginTop: 0,
+    // marginVertical: 150
   },
   header: {
     fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 20,
+    marginTop: 120
   },
   sectionTitle: {
     fontSize: 20,
