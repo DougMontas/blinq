@@ -1577,7 +1577,7 @@ export const coveredDescriptions = {
   // "Electrical Panel Issues or Outages":
   //   "Breaker replacement, fuse testing, panel servicing, electrical diagnostics",
   "Select Electrical Issues Below":
-  "Troubleshoot and diagnose power outage issue. Includes minor repairs that can be completed within 1 hour without additional parts. Visual inspection of panel and breakers. Not included: Major rewiring, Permit-related work, Fixture or device installation",
+  "Troubleshoot and diagnose power outage issue. Includes minor repairs that can be completed within 1 hour without additional parts. Visual inspection of panel and breakers. \n\n Not included: Major rewiring, Permit-related work, Fixture or device installation",
   "Water Heater Failure":
     "Diagnostics, standard water heater replacement (40–50 gal), reconnection to water/gas lines",
   "Mold or Water Damage Remediation":

@@ -2514,7 +2514,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginVertical: 12,
+    marginVertical: 82,
     textAlign: "center",
   },
   label: { fontSize: 16, fontWeight: "600", marginBottom: 6 },

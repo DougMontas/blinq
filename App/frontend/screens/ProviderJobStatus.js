@@ -1885,6 +1885,7 @@ export default function ProviderJobStatus() {
   const [additionalCharge, setAdditionalCharge] = useState("");
   const [additionalChargeReason, setAdditionalChargeReason] = useState("");
   const [showNotCompleteModal, setShowNotCompleteModal] = useState(false);
+  const hasSeenNotCompleteRef = useRef(false);
   const [showNotification, setShowNotification] = useState(true);
   const modalDisplayedRef = useRef(false);
 
@@ -1904,6 +1905,15 @@ export default function ProviderJobStatus() {
         if (!alive) return;
         setJob(data);
         jobFetched = true;
+
+        if (
+          data.customerMarkedIncomplete &&
+          !hasSeenNotCompleteRef.current &&
+          data.status !== "completed"
+        ) {
+          setShowNotCompleteModal(true);
+          hasSeenNotCompleteRef.current = true; // ✅ only show once
+        }
 
         if (data.status === "completed" && !notifiedComplete) {
           setNotifiedComplete(true);
@@ -2092,6 +2102,7 @@ export default function ProviderJobStatus() {
             </Text>
           </View>
         )}
+
         {job.paymentStatus !== "paid" && (
           <Text style={styles.alert}>** Status will update live **</Text>
         )}
@@ -2156,7 +2167,7 @@ export default function ProviderJobStatus() {
           />
         </View>
       </ScrollView>
-      {showNotCompleteModal && (
+      {/* {showNotCompleteModal && (
         <Modal visible transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
@@ -2172,7 +2183,28 @@ export default function ProviderJobStatus() {
             </View>
           </View>
         </Modal>
-      )}
+      )} */}
+
+{showNotCompleteModal && (
+  <Modal visible transparent animationType="slide">
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <Text style={styles.title}>Job Marked as Incomplete</Text>
+        <Text style={{ marginVertical: 10 }}>
+          The customer marked this job as not complete. Please review and
+          address any issues before re-submitting completion.
+        </Text>
+        <TouchableOpacity
+          style={styles.confirmButton}
+          onPress={() => setShowNotCompleteModal(false)}
+        >
+          <Text style={styles.confirmButtonText}>OK</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </Modal>
+)}
+
     </KeyboardAvoidingView>
   );
 }
