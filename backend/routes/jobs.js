@@ -1014,12 +1014,14 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 //   }
 // });
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 router.put("/:jobId/cancelled", async (req, res) => {
   try {
     const job = await Job.findById(req.params.jobId);
     if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    const { cancelledBy } = req.body;
+    const { cancelledBy, refundEligible } = req.body;
 
     if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
       return res.status(400).json({ msg: 'Invalid cancellation source' });
@@ -1029,15 +1031,16 @@ router.put("/:jobId/cancelled", async (req, res) => {
     job.auditLog.push({
       action: "cancel",
       by: cancelledBy,
-      user: req.user?._id, // If available
+      user: req.user?._id,
       timestamp: new Date(),
+      refundEligible: cancelledBy === "customer" ? refundEligible : undefined,
     });
 
     if (cancelledBy === "serviceProvider") {
       job.acceptedProvider = null;
-      job.status = "invited"; // ✅ Reset status for reinvite
+      job.status = "invited";
       job.invitationPhase = 1;
-      job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
+      job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
       await job.save();
 
@@ -1046,17 +1049,99 @@ router.put("/:jobId/cancelled", async (req, res) => {
       } else {
         console.warn("⚠️ Socket.io instance (req.io) is missing");
       }
-    } else {
-      job.status = "cancelled-by-customer";
-      await job.save();
+
+      return res.json(job);
     }
 
+    // Customer cancellation logic
+    job.status = "cancelled-by-customer";
+    job.refundEligible = refundEligible;
+
+    if (job.paymentIntentId) {
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(job.paymentIntentId);
+
+        const fullAmount = paymentIntent.amount; // in cents
+        const partialAmount = fullAmount - 12000; // deduct $120 travel fee if refundEligible === false
+
+        const refund = await stripe.refunds.create({
+          payment_intent: job.paymentIntentId,
+          amount: refundEligible ? fullAmount : Math.max(partialAmount, 0),
+          reason: "requested_by_customer",
+        });
+
+        job.refundId = refund.id;
+
+        job.auditLog.push({
+          action: "refund-issued",
+          amount: refund.amount / 100,
+          currency: refund.currency,
+          stripeRefundId: refund.id,
+          fullRefund: refundEligible,
+          timestamp: new Date(),
+        });
+      } catch (stripeErr) {
+        console.error("⚠️ Stripe refund error:", stripeErr);
+        return res.status(500).json({
+          msg: "Job cancelled, but refund failed. Please contact support.",
+          error: stripeErr.message,
+        });
+      }
+    }
+
+    await job.save();
     res.json(job);
   } catch (err) {
     console.error("❌ Job cancel error:", err);
     res.status(500).json({ msg: "Server error during cancellation" });
   }
 });
+
+
+//latest
+// router.put("/:jobId/cancelled", async (req, res) => {
+//   try {
+//     const job = await Job.findById(req.params.jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//     const { cancelledBy } = req.body;
+
+//     if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
+//       return res.status(400).json({ msg: 'Invalid cancellation source' });
+//     }
+
+//     // Log cancellation
+//     job.auditLog.push({
+//       action: "cancel",
+//       by: cancelledBy,
+//       user: req.user?._id, // If available
+//       timestamp: new Date(),
+//     });
+
+//     if (cancelledBy === "serviceProvider") {
+//       job.acceptedProvider = null;
+//       job.status = "invited"; // ✅ Reset status for reinvite
+//       job.invitationPhase = 1;
+//       job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
+
+//       await job.save();
+
+//       if (req.io) {
+//         invitePhaseOne(job, null, req.io, 1);
+//       } else {
+//         console.warn("⚠️ Socket.io instance (req.io) is missing");
+//       }
+//     } else {
+//       job.status = "cancelled-by-customer";
+//       await job.save();
+//     }
+
+//     res.json(job);
+//   } catch (err) {
+//     console.error("❌ Job cancel error:", err);
+//     res.status(500).json({ msg: "Server error during cancellation" });
+//   }
+// });
 
 // router.post("/:jobId/dispute", async (req, res) => {
 //   const { jobId, message = "Customer has disputed this job." } = req.body;
