@@ -1014,7 +1014,7 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
 //   }
 // });
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 router.put("/:jobId/cancelled", async (req, res) => {
   try {
