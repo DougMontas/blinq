@@ -211,6 +211,19 @@ export default function ProvideRating() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Rate Your Service Provider</Text>
+      
+      <TouchableOpacity
+        style={[
+          styles.submitBtn,
+          (submitting || rating === 0 || !jobId) && styles.submitBtnDisabled,
+        ]}
+        onPress={submitRating}
+        disabled={submitting || rating === 0 || !jobId}
+      >
+        <Text style={styles.submitBtnText}>
+          {submitting ? "Submitting…" : "Submit Rating"}
+        </Text>
+      </TouchableOpacity>
 
       <View style={styles.stars}>
         {[1, 2, 3, 4, 5].map((i) => (
@@ -231,7 +244,7 @@ export default function ProvideRating() {
         onChangeText={setComments}
       />
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={[
           styles.submitBtn,
           (submitting || rating === 0 || !jobId) && styles.submitBtnDisabled,
@@ -242,7 +255,7 @@ export default function ProvideRating() {
         <Text style={styles.submitBtnText}>
           {submitting ? "Submitting…" : "Submit Rating"}
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }

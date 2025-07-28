@@ -471,6 +471,7 @@ export default {
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
+        "SEND_SMS",
       ],
       intentFilters: [
         {

@@ -135,7 +135,7 @@
 //         end={{ x: 1, y: 1 }}
 //       >
 //         <Text style={styles.heroText}>
-        
+
 //           {"\n"}
 //           Hi {firstName},{" "}
 //           <Text style={styles.heroSub}>how can we help today?</Text>
@@ -147,7 +147,6 @@
 //         </TouchableOpacity>
 //       </LinearGradient>
 
-      
 //       <Text style={styles.sectionTitle}>Choose a service</Text>
 //       <View style={styles.cardsWrap}>
 //         {categories.map(({ name, img }) => (
@@ -160,7 +159,7 @@
 //                 : navigation.navigate("EmergencyForm", { category: name })
 //             }
 //           >
-            
+
 //             <Image
 //               source={
 //                 typeof img === "string" && img.startsWith("http")
@@ -178,7 +177,7 @@
 //       <Footer />
 
 //       {/* <DeleteAccountButton /> */}
-      
+
 //       <View style={{ height: 40, marginVertical: 50 }} />
 //     </ScrollView>
 //   );
@@ -382,7 +381,8 @@ export default function CustomerDashboard() {
         end={{ x: 1, y: 1 }}
       >
         <Text style={styles.heroText}>
-          {"\n"}Hi {firstName}, <Text style={styles.heroSub}>how can we help today?</Text>
+          {"\n"}Hi {firstName},{" "}
+          <Text style={styles.heroSub}>how can we help today?</Text>
         </Text>
         <TouchableOpacity style={styles.ctaBtn}>
           <Text style={styles.ctaText}>
@@ -407,10 +407,11 @@ export default function CustomerDashboard() {
               source={
                 typeof img === "string" && img.startsWith("http")
                   ? { uri: img }
-                  : ""
+                  : require("../assets/coming_soon.jpeg") // fallback image
               }
               style={styles.cardImg}
             />
+
             <View style={styles.cardBody}>
               <Text style={styles.cardLabel}>{name}</Text>
             </View>
@@ -433,7 +434,9 @@ export default function CustomerDashboard() {
         }}
         onPress={() => navigation.navigate("MyAccountCustomer")}
       >
-        <Text style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}>
+        <Text
+          style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}
+        >
           My Account
         </Text>
       </TouchableOpacity>
@@ -444,7 +447,12 @@ export default function CustomerDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 0, paddingTop: 50 },
+  container: {
+    backgroundColor: "#fff",
+    paddingBottom: 24,
+    marginTop: 0,
+    paddingTop: 50,
+  },
   containerLogo: {},
   centered: {
     flex: 1,

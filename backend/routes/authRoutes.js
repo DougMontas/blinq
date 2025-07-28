@@ -33,6 +33,7 @@ router.post("/register", async (req, res) => {
       dob, // format: YYYY-MM-DD expected
       location,
       isActive,
+      optInSms,
     } = req.body;
 
     if (!name || !email || !password || !address || !phoneNumber) {
@@ -61,6 +62,7 @@ router.post("/register", async (req, res) => {
       phoneNumber,
       zipcode: zipArray,
       location,
+      optInSms: req.body.optInSms,
       isActive: role === "serviceProvider" ? false : true,
     };
 

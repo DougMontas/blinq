@@ -56,19 +56,19 @@ const MATRIX = [
   },
   {
     Service: "Burst or Leaking Pipes",
-    Question: "Is water still flowing or shut off?",
+    Question: "Is water still flowing?",
     Option: "Yes",
     Adjustment: 0,
   },
   {
     Service: "Burst or Leaking Pipes",
-    Question: "Is water still flowing or shut off?",
+    Question: "Is water still flowing?",
     Option: "No",
     Adjustment: 50,
   },
   {
     Service: "Burst or Leaking Pipes",
-    Question: "Is water still flowing or shut off?",
+    Question: "Is water still flowing?",
     Option: "I can’t locate shutoff",
     Adjustment: 50,
   },
@@ -337,7 +337,7 @@ const MATRIX = [
   {
     Service: "HVAC System Failure",
     Question: "Type of system?",
-    Option: "Split",
+    Option: "Central A/C",
     Adjustment: 0,
   },
   {
@@ -1577,7 +1577,7 @@ export const coveredDescriptions = {
   // "Electrical Panel Issues or Outages":
   //   "Breaker replacement, fuse testing, panel servicing, electrical diagnostics",
   "Select Electrical Issues Below":
-  "Troubleshoot and diagnose power outage issue. Includes minor repairs that can be completed within 1 hour without additional parts. Visual inspection of panel and breakers. \n\n Not included: Major rewiring, Permit-related work, Fixture or device installation",
+  "Troubleshoot and diagnose power outage issue. Includes minor repairs that can be completed within 1 hour without additional parts. Visual inspection of panel and breakers. \n\n Not included: Major rewiring, Permit-related work, Fixture or device installation.",
   "Water Heater Failure":
     "Diagnostics, standard water heater replacement (40–50 gal), reconnection to water/gas lines",
   "Mold or Water Damage Remediation":

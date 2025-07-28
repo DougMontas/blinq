@@ -346,6 +346,8 @@ const jobSchema = new Schema(
       type: Date,
       default: null,
     },
+    optInSms: { type: Boolean, default: false },
+
     auditLog: [
       {
         action: String, // e.g., 'cancel', 'accept', 'reinvite'

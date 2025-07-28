@@ -1696,10 +1696,7 @@ export default function App() {
             >
               <Stack.Screen name="Loading" component={LoadingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen
-                name="HandymanCategoryScreen"
-                component={HandymanCategoryScreen}
-              />
+        
               <Stack.Screen name="Registration" component={RegistrationScreen} />
               <Stack.Screen
                 name="ResetPasswordScreen"
@@ -1708,6 +1705,10 @@ export default function App() {
               <Stack.Screen
                 name="RequestPasswordResetScreen"
                 component={RequestPasswordResetScreen}
+              />
+              <Stack.Screen
+                name="HandymanCategoryScreen"
+                component={HandymanCategoryScreen}
               />
               <Stack.Screen
                 name="CustomerDashboard"

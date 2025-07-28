@@ -2065,6 +2065,17 @@ export default function ProviderJobStatus() {
   const awaitingAdditional = job.status === "awaiting-additional-payment";
   const { additionalCharge: ac, estimatedTotal } = job;
 
+  useEffect(() => {
+    if (job?.status === "cancelled-by-customer") {
+      Alert.alert("Job Cancelled", "The customer has cancelled this job.", [
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("ServiceProviderDashboard"),
+        },
+      ]);
+    }
+  }, [job?.status]);
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -2103,6 +2114,8 @@ export default function ProviderJobStatus() {
           </View>
         )}
 
+        
+
         {job.paymentStatus !== "paid" && (
           <Text style={styles.alert}>** Status will update live **</Text>
         )}
@@ -2112,6 +2125,8 @@ export default function ProviderJobStatus() {
             Customer Phone: {job.customer.phoneNumber}
           </Text>
         )}
+
+        
         <View style={styles.card}>
           <Text style={styles.title}>Provider Actions</Text>
           <Text style={{ textAlign: "center", marginBottom: 10 }}>
