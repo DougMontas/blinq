@@ -314,6 +314,8 @@ router.post("/request-password-reset", async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString("hex");
+    console.log("✅ Stored token:", token);
+
     const resetLink = `https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/reset-password/${token}`;
 
     user.resetToken = token;
@@ -444,6 +446,7 @@ router.post("/request-password-reset", async (req, res) => {
 router.post("/reset-password/:token", async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
+  console.log("🟡 Received token from frontend:", token);
 
   if (!password || typeof password !== "string" || password.length < 6) {
     return res.status(400).json({ msg: "Password must be at least 6 characters." });
@@ -451,6 +454,7 @@ router.post("/reset-password/:token", async (req, res) => {
 
   try {
     const decodedToken = decodeURIComponent(token);
+    console.log("🟡 Received token from frontend:", token);
 
     console.log("🔍 Looking for user with resetToken:", decodedToken);
 
