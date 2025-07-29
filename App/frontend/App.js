@@ -1568,7 +1568,7 @@ const linking = {
     screens: {
       Login: "login",
       RequestPasswordReset: "request-password-reset",
-      ResetPassword: {
+      ResetPasswordScreen: {
         path: "reset-password/:token",
         parse: {
           token: (token) => token,

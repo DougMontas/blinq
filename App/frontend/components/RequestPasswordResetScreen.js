@@ -86,7 +86,16 @@ const handleRequestReset = async () => {
   
       Alert.alert(
         "Email Sent",
-        "Check your email for a link to reset your password."
+        "Check your email for a link to reset your password.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // ✅ Optional: send user back to Login screen
+              navigation.replace("ResetPasswordScreen");
+            },
+          },
+        ]
       );
     } catch (err) {
       console.log("[Request Reset] Error full object:", err);
