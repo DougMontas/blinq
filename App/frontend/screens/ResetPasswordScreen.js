@@ -657,25 +657,54 @@ export default function ResetPasswordScreen() {
     }
   }, [token]);
 
+  // const handleReset = async () => {
+  //   if (!token) return;
+
+  //   if (!email || !password || !confirmPassword) {
+  //     return Alert.alert("Error", "All fields are required.");
+  //   }
+
+  //   if (password !== confirmPassword) {
+  //     return Alert.alert("Error", "Passwords do not match.");
+  //   }
+
+  //   if (password.length < 6) {
+  //     return Alert.alert("Error", "Password must be at least 6 characters.");
+  //   }
+
+  //   try {
+  //     setLoading(true);
+  //     const cleanedEmail = email.trim().toLowerCase();
+  //     await api.post(`/reset-password/${token}`, { email: cleanedEmail, password });
+  //     Alert.alert("Success", "Password has been reset.", [
+  //       { text: "OK", onPress: () => navigation.replace("LoginScreen") },
+  //     ]);
+  //   } catch (err) {
+  //     console.error("Reset error:", err.response?.data || err.message);
+  //     Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleReset = async () => {
     if (!token) return;
-
-    if (!email || !password || !confirmPassword) {
+  
+    if (!password || !confirmPassword) {
       return Alert.alert("Error", "All fields are required.");
     }
-
+  
     if (password !== confirmPassword) {
       return Alert.alert("Error", "Passwords do not match.");
     }
-
+  
     if (password.length < 6) {
       return Alert.alert("Error", "Password must be at least 6 characters.");
     }
-
+  
     try {
       setLoading(true);
-      const cleanedEmail = email.trim().toLowerCase();
-      await api.post(`/reset-password/${token}`, { email: cleanedEmail, password });
+      await api.post(`/reset-password/${token}`, { password });
       Alert.alert("Success", "Password has been reset.", [
         { text: "OK", onPress: () => navigation.replace("LoginScreen") },
       ]);
@@ -686,7 +715,7 @@ export default function ResetPasswordScreen() {
       setLoading(false);
     }
   };
-
+  
   return (
     <View style={styles.container}>
       <BackButton />
