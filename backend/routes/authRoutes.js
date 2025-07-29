@@ -345,6 +345,47 @@ router.post("/request-password-reset", async (req, res) => {
   }
 });
 
+router.post("/reset-password/:token", async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+  console.log("🟡 Received token from frontend:", token);
+
+  if (!password || typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ msg: "Password must be at least 6 characters." });
+  }
+
+  try {
+    const decodedToken = decodeURIComponent(token);
+    console.log("🟡 Received token from frontend:", token);
+
+    console.log("🔍 Looking for user with resetToken:", decodedToken);
+
+    const user = await Users.findOne({
+      resetToken: decodedToken,
+      resetTokenExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      console.warn("❌ Invalid or expired token:", decodedToken);
+      return res.status(400).json({ msg: "Token is invalid or expired." });
+    }
+
+    console.log("🔐 Resetting password for:", user.email || user._id);
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = undefined;
+    user.resetTokenExpires = undefined;
+
+    await user.save();
+    console.log("✅ Password reset successful");
+
+    res.json({ msg: "Password has been reset." });
+  } catch (err) {
+    console.error("❌ Reset error:", err);
+    res.status(500).json({ msg: "Failed to reset password." });
+  }
+});
+
 //latest
 // router.post("/reset-password/:token", async (req, res) => {
 //   const { token } = req.params;
@@ -443,46 +484,7 @@ router.post("/request-password-reset", async (req, res) => {
 //   }
 // });
 
-router.post("/reset-password/:token", async (req, res) => {
-  const { token } = req.params;
-  const { password } = req.body;
-  console.log("🟡 Received token from frontend:", token);
 
-  if (!password || typeof password !== "string" || password.length < 6) {
-    return res.status(400).json({ msg: "Password must be at least 6 characters." });
-  }
-
-  try {
-    const decodedToken = decodeURIComponent(token);
-    console.log("🟡 Received token from frontend:", token);
-
-    console.log("🔍 Looking for user with resetToken:", decodedToken);
-
-    const user = await Users.findOne({
-      resetToken: decodedToken,
-      resetTokenExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      console.warn("❌ Invalid or expired token:", decodedToken);
-      return res.status(400).json({ msg: "Token is invalid or expired." });
-    }
-
-    console.log("🔐 Resetting password for:", user.email || user._id);
-
-    user.password = await bcrypt.hash(password, 10);
-    user.resetToken = undefined;
-    user.resetTokenExpires = undefined;
-
-    await user.save();
-    console.log("✅ Password reset successful");
-
-    res.json({ msg: "Password has been reset." });
-  } catch (err) {
-    console.error("❌ Reset error:", err);
-    res.status(500).json({ msg: "Failed to reset password." });
-  }
-});
 
 
 
