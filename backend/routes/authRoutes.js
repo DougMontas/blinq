@@ -369,9 +369,48 @@ router.post("/request-password-reset", async (req, res) => {
 //   }
 // });
 
+// router.post("/reset-password/:token", async (req, res) => {
+//   const { token } = req.params;
+//   const { password } = req.body;
+
+//   if (!password || typeof password !== "string" || password.length < 6) {
+//     return res.status(400).json({ msg: "Password must be at least 6 characters." });
+//   }
+
+//   try {
+//     const user = await Users.findOne({
+//       resetToken: token,
+//       resetTokenExpires: { $gt: Date.now() },
+//     });
+//     console.log("🔍 Incoming reset token:", token);
+
+//     if (!user) {
+//       console.warn("❌ Invalid or expired token:", token);
+//       return res.status(400).json({ msg: "Token is invalid or expired." });
+//     }
+
+//     console.log("🔐 Resetting password for:", user.email || user._id);
+
+//     // Hash and save new password
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     user.password = hashedPassword;
+//     user.resetToken = undefined;
+//     user.resetTokenExpires = undefined;
+//     await user.save();
+
+//     res.json({ msg: "Password has been reset." });
+//   } catch (err) {
+//     console.error("❌ Reset error:", err);
+//     res.status(500).json({ msg: "Failed to reset password." });
+//   }
+// });
+
 router.post("/reset-password/:token", async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
+
+  console.log("🔍 Incoming token:", token);
+  console.log("🔍 Incoming password:", password);
 
   if (!password || typeof password !== "string" || password.length < 6) {
     return res.status(400).json({ msg: "Password must be at least 6 characters." });
@@ -390,9 +429,7 @@ router.post("/reset-password/:token", async (req, res) => {
 
     console.log("🔐 Resetting password for:", user.email || user._id);
 
-    // Hash and save new password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
+    user.password = await bcrypt.hash(password, 10);
     user.resetToken = undefined;
     user.resetTokenExpires = undefined;
     await user.save();
@@ -403,6 +440,7 @@ router.post("/reset-password/:token", async (req, res) => {
     res.status(500).json({ msg: "Failed to reset password." });
   }
 });
+
 
 
 router.post("/refresh-token", async (req, res) => {
