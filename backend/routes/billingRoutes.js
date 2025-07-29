@@ -69,62 +69,177 @@ const router = express.Router();
 //   }
 // });
 
+//latest
+// router.post("/subscribe", auth, async (req, res) => {
+//   try {
+//     const provider = req.user;
+
+//     if (provider.billingTier !== "hybrid") {
+//       return res.status(400).json({ msg: "You must be in the hybrid tier to subscribe." });
+//     }
+
+//     if (!provider.stripeAccountId) {
+//       return res.status(400).json({ msg: "Provider has no Stripe account yet." });
+//     }
+
+//     const { paymentMethodId } = req.body;
+
+//     let customerId = provider.stripeCustomerId;
+
+//     if (!customerId) {
+//       const customer = await stripe.customers.create({
+//         email: provider.email,
+//         name: provider.businessName || provider.name,
+//         phone: provider.phoneNumber,
+//       });
+
+//       customerId = customer.id;
+//       provider.stripeCustomerId = customerId;
+//       await provider.save();
+//     }
+
+//     // Attach and set default payment method
+//     await stripe.paymentMethods.attach(paymentMethodId, {
+//       customer: customerId,
+//     });
+
+//     await stripe.customers.update(customerId, {
+//       invoice_settings: { default_payment_method: paymentMethodId },
+//     });
+
+//     // Check if already subscribed
+//     const subs = await stripe.subscriptions.list({
+//       customer: customerId,
+//       status: "active",
+//       limit: 1,
+//     });
+
+//     if (!subs.data.length) {
+//       await stripe.subscriptions.create({
+//         customer: customerId,
+//         items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+//         metadata: { providerId: provider.id },
+//       });
+//     }
+
+//     res.json({ msg: "Hybrid subscription active." });
+//   } catch (err) {
+//     console.error("Subscribe error", err.message, err?.raw || err);
+//     res.status(500).json({ msg: "Failed to start hybrid subscription." });
+//   }
+// });
+
 router.post("/subscribe", auth, async (req, res) => {
   try {
     const provider = req.user;
-
-    if (provider.billingTier !== "hybrid") {
-      return res.status(400).json({ msg: "You must be in the hybrid tier to subscribe." });
-    }
-
-    if (!provider.stripeAccountId) {
-      return res.status(400).json({ msg: "Provider has no Stripe account yet." });
-    }
-
     const { paymentMethodId } = req.body;
 
-    let customerId = provider.stripeCustomerId;
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
+    // Ensure Stripe Connect onboarding for payouts
+    if (!provider.stripeAccountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        country: "US",
         email: provider.email,
-        name: provider.businessName || provider.name,
-        phone: provider.phoneNumber,
+        capabilities: { transfers: { requested: true } },
+        business_type: "individual",
+        individual: {
+          email: provider.email,
+          first_name: provider.name.split(" ")[0],
+          last_name: provider.name.split(" ").slice(1).join(" ") || "N/A",
+        },
+        metadata: {
+          providerId: provider._id.toString(),
+        },
       });
 
-      customerId = customer.id;
-      provider.stripeCustomerId = customerId;
+      provider.stripeAccountId = account.id;
       await provider.save();
     }
 
-    // Attach and set default payment method
-    await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: customerId,
-    });
+    // PROFIT SHARING TIER — No subscription
+    if (provider.billingTier === "profit_sharing") {
+      if (!provider.stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: provider.email,
+          name: provider.businessName || provider.name,
+          phone: provider.phoneNumber,
+          metadata: {
+            providerId: provider._id.toString(),
+            billingTier: "profit_sharing",
+          },
+        });
+        provider.stripeCustomerId = customer.id;
+        await provider.save();
+      }
 
-    await stripe.customers.update(customerId, {
-      invoice_settings: { default_payment_method: paymentMethodId },
-    });
-
-    // Check if already subscribed
-    const subs = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
-
-    if (!subs.data.length) {
-      await stripe.subscriptions.create({
-        customer: customerId,
-        items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
-        metadata: { providerId: provider.id },
+      return res.status(200).json({
+        msg: "Profit Sharing tier activated. Onboarding required.",
+        stripeAccountId: provider.stripeAccountId,
       });
     }
 
-    res.json({ msg: "Hybrid subscription active." });
+    // HYBRID TIER — With subscription
+    if (provider.billingTier === "hybrid") {
+      if (!paymentMethodId) {
+        return res.status(400).json({ msg: "Payment method ID is required for hybrid tier." });
+      }
+
+      let customerId = provider.stripeCustomerId;
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: provider.email,
+          name: provider.businessName || provider.name,
+          phone: provider.phoneNumber,
+          metadata: {
+            providerId: provider._id.toString(),
+            billingTier: "hybrid",
+          },
+        });
+        customerId = customer.id;
+        provider.stripeCustomerId = customerId;
+        await provider.save();
+      }
+
+      await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+      await stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+
+      const existing = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "active",
+        limit: 1,
+      });
+      if (existing.data.length) {
+        return res.status(200).json({ msg: "Subscription already active." });
+      }
+
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+        metadata: {
+          providerId: provider._id.toString(),
+          billingTier: "hybrid",
+        },
+        expand: ["latest_invoice.payment_intent"],
+      });
+
+      return res.status(200).json({
+        msg: "Hybrid subscription started.",
+        subscriptionId: subscription.id,
+        customerId,
+        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
+        stripeAccountId: provider.stripeAccountId,
+      });
+    }
+
+    return res.status(400).json({ msg: "Unsupported billing tier." });
   } catch (err) {
-    console.error("Subscribe error", err.message, err?.raw || err);
-    res.status(500).json({ msg: "Failed to start hybrid subscription." });
+    console.error("❌ Subscribe error", err.message, err?.raw || err);
+    return res.status(500).json({ msg: "Subscription error", error: err.message });
   }
 });
 
