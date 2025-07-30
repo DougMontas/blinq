@@ -2766,6 +2766,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useStripe } from "@stripe/stripe-react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+
 import api from "../api/client";
 import BackButton from "../components/BackButton";
 
@@ -2776,6 +2777,9 @@ const BILLING_PRODUCTS = {
   profit_sharing: "prod_Se5JgrG5D9G2Wq",
   hybrid: "prod_Se4dOaW9m5lRpw",
 };
+
+const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
 
 export default function RegistrationScreen() {
   const navigation = useNavigation();
@@ -3033,23 +3037,73 @@ export default function RegistrationScreen() {
         navigation.reset({ index: 0, routes: [{ name: "Login" }] });
       } else {
         // 🟢 New step: hybrid users need to subscribe after registration
+        // if (formData.billingTier === "hybrid") {
+        //   try {
+        //     const subscribeRes = await api.post("/subscribe", {
+        //       paymentMethodId: "pm_card_visa" // Replace with actual Stripe PaymentMethod ID
+        //     });
+  
+        //     const stripeUrl =
+        //       subscribeRes.data.stripeOnboardingUrl ||
+        //       subscribeRes.data.stripeDashboardUrl;
+  
+        //     if (stripeUrl) {
+        //       Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+        //       Linking.openURL(stripeUrl);
+        //       return;
+        //     }
+        //   } catch (err) {
+        //     console.error("❌ Subscription error:", err.response?.data || err);
+        //     Alert.alert("Subscription error", err.response?.data?.msg || "Could not start subscription.");
+        //     return;
+        //   }
+        // }
+
         if (formData.billingTier === "hybrid") {
           try {
-            const subscribeRes = await api.post("/subscribe", {
-              paymentMethodId: "pm_card_visa" // Replace with actual Stripe PaymentMethod ID
+            // 1. Create PaymentSheet setup from backend
+            const sheetRes = await api.post("/create-payment-sheet", {
+              email: formData.email,
+              name: formData.name,
+              phoneNumber: formData.phoneNumber,
             });
-  
+        
+            const { clientSecret, ephemeralKey, customer } = sheetRes.data;
+        
+            // 2. Initialize the PaymentSheet
+            const { error: initError } = await initPaymentSheet({
+              customerId: customer,
+              customerEphemeralKeySecret: ephemeralKey,
+              paymentIntentClientSecret: clientSecret,
+            });
+        
+            if (initError) {
+              Alert.alert("Stripe Error", initError.message);
+              return;
+            }
+        
+            // 3. Present the sheet to the user
+            const { error: presentError } = await presentPaymentSheet();
+        
+            if (presentError) {
+              Alert.alert("Payment Error", presentError.message);
+              return;
+            }
+        
+            // 4. Notify backend to finalize the subscription setup
+            const subscribeRes = await api.post("/subscribe", {});
+        
             const stripeUrl =
               subscribeRes.data.stripeOnboardingUrl ||
               subscribeRes.data.stripeDashboardUrl;
-  
+        
             if (stripeUrl) {
               Alert.alert("Redirecting", "Complete onboarding with Stripe.");
               Linking.openURL(stripeUrl);
               return;
             }
           } catch (err) {
-            console.error("❌ Subscription error:", err.response?.data || err);
+            console.error("❌ PaymentSheet hybrid onboarding error:", err.response?.data || err);
             Alert.alert("Subscription error", err.response?.data?.msg || "Could not start subscription.");
             return;
           }
