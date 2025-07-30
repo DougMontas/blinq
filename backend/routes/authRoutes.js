@@ -527,10 +527,6 @@ router.post("/reset-password/:token", async (req, res) => {
 //   }
 // });
 
-import bcrypt from "bcryptjs";
-import { auth } from "../middlewares/auth.js";
-import Users from "../models/Users.js";
-
 router.post("/change-password", auth, async (req, res) => {
   console.log("🔐 Incoming /change-password request");
 
@@ -538,6 +534,7 @@ router.post("/change-password", auth, async (req, res) => {
   const user = req.user;
 
   console.log("📦 req.user:", user);
+  console.log("📝 Request body:", { currentPassword, newPassword });
 
   if (!user || !user._id) {
     console.warn("❌ No authenticated user found in request.");
@@ -550,9 +547,17 @@ router.post("/change-password", auth, async (req, res) => {
 
   try {
     const existingUser = await Users.findById(user._id).select("+password");
-    console.log("👤 Existing user found:", existingUser?.email || existingUser?._id);
+    if (!existingUser) {
+      console.error("❌ User not found in database after auth:", user._id);
+      return res.status(404).json({ msg: "User not found." });
+    }
+
+    console.log("👤 Existing user email:", existingUser.email);
+    console.log("🔐 Existing password hash:", existingUser.password);
 
     const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
+    console.log("🔎 Password match result:", isMatch);
+
     if (!isMatch) {
       console.warn("❌ Current password does not match for user:", existingUser._id);
       return res.status(401).json({ msg: "Current password is incorrect." });
@@ -562,6 +567,10 @@ router.post("/change-password", auth, async (req, res) => {
     existingUser.password = newPassword;
     await existingUser.save();
     console.log("✅ Password successfully updated for user:", existingUser._id);
+
+    // Confirm password update by reloading user
+    const confirmUser = await Users.findById(user._id).select("+password");
+    console.log("🔁 Confirmed saved password hash:", confirmUser.password);
 
     res.json({ msg: "Password successfully changed." });
   } catch (err) {
