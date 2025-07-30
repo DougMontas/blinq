@@ -10,12 +10,14 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import api from "../api/client";
 import BackButton from "./BackButton";
 
 export default function RequestPasswordResetScreen() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
 
 //   const handleRequestReset = async () => {
 //     if (!email.includes("@") || email.length < 6) {
@@ -128,7 +130,7 @@ const handleRequestReset = async () => {
     Alert.alert("Email Sent", "Check your inbox to reset your password.", [
       {
         text: "OK",
-        onPress: () => navigation.replace("LoginScreen"),
+        onPress: () => navigation.replace("ResetPasswordScreen"),
       },
     ]);
   } catch (err) {

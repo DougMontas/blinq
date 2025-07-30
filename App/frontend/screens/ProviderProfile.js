@@ -484,7 +484,7 @@ export default function ProviderProfile() {
   const contractorName = profile.businessName || "[Contractor Name]";
   const contractorAddress = profile.address || "[Contractor Address]";
 
-  const agreementText = `INDEPENDENT CONTRACTOR AGREEMENT
+  const agreementText = `
 
 This Independent Contractor Agreement (\"Agreement\") is made and entered into as of ${effectiveDate} by and between:
 
@@ -549,9 +549,10 @@ Address: ${contractorAddress}
 
 IN WITNESS WHEREOF, the parties hereto have executed this Independent Contractor Agreement as of the Effective Date.
 
-_______________________________        _______________________________
-BlinqFix (Company)                        ${contractorName} (Contractor)
-Date: ________________________           Date: ________________________`;
+// _______________________________        _______________________________
+// BlinqFix (Company)                        ${contractorName} (Contractor)
+// Date: ________________________           Date: ________________________
+`;
 
   useEffect(() => {
     const fetchProfile = async () => {

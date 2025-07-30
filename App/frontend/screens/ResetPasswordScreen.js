@@ -782,8 +782,133 @@
 //   },
 // });
 
+//latest
+// import React, { useState, useEffect } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   StyleSheet,
+//   TouchableOpacity,
+//   Alert,
+//   ActivityIndicator,
+// } from "react-native";
+// import { useRoute, useNavigation } from "@react-navigation/native";
+// import api from "../api/client";
+// import BackButton from "../components/BackButton";
 
-import React, { useState, useEffect } from "react";
+// export default function ResetPasswordScreen() {
+//   const route = useRoute();
+//   const navigation = useNavigation();
+//   const token = route?.params?.token ?? null;
+
+//   const [password, setPassword] = useState("");
+//   const [confirmPassword, setConfirmPassword] = useState("");
+//   const [loading, setLoading] = useState(false);
+
+//   useEffect(() => {
+//     if (!token) {
+//       Alert.alert("Missing Token", "Invalid password reset link.", [
+//         { text: "OK", onPress: () => navigation.replace("LoginScreen") },
+//       ]);
+//     }
+//   }, [token]);
+
+//   useEffect(() => {
+//     console.log("🧪 Token passed from route:", token);
+//   }, []);
+
+//   const handleReset = async () => {
+//     if (!token) return;
+
+//     if (!password || !confirmPassword) {
+//       return Alert.alert("Error", "All fields are required.");
+//     }
+
+//     if (password !== confirmPassword) {
+//       return Alert.alert("Error", "Passwords do not match.");
+//     }
+
+//     if (password.length < 6) {
+//       return Alert.alert("Error", "Password must be at least 6 characters.");
+//     }
+
+   
+    
+//     try {
+//       setLoading(true);
+//       await api.post(`/auth/reset-password/${token}`, { password });
+//       Alert.alert("Success", "Your password has been reset.", [
+//         { text: "OK", onPress: () => navigation.replace("Login") },
+//       ]);
+//     } catch (err) {
+//       console.error("Reset error:", err.response?.data || err.message);
+//       Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <View style={styles.container}>
+//       <BackButton />
+//       <Text style={styles.title}>Reset Your Password</Text>
+//       <TextInput
+//         style={styles.input}
+//         placeholder="New Password"
+//         secureTextEntry
+//         value={password}
+//         onChangeText={setPassword}
+//       />
+//       <TextInput
+//         style={styles.input}
+//         placeholder="Confirm Password"
+//         secureTextEntry
+//         value={confirmPassword}
+//         onChangeText={setConfirmPassword}
+//       />
+//       <TouchableOpacity style={styles.button} onPress={handleReset} disabled={loading}>
+//         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Reset Password</Text>}
+//       </TouchableOpacity>
+//     </View>
+//   );
+// }
+
+
+// const styles = StyleSheet.create({
+//   container: {
+//     padding: 24,
+//     flex: 1,
+//     justifyContent: "center",
+//     backgroundColor: "#fff",
+//   },
+//   title: {
+//     fontSize: 24,
+//     fontWeight: "bold",
+//     textAlign: "center",
+//     marginBottom: 24,
+//   },
+//   input: {
+//     borderWidth: 1,
+//     borderColor: "#ccc",
+//     borderRadius: 6,
+//     padding: 12,
+//     marginBottom: 12,
+//   },
+//   button: {
+//     backgroundColor: "#1976d2",
+//     paddingVertical: 14,
+//     borderRadius: 6,
+//     alignItems: "center",
+//   },
+//   buttonText: {
+//     color: "#fff",
+//     fontWeight: "bold",
+//     fontSize: 16,
+//   },
+// });
+
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -793,50 +918,43 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
 import api from "../api/client";
 import BackButton from "../components/BackButton";
 
-export default function ResetPasswordScreen() {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const token = route?.params?.token ?? null;
-
-  const [password, setPassword] = useState("");
+export default function ChangePasswordScreen({ navigation }) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!token) {
-      Alert.alert("Missing Token", "Invalid password reset link.", [
-        { text: "OK", onPress: () => navigation.replace("LoginScreen") },
-      ]);
-    }
-  }, [token]);
-
-  const handleReset = async () => {
-    if (!token) return;
-
-    if (!password || !confirmPassword) {
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
       return Alert.alert("Error", "All fields are required.");
     }
 
-    if (password !== confirmPassword) {
-      return Alert.alert("Error", "Passwords do not match.");
+    if (newPassword !== confirmPassword) {
+      return Alert.alert("Error", "New passwords do not match.");
     }
 
-    if (password.length < 6) {
-      return Alert.alert("Error", "Password must be at least 6 characters.");
+    if (newPassword.length < 6) {
+      return Alert.alert("Error", "New password must be at least 6 characters.");
     }
 
     try {
       setLoading(true);
-      await api.post(`/reset-password/${token}`, { password });
-      Alert.alert("Success", "Your password has been reset.", [
-        { text: "OK", onPress: () => navigation.replace("LoginScreen") },
+      const res = await api.post("/auth/change-password", {
+        currentPassword,
+        newPassword,
+      });
+
+      Alert.alert("Success", res.data.msg || "Password changed successfully.", [
+        {
+          text: "OK",
+          onPress: () => navigation.goBack(),
+        },
       ]);
     } catch (err) {
-      console.error("Reset error:", err.response?.data || err.message);
+      console.error("Change password error:", err.response?.data || err.message);
       Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
     } finally {
       setLoading(false);
@@ -846,28 +964,42 @@ export default function ResetPasswordScreen() {
   return (
     <View style={styles.container}>
       <BackButton />
-      <Text style={styles.title}>Reset Your Password</Text>
+      <Text style={styles.title}>Change Password</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Current Password"
+        secureTextEntry
+        value={currentPassword}
+        onChangeText={setCurrentPassword}
+      />
       <TextInput
         style={styles.input}
         placeholder="New Password"
         secureTextEntry
-        value={password}
-        onChangeText={setPassword}
+        value={newPassword}
+        onChangeText={setNewPassword}
       />
       <TextInput
         style={styles.input}
-        placeholder="Confirm Password"
+        placeholder="Confirm New Password"
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
       />
-      <TouchableOpacity style={styles.button} onPress={handleReset} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Reset Password</Text>}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleChangePassword}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Update Password</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
