@@ -2778,10 +2778,10 @@ const BILLING_PRODUCTS = {
   hybrid: "prod_Se4dOaW9m5lRpw",
 };
 
-const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
 
 export default function RegistrationScreen() {
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const navigation = useNavigation();
   const stripe = useStripe();
 
