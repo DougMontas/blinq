@@ -386,6 +386,28 @@ router.post("/reset-password/:token", async (req, res) => {
   }
 });
 
+router.post("/change-password", auth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = req.user;
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ msg: "New password must be at least 6 characters." });
+  }
+
+  const existingUser = await Users.findById(user._id).select("+password");
+  const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
+
+  if (!isMatch) {
+    return res.status(401).json({ msg: "Current password is incorrect." });
+  }
+
+  existingUser.password = await bcrypt.hash(newPassword, 10);
+  await existingUser.save();
+
+  res.json({ msg: "Password successfully changed." });
+});
+
+
 //latest
 // router.post("/reset-password/:token", async (req, res) => {
 //   const { token } = req.params;
