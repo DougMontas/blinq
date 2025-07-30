@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto"; // for reset tokens
 import Users from "../models/Users.js";
 import sendEmail from "../utils/sendEmail.js";
+import { auth } from "../middlewares/auth.js";
+
 
 const router = express.Router();
 const baseUrl = process.env.FRONTEND_BASE_URL;
@@ -386,7 +388,7 @@ router.post("/reset-password/:token", async (req, res) => {
   }
 });
 
-router.post("/change-password", async (req, res) => {
+router.post("/change-password", auth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const user = req.user;
 
