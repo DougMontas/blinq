@@ -386,7 +386,7 @@ router.post("/reset-password/:token", async (req, res) => {
   }
 });
 
-router.post("/change-password", auth, async (req, res) => {
+router.post("/change-password", async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const user = req.user;
 
