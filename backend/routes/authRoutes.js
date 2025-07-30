@@ -346,7 +346,7 @@ router.post("/request-password-reset", async (req, res) => {
 });
 
 router.post("/reset-password/:token", async (req, res) => {
-  const { token } = req.params;
+  const { token } = req.params || crypto.randomBytes(32).toString("hex")
   const { password } = req.body;
   console.log("🟡 Received token from frontend:", token);
 
