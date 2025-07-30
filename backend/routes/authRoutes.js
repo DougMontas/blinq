@@ -387,44 +387,44 @@ router.post("/reset-password/:token", async (req, res) => {
     res.status(500).json({ msg: "Failed to reset password." });
   }
 });
+//double hashing
+// router.post("/change-password", auth, async (req, res) => {
+//   console.log("🔐 Incoming /change-password request");
 
-router.post("/change-password", auth, async (req, res) => {
-  console.log("🔐 Incoming /change-password request");
+//   const { currentPassword, newPassword } = req.body;
+//   const user = req.user;
 
-  const { currentPassword, newPassword } = req.body;
-  const user = req.user;
+//   console.log("📦 req.user:", user);
 
-  console.log("📦 req.user:", user);
+//   if (!user || !user._id) {
+//     console.warn("❌ No authenticated user found in request.");
+//     return res.status(401).json({ msg: "Unauthorized or invalid user context." });
+//   }
 
-  if (!user || !user._id) {
-    console.warn("❌ No authenticated user found in request.");
-    return res.status(401).json({ msg: "Unauthorized or invalid user context." });
-  }
+//   if (!newPassword || newPassword.length < 6) {
+//     return res.status(400).json({ msg: "New password must be at least 6 characters." });
+//   }
 
-  if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ msg: "New password must be at least 6 characters." });
-  }
+//   try {
+//     const existingUser = await Users.findById(user._id).select("+password");
+//     console.log("👤 Existing user found:", existingUser?.email || existingUser?._id);
 
-  try {
-    const existingUser = await Users.findById(user._id).select("+password");
-    console.log("👤 Existing user found:", existingUser?.email || existingUser?._id);
+//     const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
+//     if (!isMatch) {
+//       console.warn("❌ Current password does not match for user:", existingUser._id);
+//       return res.status(401).json({ msg: "Current password is incorrect." });
+//     }
 
-    const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
-    if (!isMatch) {
-      console.warn("❌ Current password does not match for user:", existingUser._id);
-      return res.status(401).json({ msg: "Current password is incorrect." });
-    }
+//     existingUser.password = await bcrypt.hash(newPassword, 10);
+//     await existingUser.save();
+//     console.log("✅ Password successfully updated for user:", existingUser._id);
 
-    existingUser.password = await bcrypt.hash(newPassword, 10);
-    await existingUser.save();
-    console.log("✅ Password successfully updated for user:", existingUser._id);
-
-    res.json({ msg: "Password successfully changed." });
-  } catch (err) {
-    console.error("❌ Error changing password:", err.message);
-    res.status(500).json({ msg: "Server error. Please try again later." });
-  }
-});
+//     res.json({ msg: "Password successfully changed." });
+//   } catch (err) {
+//     console.error("❌ Error changing password:", err.message);
+//     res.status(500).json({ msg: "Server error. Please try again later." });
+//   }
+// });
 
 
 
@@ -526,6 +526,49 @@ router.post("/change-password", auth, async (req, res) => {
 //     res.status(500).json({ msg: "Failed to reset password." });
 //   }
 // });
+
+import bcrypt from "bcryptjs";
+import { auth } from "../middlewares/auth.js";
+import Users from "../models/Users.js";
+
+router.post("/change-password", auth, async (req, res) => {
+  console.log("🔐 Incoming /change-password request");
+
+  const { currentPassword, newPassword } = req.body;
+  const user = req.user;
+
+  console.log("📦 req.user:", user);
+
+  if (!user || !user._id) {
+    console.warn("❌ No authenticated user found in request.");
+    return res.status(401).json({ msg: "Unauthorized or invalid user context." });
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ msg: "New password must be at least 6 characters." });
+  }
+
+  try {
+    const existingUser = await Users.findById(user._id).select("+password");
+    console.log("👤 Existing user found:", existingUser?.email || existingUser?._id);
+
+    const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
+    if (!isMatch) {
+      console.warn("❌ Current password does not match for user:", existingUser._id);
+      return res.status(401).json({ msg: "Current password is incorrect." });
+    }
+
+    // ✅ Let schema pre-save hook hash the new password
+    existingUser.password = newPassword;
+    await existingUser.save();
+    console.log("✅ Password successfully updated for user:", existingUser._id);
+
+    res.json({ msg: "Password successfully changed." });
+  } catch (err) {
+    console.error("❌ Error changing password:", err.message);
+    res.status(500).json({ msg: "Server error. Please try again later." });
+  }
+});
 
 
 
