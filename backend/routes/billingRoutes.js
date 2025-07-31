@@ -709,6 +709,61 @@ router.put("/jobs/:jobId/complete", auth, async (req, res) => {
 //   }
 // });
 
+// router.post("/create-payment-sheet", auth, async (req, res) => {
+//   try {
+//     const user = req.user;
+//     const { email, name, phoneNumber } = req.body;
+
+//     console.log("📥 Creating payment sheet for:", email);
+
+//     if (!user.stripeCustomerId) {
+//       const customer = await stripe.customers.create({
+//         email,
+//         name,
+//         phone: phoneNumber,
+//         metadata: { userId: user._id.toString() },
+//       });
+//       user.stripeCustomerId = customer.id;
+//       await user.save();
+//       console.log("✅ Stripe customer created:", customer.id);
+//     } else {
+//       console.log("🔁 Using existing Stripe customer:", user.stripeCustomerId);
+//     }
+
+//     // 🔑 Create an ephemeral key
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: user.stripeCustomerId },
+//       { apiVersion: "2023-10-16" }
+//     );
+
+//     // 💰 Create a temporary PaymentIntent
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount: 5000, // symbolic $50 setup fee (not charged unless confirmed)
+//       currency: "usd",
+//       customer: user.stripeCustomerId,
+//       automatic_payment_methods: { enabled: true },
+//       metadata: {
+//         userId: user._id.toString(),
+//         billingTier: user.billingTier,
+//         role: user.role,
+//       },
+//     });
+
+//     console.log("🧾 PaymentIntent created:", paymentIntent.id);
+
+//     return res.json({
+//       paymentIntent: paymentIntent.id,
+//       clientSecret: paymentIntent.client_secret,
+//       ephemeralKey: ephemeralKey.secret,
+//       customer: user.stripeCustomerId,
+//     });
+//   } catch (err) {
+//     console.error("❌ Error creating PaymentSheet:", err.message);
+//     res.status(500).json({ msg: "Failed to initialize PaymentSheet." });
+//   }
+// });
+
+        
 router.post("/create-payment-sheet", auth, async (req, res) => {
   try {
     const user = req.user;
@@ -730,28 +785,22 @@ router.post("/create-payment-sheet", auth, async (req, res) => {
       console.log("🔁 Using existing Stripe customer:", user.stripeCustomerId);
     }
 
-    // 🔑 Create an ephemeral key
     const ephemeralKey = await stripe.ephemeralKeys.create(
       { customer: user.stripeCustomerId },
       { apiVersion: "2023-10-16" }
     );
 
-    // 💰 Create a temporary PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: 5000, // symbolic $50 setup fee (not charged unless confirmed)
+      amount: 5000, // $50 placeholder
       currency: "usd",
       customer: user.stripeCustomerId,
       automatic_payment_methods: { enabled: true },
-      metadata: {
-        userId: user._id.toString(),
-        billingTier: user.billingTier,
-        role: user.role,
-      },
+      metadata: { userId: user._id.toString() },
     });
 
     console.log("🧾 PaymentIntent created:", paymentIntent.id);
 
-    return res.json({
+    res.json({
       paymentIntent: paymentIntent.id,
       clientSecret: paymentIntent.client_secret,
       ephemeralKey: ephemeralKey.secret,
@@ -759,7 +808,7 @@ router.post("/create-payment-sheet", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Error creating PaymentSheet:", err.message);
-    res.status(500).json({ msg: "Failed to initialize PaymentSheet." });
+    res.status(500).json({ msg: "Failed to initialize PaymentSheet.", error: err.message });
   }
 });
 
