@@ -341,10 +341,11 @@ router.post("/register", async (req, res) => {
         serviceZipcode: zipArray,
         ssnLast4,
         dob,
-        w9: "fill out",
-        businessLicense: "fill out",
-        proofOfInsurance: "fill out",
-        independentContractorAgreement: "fill out",
+        // These will be filled later via provider profile screen
+        w9: undefined,
+        businessLicense: undefined,
+        proofOfInsurance: undefined,
+        independentContractorAgreement: undefined,
       });
     }
 
@@ -376,6 +377,7 @@ router.post("/register", async (req, res) => {
     return res.status(500).json({ msg: "Registration failed", error: err.message });
   }
 });
+
 
 
 router.post("/login", async (req, res) => {
