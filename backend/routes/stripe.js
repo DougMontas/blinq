@@ -873,15 +873,19 @@ router.post("/onboard-stripe", auth, async (req, res) => {
   } catch (err) {
     console.error("❌ Stripe onboarding failed:", err.message);
 
-    // If onboarding failed AND user was newly created and not fully onboarded, clean up
     if (user && !user.stripeAccountId) {
       console.log("🧹 Cleaning up incomplete user registration:", user.email);
-      await Users.deleteOne({ _id: user._id });
+      try {
+        await Users.deleteOne({ _id: user._id });
+      } catch (delErr) {
+        console.error("⚠️ Failed to clean up incomplete user:", delErr.message);
+      }
     }
 
     res.status(500).json({ msg: "Stripe onboarding failed.", error: err.message });
   }
 });
+
 
 
 
