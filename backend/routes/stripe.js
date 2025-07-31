@@ -695,12 +695,6 @@ router.post("/onboard-stripe", auth, async (req, res) => {
       return res.status(400).json({ msg: "Missing required fields for onboarding." });
     }
 
-    // 🛡️ Patch missing doc fields to avoid validation errors
-    user.w9 ??= "pending";
-    user.businessLicense ??= "pending";
-    user.proofOfInsurance ??= "pending";
-    user.independentContractorAgreement ??= "pending";
-
     const [firstName, ...lastParts] = user.name.trim().split(" ");
     const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
     const dobDate = new Date(user.dob);
@@ -737,8 +731,7 @@ router.post("/onboard-stripe", auth, async (req, res) => {
         },
       });
 
-      user.stripeAccountId = account.id;
-      await user.save();
+      await Users.updateOne({ _id: user._id }, { stripeAccountId: account.id });
       stripeAccountId = account.id;
       console.log("✅ Stripe account created:", stripeAccountId);
     } else {
@@ -781,6 +774,7 @@ router.post("/onboard-stripe", auth, async (req, res) => {
     res.status(500).json({ msg: "Stripe onboarding failed.", error: err.message });
   }
 });
+
 
 
 
