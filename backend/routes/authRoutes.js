@@ -178,7 +178,106 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 //   }
 // });
 
+//last latest
+// router.post("/register", async (req, res) => {
+//   try {
+//     let {
+//       name,
+//       email,
+//       password,
+//       role = "customer",
+//       address,
+//       phoneNumber,
+//       zipcode,
+//       serviceType,
+//       billingTier,
+//       ssnLast4,
+//       dob,
+//       location,
+//       isActive,
+//       optInSms,
+//     } = req.body;
+
+//     if (!name || !email || !password || !address || !phoneNumber) {
+//       return res.status(400).json({
+//         msg: "Name, email, password, address and phoneNumber are required.",
+//       });
+//     }
+
+//     email = email.toLowerCase().trim();
+//     const existingUser = await Users.findOne({ email });
+//     if (existingUser) return res.status(400).json({ msg: "User already exists" });
+
+//     const zipArray = Array.isArray(zipcode)
+//       ? zipcode.map(Number)
+//       : [Number(zipcode)];
+
+//     const userData = {
+//       name,
+//       email,
+//       password,
+//       role,
+//       address,
+//       phoneNumber,
+//       zipcode: zipArray,
+//       location,
+//       optInSms,
+//       isActive: role === "serviceProvider" ? false : true,
+//     };
+
+//     if (role === "serviceProvider") {
+//       if (!ssnLast4 || !dob) {
+//         return res.status(400).json({
+//           msg: "SSN last 4 digits and DOB are required for providers.",
+//         });
+//       }
+
+//       const dobDate = new Date(dob);
+//       if (isNaN(dobDate.getTime())) {
+//         return res.status(400).json({ msg: "Invalid DOB format. Use YYYY-MM-DD." });
+//       }
+
+//       Object.assign(userData, {
+//         serviceType,
+//         billingTier,
+//         serviceZipcode: zipArray,
+//         ssnLast4,
+//         dob,
+//         w9: "fill out",
+//         businessLicense: "fill out",
+//         proofOfInsurance: "fill out",
+//         independentContractorAgreement: "fill out",
+//       });
+//     }
+
+//     const newUser = await Users.create(userData);
+
+//     const token = jwt.sign(
+//       { id: newUser._id, role: newUser.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "15m" }
+//     );
+
+//     const refreshToken = jwt.sign(
+//       { id: newUser._id },
+//       process.env.REFRESH_SECRET,
+//       { expiresIn: "30d" }
+//     );
+
+//     newUser.refreshToken = refreshToken;
+//     await newUser.save();
+
+//     return res.json({ token, refreshToken });
+//   } catch (err) {
+//     console.error("Error in POST /register:", err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
 router.post("/register", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     let {
       name,
@@ -242,14 +341,11 @@ router.post("/register", async (req, res) => {
         serviceZipcode: zipArray,
         ssnLast4,
         dob,
-        w9: "fill out",
-        businessLicense: "fill out",
-        proofOfInsurance: "fill out",
-        independentContractorAgreement: "fill out",
       });
     }
 
-    const newUser = await Users.create(userData);
+    const newUser = new Users(userData);
+    await newUser.save({ session });
 
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
@@ -264,12 +360,17 @@ router.post("/register", async (req, res) => {
     );
 
     newUser.refreshToken = refreshToken;
-    await newUser.save();
+    await newUser.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.json({ token, refreshToken });
   } catch (err) {
-    console.error("Error in POST /register:", err);
-    return res.status(500).json({ msg: "Server error" });
+    await session.abortTransaction();
+    session.endSession();
+    console.error("❌ Error in POST /register:", err.message);
+    return res.status(500).json({ msg: "Registration failed", error: err.message });
   }
 });
 
