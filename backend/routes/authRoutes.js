@@ -579,10 +579,6 @@ router.post("/change-password", auth, async (req, res) => {
   }
 });
 
-
-
-
-
 router.post("/refresh-token", async (req, res) => {
   try {
     const { refreshToken } = req.body;

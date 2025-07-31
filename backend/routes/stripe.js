@@ -495,6 +495,82 @@ router.post("/update-billing", auth, async (req, res) => {
   }
 });
 
+router.post("/onboard-stripe", auth, async (req, res) => {
+  try {
+    const user = req.user;
+    if (user.role !== "serviceProvider") {
+      return res.status(403).json({ msg: "Only service providers can onboard." });
+    }
+
+    const [firstName, ...lastParts] = user.name.trim().split(" ");
+    const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
+    const dobDate = new Date(user.dob);
+
+    if (isNaN(dobDate.getTime())) {
+      return res.status(400).json({ msg: "Invalid date of birth format." });
+    }
+
+    let stripeAccountId = user.stripeAccountId;
+
+    if (!stripeAccountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        country: "US",
+        business_type: "individual",
+        email: user.email,
+        individual: {
+          first_name: firstName,
+          last_name: lastName,
+          ssn_last_4: user.ssnLast4,
+          dob: {
+            day: dobDate.getUTCDate(),
+            month: dobDate.getUTCMonth() + 1,
+            year: dobDate.getUTCFullYear(),
+          },
+          phone: user.phoneNumber,
+          email: user.email,
+        },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      });
+
+      user.stripeAccountId = account.id;
+      await user.save();
+      stripeAccountId = account.id;
+    } else {
+      await stripe.accounts.update(stripeAccountId, {
+        individual: {
+          first_name: firstName,
+          last_name: lastName,
+          ssn_last_4: user.ssnLast4,
+          dob: {
+            day: dobDate.getUTCDate(),
+            month: dobDate.getUTCMonth() + 1,
+            year: dobDate.getUTCFullYear(),
+          },
+          phone: user.phoneNumber,
+          email: user.email,
+        },
+      });
+    }
+
+    const accountLink = await stripe.accountLinks.create({
+      account: stripeAccountId,
+      refresh_url: refreshUrl,
+      return_url: returnUrl,
+      type: "account_onboarding",
+    });
+
+    return res.json({ stripeOnboardingUrl: accountLink.url });
+  } catch (err) {
+    console.error("❌ Onboard Stripe error:", err);
+    res.status(500).json({ msg: "Stripe onboarding failed." });
+  }
+});
+
+
 
 export default router;
 
