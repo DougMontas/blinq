@@ -341,11 +341,14 @@ router.post("/register", async (req, res) => {
         serviceZipcode: zipArray,
         ssnLast4,
         dob,
+        w9: "fill out",
+        businessLicense: "fill out",
+        proofOfInsurance: "fill out",
+        independentContractorAgreement: "fill out",
       });
     }
 
-    const newUser = new Users(userData);
-    await newUser.save({ session });
+    const [newUser] = await Users.create([userData], { session });
 
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
@@ -369,7 +372,7 @@ router.post("/register", async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    console.error("❌ Error in POST /register:", err.message);
+    console.error("❌ Registration failed:", err);
     return res.status(500).json({ msg: "Registration failed", error: err.message });
   }
 });
