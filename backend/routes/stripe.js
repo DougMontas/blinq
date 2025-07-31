@@ -574,12 +574,23 @@ router.post("/update-billing", auth, async (req, res) => {
 
 router.post("/onboard-stripe", auth, async (req, res) => {
   try {
-    const user = req.user;
+    const user = await Users.findById(req.user.id);
     console.log("🔐 Incoming onboard-stripe request for:", user.email);
 
-    if (user.role !== "serviceProvider") {
-      console.warn("⛔ Unauthorized role attempting onboarding:", user.role);
+    if (!user || user.role !== "serviceProvider") {
+      console.warn("⛔ Unauthorized or missing user.");
       return res.status(403).json({ msg: "Only service providers can onboard." });
+    }
+
+    if (!user.name || !user.dob || !user.ssnLast4 || !user.phoneNumber || !user.email) {
+      console.warn("❗ Missing required user fields:", {
+        name: user.name,
+        dob: user.dob,
+        ssnLast4: user.ssnLast4,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+      });
+      return res.status(400).json({ msg: "Missing required fields for onboarding." });
     }
 
     const [firstName, ...lastParts] = user.name.trim().split(" ");
@@ -587,14 +598,14 @@ router.post("/onboard-stripe", auth, async (req, res) => {
     const dobDate = new Date(user.dob);
 
     if (isNaN(dobDate.getTime())) {
-      console.warn("⚠️ Invalid DOB for user:", user.email, user.dob);
+      console.warn("⚠️ Invalid DOB format:", user.dob);
       return res.status(400).json({ msg: "Invalid date of birth format." });
     }
 
     let stripeAccountId = user.stripeAccountId;
 
     if (!stripeAccountId) {
-      console.log("📦 Creating new Stripe account for:", user.email);
+      console.log("📦 Creating Stripe Express account for:", user.email);
       const account = await stripe.accounts.create({
         type: "express",
         country: "US",
@@ -640,6 +651,7 @@ router.post("/onboard-stripe", auth, async (req, res) => {
       });
     }
 
+    console.log("🔗 Creating account link for onboarding...");
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
       refresh_url: refreshUrl,
@@ -656,11 +668,12 @@ router.post("/onboard-stripe", auth, async (req, res) => {
       stripeDashboardUrl,
     });
   } catch (err) {
-    console.error("❌ Onboard Stripe error:", err.message);
+    console.error("❌ Stripe onboarding failed:", err.message);
     console.error(err);
-    res.status(500).json({ msg: "Stripe onboarding failed." });
+    res.status(500).json({ msg: "Stripe onboarding failed.", error: err.message });
   }
 });
+
 
 
 
