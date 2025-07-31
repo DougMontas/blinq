@@ -32,10 +32,10 @@ const usersSchema = new mongoose.Schema(
     },
 
     /* ---------- provider docs ---------- */
-    w9: { type: String },
-    businessLicense: { type: String },
-    proofOfInsurance: { type: String },
-    independentContractorAgreement: { type: String },
+    w9: { type: String, default: null },
+    businessLicense: { type: String, default: null },
+    proofOfInsurance: { type: String, default: null },
+    independentContractorAgreement: { type: String, default: null },
     yearsExperience: { type: Number },
     profilePicture: {
       type: String, // base64-encoded string

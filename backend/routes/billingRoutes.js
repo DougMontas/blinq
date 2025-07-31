@@ -500,12 +500,6 @@ router.post("/subscribe", auth, async (req, res) => {
   }
 });
 
-
-
-/**
- * PUT /api/billing/jobs/:jobId/complete
- * Completes a job and processes payout based on billing tier.
- */
 router.put("/jobs/:jobId/complete", auth, async (req, res) => {
   try {
     const job = await Job.findById(req.params.jobId);
