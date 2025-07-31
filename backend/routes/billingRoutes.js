@@ -309,4 +309,48 @@ router.put("/jobs/:jobId/complete", auth, async (req, res) => {
   }
 });
 
+router.post("/create-payment-sheet", auth, async (req, res) => {
+  try {
+    const user = req.user;
+    const { email, name, phoneNumber } = req.body;
+
+    if (!user.stripeCustomerId) {
+      // Create a new Stripe customer if one doesn't exist
+      const customer = await stripeClient.customers.create({
+        email,
+        name,
+        phone: phoneNumber,
+        metadata: { userId: user._id.toString() },
+      });
+      user.stripeCustomerId = customer.id;
+      await user.save();
+    }
+
+    // Create an ephemeral key for the customer
+    const ephemeralKey = await stripeClient.ephemeralKeys.create(
+      { customer: user.stripeCustomerId },
+      { apiVersion: "2023-10-16" }
+    );
+
+    // Create a test payment intent for setup (value is symbolic)
+    const paymentIntent = await stripeClient.paymentIntents.create({
+      amount: 5000, // $50 test value, not charged immediately
+      currency: "usd",
+      customer: user.stripeCustomerId,
+      automatic_payment_methods: { enabled: true },
+      metadata: { userId: user._id.toString() },
+    });
+
+    res.json({
+      paymentIntent: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
+      ephemeralKey: ephemeralKey.secret,
+      customer: user.stripeCustomerId,
+    });
+  } catch (err) {
+    console.error("❌ Error creating PaymentSheet:", err.message);
+    res.status(500).json({ msg: "Failed to initialize PaymentSheet." });
+  }
+});
+
 export default router;
