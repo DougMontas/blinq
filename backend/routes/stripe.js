@@ -886,27 +886,127 @@ router.post("/update-billing", auth, async (req, res) => {
 //   }
 // });
 
+// router.post("/onboard-stripe", auth, async (req, res) => {
+//   let user;
+//   try {
+//     user = await Users.findById(req.user.id);
+//     console.log("🔐 Incoming onboard-stripe request for:", user?.email);
+
+//     if (!user || user.role !== "serviceProvider") {
+//       console.warn("⛔ Unauthorized or missing user.");
+//       return res.status(403).json({ msg: "Only service providers can onboard." });
+//     }
+
+//     const requiredFields = [user.name, user.dob, user.ssnLast4, user.phoneNumber, user.email];
+//     if (requiredFields.some((f) => !f)) {
+//       console.warn("❗ Missing required user fields:", {
+//         name: user.name,
+//         dob: user.dob,
+//         ssnLast4: user.ssnLast4,
+//         phoneNumber: user.phoneNumber,
+//         email: user.email,
+//       });
+//       return res.status(400).json({ msg: "Missing required fields for onboarding." });
+//     }
+
+//     const [firstName, ...lastParts] = user.name.trim().split(" ");
+//     const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
+//     const dobDate = new Date(user.dob);
+
+//     if (isNaN(dobDate.getTime())) {
+//       console.warn("⚠️ Invalid DOB format:", user.dob);
+//       return res.status(400).json({ msg: "Invalid date of birth format." });
+//     }
+
+//     let stripeAccountId = user.stripeAccountId;
+
+//     if (!stripeAccountId) {
+//       console.log("📦 Creating Stripe Express account for:", user.email);
+//       const account = await stripe.accounts.create({
+//         type: "express",
+//         country: "US",
+//         business_type: "individual",
+//         email: user.email,
+//         individual: {
+//           first_name: firstName,
+//           last_name: lastName,
+//           ssn_last_4: user.ssnLast4,
+//           dob: {
+//             day: dobDate.getUTCDate(),
+//             month: dobDate.getUTCMonth() + 1,
+//             year: dobDate.getUTCFullYear(),
+//           },
+//           phone: user.phoneNumber,
+//           email: user.email,
+//         },
+//         capabilities: {
+//           card_payments: { requested: true },
+//           transfers: { requested: true },
+//         },
+//       });
+
+//       // Use updateOne to avoid Mongoose schema validation errors
+//       await Users.updateOne({ _id: user._id }, { stripeAccountId: account.id });
+//       stripeAccountId = account.id;
+//       console.log("✅ Stripe account created:", stripeAccountId);
+//     } else {
+//       console.log("♻️ Updating existing Stripe account:", stripeAccountId);
+//       await stripe.accounts.update(stripeAccountId, {
+//         individual: {
+//           first_name: firstName,
+//           last_name: lastName,
+//           ssn_last_4: user.ssnLast4,
+//           dob: {
+//             day: dobDate.getUTCDate(),
+//             month: dobDate.getUTCMonth() + 1,
+//             year: dobDate.getUTCFullYear(),
+//           },
+//           phone: user.phoneNumber,
+//           email: user.email,
+//         },
+//       });
+//     }
+
+//     console.log("🔗 Creating account link for onboarding...");
+//     const accountLink = await stripe.accountLinks.create({
+//       account: stripeAccountId,
+//       refresh_url: refreshUrl,
+//       return_url: returnUrl,
+//       type: "account_onboarding",
+//     });
+
+//     console.log("🔗 Onboarding link generated:", accountLink.url);
+
+//     const stripeDashboardUrl = `https://dashboard.stripe.com/express/${stripeAccountId}`;
+
+//     return res.json({
+//       stripeOnboardingUrl: accountLink.url,
+//       stripeDashboardUrl,
+//     });
+//   } catch (err) {
+//     console.error("❌ Stripe onboarding failed:", err.message);
+
+//     if (user && !user.stripeAccountId) {
+//       console.log("🧹 Cleaning up incomplete user registration:", user.email);
+//       try {
+//         await Users.deleteOne({ _id: user._id });
+//       } catch (delErr) {
+//         console.error("⚠️ Failed to clean up user:", delErr.message);
+//       }
+//     }
+
+//     res.status(500).json({ msg: "Stripe onboarding failed.", error: err.message });
+//   }
+// });
+
 router.post("/onboard-stripe", auth, async (req, res) => {
-  let user;
   try {
-    user = await Users.findById(req.user.id);
+    const user = await Users.findById(req.user.id);
     console.log("🔐 Incoming onboard-stripe request for:", user?.email);
 
     if (!user || user.role !== "serviceProvider") {
       console.warn("⛔ Unauthorized or missing user.");
       return res.status(403).json({ msg: "Only service providers can onboard." });
-    }
-
-    const requiredFields = [user.name, user.dob, user.ssnLast4, user.phoneNumber, user.email];
-    if (requiredFields.some((f) => !f)) {
-      console.warn("❗ Missing required user fields:", {
-        name: user.name,
-        dob: user.dob,
-        ssnLast4: user.ssnLast4,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-      });
-      return res.status(400).json({ msg: "Missing required fields for onboarding." });
     }
 
     const [firstName, ...lastParts] = user.name.trim().split(" ");
@@ -918,9 +1018,8 @@ router.post("/onboard-stripe", auth, async (req, res) => {
       return res.status(400).json({ msg: "Invalid date of birth format." });
     }
 
-    let stripeAccountId = user.stripeAccountId;
-
-    if (!stripeAccountId) {
+    let stripeAccountId;
+    try {
       console.log("📦 Creating Stripe Express account for:", user.email);
       const account = await stripe.accounts.create({
         type: "express",
@@ -945,26 +1044,14 @@ router.post("/onboard-stripe", auth, async (req, res) => {
         },
       });
 
-      // Use updateOne to avoid Mongoose schema validation errors
-      await Users.updateOne({ _id: user._id }, { stripeAccountId: account.id });
       stripeAccountId = account.id;
+      await Users.updateOne({ _id: user._id }, { stripeAccountId });
       console.log("✅ Stripe account created:", stripeAccountId);
-    } else {
-      console.log("♻️ Updating existing Stripe account:", stripeAccountId);
-      await stripe.accounts.update(stripeAccountId, {
-        individual: {
-          first_name: firstName,
-          last_name: lastName,
-          ssn_last_4: user.ssnLast4,
-          dob: {
-            day: dobDate.getUTCDate(),
-            month: dobDate.getUTCMonth() + 1,
-            year: dobDate.getUTCFullYear(),
-          },
-          phone: user.phoneNumber,
-          email: user.email,
-        },
-      });
+    } catch (stripeErr) {
+      console.error("❌ Failed to create Stripe account:", stripeErr.message);
+      await Users.deleteOne({ _id: user._id });
+      console.log("🧹 User creation rolled back for:", user.email);
+      return res.status(500).json({ msg: "Stripe account creation failed." });
     }
 
     console.log("🔗 Creating account link for onboarding...");
@@ -984,17 +1071,7 @@ router.post("/onboard-stripe", auth, async (req, res) => {
       stripeDashboardUrl,
     });
   } catch (err) {
-    console.error("❌ Stripe onboarding failed:", err.message);
-
-    if (user && !user.stripeAccountId) {
-      console.log("🧹 Cleaning up incomplete user registration:", user.email);
-      try {
-        await Users.deleteOne({ _id: user._id });
-      } catch (delErr) {
-        console.error("⚠️ Failed to clean up user:", delErr.message);
-      }
-    }
-
+    console.error("❌ Stripe onboarding route failed:", err.message);
     res.status(500).json({ msg: "Stripe onboarding failed.", error: err.message });
   }
 });
