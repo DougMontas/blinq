@@ -732,11 +732,170 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 //   }
 // });
 
+// router.post("/register", async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+//   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+//   try {
+//     let {
+//       name,
+//       email,
+//       password,
+//       role = "customer",
+//       address,
+//       phoneNumber,
+//       zipcode,
+//       serviceType,
+//       billingTier,
+//       ssnLast4,
+//       dob,
+//       location,
+//       isActive,
+//       optInSms,
+//     } = req.body;
+
+//     if (!name || !email || !password || !address || !phoneNumber) {
+//       return res.status(400).json({
+//         msg: "Name, email, password, address and phoneNumber are required.",
+//       });
+//     }
+
+//     email = email.toLowerCase().trim();
+//     const existingUser = await Users.findOne({ email });
+//     if (existingUser) return res.status(400).json({ msg: "User already exists" });
+
+//     const zipArray = Array.isArray(zipcode)
+//       ? zipcode.map(Number)
+//       : [Number(zipcode)];
+
+//     const userData = {
+//       name,
+//       email,
+//       password,
+//       role,
+//       address,
+//       phoneNumber,
+//       zipcode: zipArray,
+//       location,
+//       optInSms,
+//       isActive: role === "serviceProvider" ? false : true,
+//     };
+
+//     if (role === "serviceProvider") {
+//       if (!ssnLast4 || !dob) {
+//         return res.status(400).json({
+//           msg: "SSN last 4 digits and DOB are required for providers.",
+//         });
+//       }
+
+//       const dobDate = new Date(dob);
+//       if (isNaN(dobDate.getTime())) {
+//         return res.status(400).json({ msg: "Invalid DOB format. Use YYYY-MM-DD." });
+//       }
+
+//       Object.assign(userData, {
+//         serviceType,
+//         billingTier,
+//         serviceZipcode: zipArray,
+//         ssnLast4,
+//         dob,
+//         w9: null,
+//         businessLicense: null,
+//         proofOfInsurance: null,
+//         independentContractorAgreement: null,
+//       });
+//     }
+
+//     const [newUser] = await Users.create([userData], { session });
+
+//     // 🔐 Perform Stripe onboarding BEFORE committing transaction
+//     if (role === "serviceProvider") {
+//       try {
+//         const [firstName, ...lastParts] = name.trim().split(" ");
+//         const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
+//         const account = await stripe.accounts.create({
+//           type: "express",
+//           country: "US",
+//           email,
+//           business_type: "individual",
+//           individual: {
+//             first_name: firstName,
+//             last_name: lastName,
+//             ssn_last_4: ssnLast4,
+//             dob: {
+//               day: dobDate.getUTCDate(),
+//               month: dobDate.getUTCMonth() + 1,
+//               year: dobDate.getUTCFullYear(),
+//             },
+//             phone: phoneNumber,
+//             email,
+//           },
+//           capabilities: {
+//             card_payments: { requested: true },
+//             transfers: { requested: true },
+//           },
+//         });
+
+//         newUser.stripeAccountId = account.id;
+//         await newUser.save({ session });
+
+//         // 💳 Optionally, create a subscription with trial period (1 day)
+//         if (billingTier === "hybrid") {
+//           const stripeCustomer = await stripe.customers.create({
+//             email,
+//             name,
+//             phone: phoneNumber,
+//             metadata: { userId: newUser._id.toString(), billingTier: "hybrid" },
+//           });
+
+//           newUser.stripeCustomerId = stripeCustomer.id;
+
+//           await stripe.subscriptions.create({
+//             customer: stripeCustomer.id,
+//             items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+//             trial_period_days: 1, // Delay payment for 1 day
+//             metadata: { userId: newUser._id.toString() },
+//           });
+
+//           await newUser.save({ session });
+//         }
+//       } catch (stripeErr) {
+//         throw new Error("Stripe onboarding failed: " + stripeErr.message);
+//       }
+//     }
+
+//     const token = jwt.sign(
+//       { id: newUser._id, role: newUser.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "15m" }
+//     );
+
+//     const refreshToken = jwt.sign(
+//       { id: newUser._id },
+//       process.env.REFRESH_SECRET,
+//       { expiresIn: "30d" }
+//     );
+
+//     newUser.refreshToken = refreshToken;
+//     await newUser.save({ session });
+
+//     await session.commitTransaction();
+//     session.endSession();
+
+//     return res.json({ token, refreshToken });
+//   } catch (err) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error("❌ Registration failed:", err);
+//     return res.status(500).json({ msg: "Registration failed", error: err.message });
+//   }
+// });
+
 router.post("/register", async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  
+
   try {
     let {
       name,
@@ -763,7 +922,8 @@ router.post("/register", async (req, res) => {
 
     email = email.toLowerCase().trim();
     const existingUser = await Users.findOne({ email });
-    if (existingUser) return res.status(400).json({ msg: "User already exists" });
+    if (existingUser)
+      return res.status(400).json({ msg: "User already exists" });
 
     const zipArray = Array.isArray(zipcode)
       ? zipcode.map(Number)
@@ -782,6 +942,7 @@ router.post("/register", async (req, res) => {
       isActive: role === "serviceProvider" ? false : true,
     };
 
+    let dobDate;
     if (role === "serviceProvider") {
       if (!ssnLast4 || !dob) {
         return res.status(400).json({
@@ -789,9 +950,11 @@ router.post("/register", async (req, res) => {
         });
       }
 
-      const dobDate = new Date(dob);
+      dobDate = new Date(dob);
       if (isNaN(dobDate.getTime())) {
-        return res.status(400).json({ msg: "Invalid DOB format. Use YYYY-MM-DD." });
+        return res.status(400).json({
+          msg: "Invalid DOB format. Use YYYY-MM-DD.",
+        });
       }
 
       Object.assign(userData, {
@@ -814,6 +977,7 @@ router.post("/register", async (req, res) => {
       try {
         const [firstName, ...lastParts] = name.trim().split(" ");
         const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
+
         const account = await stripe.accounts.create({
           type: "express",
           country: "US",
@@ -840,13 +1004,15 @@ router.post("/register", async (req, res) => {
         newUser.stripeAccountId = account.id;
         await newUser.save({ session });
 
-        // 💳 Optionally, create a subscription with trial period (1 day)
         if (billingTier === "hybrid") {
           const stripeCustomer = await stripe.customers.create({
             email,
             name,
             phone: phoneNumber,
-            metadata: { userId: newUser._id.toString(), billingTier: "hybrid" },
+            metadata: {
+              userId: newUser._id.toString(),
+              billingTier: "hybrid",
+            },
           });
 
           newUser.stripeCustomerId = stripeCustomer.id;
@@ -854,14 +1020,20 @@ router.post("/register", async (req, res) => {
           await stripe.subscriptions.create({
             customer: stripeCustomer.id,
             items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
-            trial_period_days: 1, // Delay payment for 1 day
+            trial_period_days: 1,
             metadata: { userId: newUser._id.toString() },
           });
 
           await newUser.save({ session });
         }
       } catch (stripeErr) {
-        throw new Error("Stripe onboarding failed: " + stripeErr.message);
+        await session.abortTransaction();
+        session.endSession();
+        console.error("❌ Stripe onboarding failed:", stripeErr);
+        return res.status(500).json({
+          msg: "Registration failed",
+          error: "Stripe onboarding failed: " + stripeErr.message,
+        });
       }
     }
 
@@ -888,7 +1060,10 @@ router.post("/register", async (req, res) => {
     await session.abortTransaction();
     session.endSession();
     console.error("❌ Registration failed:", err);
-    return res.status(500).json({ msg: "Registration failed", error: err.message });
+    return res.status(500).json({
+      msg: "Registration failed",
+      error: err.message,
+    });
   }
 });
 
