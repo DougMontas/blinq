@@ -2001,6 +2001,235 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 //   }
 // });
 
+// router.post("/register", async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+
+//   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+//   try {
+//     let {
+//       name,
+//       email,
+//       password,
+//       role = "customer",
+//       address,
+//       phoneNumber,
+//       zipcode,
+//       serviceType,
+//       billingTier,
+//       ssnLast4,
+//       dob,
+//       location,
+//       isActive,
+//       optInSms,
+//     } = req.body;
+
+//     if (!name || !email || !password || !address || !phoneNumber) {
+//       return res.status(400).json({
+//         msg: "Name, email, password, address and phoneNumber are required.",
+//       });
+//     }
+
+//     email = email.toLowerCase().trim();
+//     const existingUser = await Users.findOne({ email });
+//     if (existingUser) return res.status(400).json({ msg: "User already exists" });
+
+//     const zipArray = Array.isArray(zipcode) ? zipcode.map(Number) : [Number(zipcode)];
+
+//     const userData = {
+//       name,
+//       email,
+//       password,
+//       role,
+//       address,
+//       phoneNumber,
+//       zipcode: zipArray,
+//       location,
+//       optInSms,
+//       isActive: role === "serviceProvider" ? false : true,
+//     };
+
+//     let dobDate;
+//     if (role === "serviceProvider") {
+//       if (!ssnLast4 || !dob) {
+//         return res.status(400).json({
+//           msg: "SSN last 4 digits and DOB are required for providers.",
+//         });
+//       }
+
+//       dobDate = new Date(dob);
+//       if (isNaN(dobDate.getTime())) {
+//         return res.status(400).json({
+//           msg: "Invalid DOB format. Use YYYY-MM-DD.",
+//         });
+//       }
+
+//       Object.assign(userData, {
+//         serviceType,
+//         billingTier,
+//         serviceZipcode: zipArray,
+//         ssnLast4,
+//         dob,
+//         w9: null,
+//         businessLicense: null,
+//         proofOfInsurance: null,
+//         independentContractorAgreement: null,
+//       });
+//     }
+
+//     const [newUser] = await Users.create([userData], { session });
+
+//     let clientSecret = null;
+
+//     if (role === "serviceProvider") {
+//       const [firstName, ...lastParts] = name.trim().split(" ");
+//       const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
+
+//       const account = await stripe.accounts.create({
+//         type: "express",
+//         country: "US",
+//         email,
+//         business_type: "individual",
+//         individual: {
+//           first_name: firstName,
+//           last_name: lastName,
+//           ssn_last_4: ssnLast4,
+//           dob: {
+//             day: dobDate.getUTCDate(),
+//             month: dobDate.getUTCMonth() + 1,
+//             year: dobDate.getUTCFullYear(),
+//           },
+//           phone: phoneNumber,
+//           email,
+//         },
+//         capabilities: {
+//           card_payments: { requested: true },
+//           transfers: { requested: true },
+//         },
+//       });
+
+//       newUser.stripeAccountId = account.id;
+
+//       if (billingTier === "hybrid") {
+//         const stripeCustomer = await stripe.customers.create({
+//           email,
+//           name,
+//           phone: phoneNumber,
+//           metadata: {
+//             userId: newUser._id.toString(),
+//             billingTier: "hybrid",
+//           },
+//         });
+
+//         newUser.stripeCustomerId = stripeCustomer.id;
+
+//         let subscription;
+//         try {
+//           subscription = await stripe.subscriptions.create({
+//             customer: stripeCustomer.id,
+//             items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+//             trial_period_days: 1,
+//             payment_behavior: "default_incomplete",
+//             collection_method: "charge_automatically",
+//             payment_settings: {
+//               save_default_payment_method: "on_subscription",
+//               payment_method_types: ["card"],
+//             },
+//             metadata: { userId: newUser._id.toString() },
+//             expand: ["latest_invoice.payment_intent"],
+//           });
+//         } catch (stripeSubErr) {
+//           console.error("❌ Stripe subscription creation failed:", stripeSubErr);
+//           throw new Error("Stripe subscription creation error: " + stripeSubErr.message);
+//         }
+
+//         const latestInvoice = subscription.latest_invoice;
+
+//         if (!latestInvoice) {
+//           console.error("❌ Missing latest_invoice from subscription:", subscription);
+//           throw new Error("Stripe subscription missing latest invoice.");
+//         }
+
+//         const paymentIntent = latestInvoice.payment_intent;
+
+//         if (!paymentIntent || !paymentIntent.client_secret) {
+//           console.error("❌ Missing payment_intent or client_secret:", paymentIntent);
+//           throw new Error("Stripe subscription missing client secret.");
+//         }
+
+//         clientSecret = paymentIntent.client_secret;
+//       }
+
+//       const accountLink = await stripe.accountLinks.create({
+//         account: newUser.stripeAccountId,
+//         refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+//         return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+//         type: "account_onboarding",
+//       });
+
+//       const token = jwt.sign(
+//         { id: newUser._id, role: newUser.role },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "15m" }
+//       );
+
+//       const refreshToken = jwt.sign(
+//         { id: newUser._id },
+//         process.env.REFRESH_SECRET,
+//         { expiresIn: "30d" }
+//       );
+
+//       newUser.refreshToken = refreshToken;
+//       await newUser.save({ session });
+
+//       await session.commitTransaction();
+//       session.endSession();
+
+//       return res.json({
+//         token,
+//         refreshToken,
+//         stripeOnboardingUrl: accountLink.url,
+//         stripeDashboardUrl: `https://dashboard.stripe.com/express/${newUser.stripeAccountId}`,
+//         subscriptionClientSecret: clientSecret,
+//       });
+//     } else {
+//       const token = jwt.sign(
+//         { id: newUser._id, role: newUser.role },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "15m" }
+//       );
+
+//       const refreshToken = jwt.sign(
+//         { id: newUser._id },
+//         process.env.REFRESH_SECRET,
+//         { expiresIn: "30d" }
+//       );
+
+//       newUser.refreshToken = refreshToken;
+//       await newUser.save({ session });
+
+//       await session.commitTransaction();
+//       session.endSession();
+
+//       return res.json({
+//         token,
+//         refreshToken,
+//       });
+//     }
+//   } catch (err) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error("❌ Registration failed:", err);
+//     return res.status(500).json({
+//       msg: "Registration failed",
+//       error: err.message,
+//     });
+//   }
+// });
+
+// ✅ Updated: Added fallback logic for missing payment_intent and detailed invoice debugging
+
 router.post("/register", async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -2146,15 +2375,28 @@ router.post("/register", async (req, res) => {
 
         const latestInvoice = subscription.latest_invoice;
 
-        if (!latestInvoice) {
+        if (!latestInvoice || !latestInvoice.id) {
           console.error("❌ Missing latest_invoice from subscription:", subscription);
           throw new Error("Stripe subscription missing latest invoice.");
         }
 
-        const paymentIntent = latestInvoice.payment_intent;
+        // Fallback attempt: fetch invoice directly to confirm intent
+        let invoiceData = latestInvoice;
+        if (!latestInvoice.payment_intent) {
+          try {
+            invoiceData = await stripe.invoices.retrieve(latestInvoice.id, {
+              expand: ["payment_intent"],
+            });
+            console.log("📦 Fetched invoice fallback:", invoiceData.id);
+          } catch (err) {
+            console.error("❌ Failed to fetch invoice fallback:", err);
+          }
+        }
+
+        const paymentIntent = invoiceData.payment_intent;
 
         if (!paymentIntent || !paymentIntent.client_secret) {
-          console.error("❌ Missing payment_intent or client_secret:", paymentIntent);
+          console.error("❌ Missing payment_intent or client_secret after fallback:", paymentIntent);
           throw new Error("Stripe subscription missing client secret.");
         }
 
