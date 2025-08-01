@@ -549,7 +549,10 @@ router.post("/register", async (req, res) => {
         serviceZipcode: zipArray,
         ssnLast4,
         dob,
-        // Completely omit these fields so mongoose doesn't validate them
+        w9: null,
+        businessLicense: null,
+        proofOfInsurance: null,
+        independentContractorAgreement: null,
       });
     }
 
@@ -581,8 +584,6 @@ router.post("/register", async (req, res) => {
     return res.status(500).json({ msg: "Registration failed", error: err.message });
   }
 });
-
-
 
 
 router.post("/login", async (req, res) => {
