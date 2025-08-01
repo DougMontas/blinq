@@ -1459,31 +1459,45 @@ router.post("/register", async (req, res) => {
 
         // const paymentIntent = subscription.latest_invoice?.payment_intent;
         // clientSecret = paymentIntent?.client_secret;
+        // const subscription = await stripe.subscriptions.create({
+        //   customer: stripeCustomer.id,
+        //   items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+        //   trial_period_days: 1,
+        //   payment_behavior: "default_incomplete",
+        //   collection_method: "charge_automatically",
+        //   metadata: { userId: newUser._id.toString() },
+        //   payment_settings: {
+        //     payment_method_types: ["card"],
+        //   },
+        //   expand: ["latest_invoice.payment_intent"],
+        // });
+        
+        // // ⛑️ Validate safe existence
+        // const latestInvoice = subscription.latest_invoice;
+        // const paymentIntent = latestInvoice?.payment_intent;
+        
+        // if (!paymentIntent || !paymentIntent.client_secret) {
+        //   console.error("Stripe subscription missing payment intent or client secret");
+        //   throw new Error("Stripe subscription missing client secret.");
+        // }
+
         const subscription = await stripe.subscriptions.create({
           customer: stripeCustomer.id,
           items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
-          trial_period_days: 1,
+          trial_period_days: 1, // first charge starts tomorrow
           payment_behavior: "default_incomplete",
           collection_method: "charge_automatically",
-          metadata: { userId: newUser._id.toString() },
           payment_settings: {
-            payment_method_types: ["card"],
+            payment_method_types: ["card"], // must be specified
           },
+          metadata: { userId: newUser._id.toString() },
           expand: ["latest_invoice.payment_intent"],
         });
         
-        // ⛑️ Validate safe existence
-        const latestInvoice = subscription.latest_invoice;
-        const paymentIntent = latestInvoice?.payment_intent;
-        
-        if (!paymentIntent || !paymentIntent.client_secret) {
-          console.error("Stripe subscription missing payment intent or client secret");
-          throw new Error("Stripe subscription missing client secret.");
-        }
-        
-        const clientSecret = paymentIntent.client_secret;
+        const clientSecret = subscription?.latest_invoice?.payment_intent?.client_secret;
         
         if (!clientSecret) {
+          console.error("⚠️ subscription.latest_invoice:", subscription.latest_invoice);
           throw new Error("Stripe subscription missing client secret.");
         }
       }
