@@ -153,18 +153,32 @@ usersSchema.pre("save", async function (next) {
 });
 
 /* -------- provider-required docs -------- */
+// usersSchema.pre("validate", function (next) {
+//   if (this.role === "serviceProvider") {
+//     const missing = REQUIRED_FOR_PROVIDER.filter((f) => !this[f]);
+//     if (missing.length) {
+//       this.invalidate(
+//         missing[0],
+//         `${missing.join(", ")} required for serviceProvider`
+//       );
+//     }
+//   }
+//   next();
+// });
+
 usersSchema.pre("validate", function (next) {
-  if (this.role === "serviceProvider") {
+  if (this.role === "serviceProvider" && this.isActive) {
     const missing = REQUIRED_FOR_PROVIDER.filter((f) => !this[f]);
     if (missing.length) {
       this.invalidate(
         missing[0],
-        `${missing.join(", ")} required for serviceProvider`
+        `${missing.join(", ")} required to activate account`
       );
     }
   }
   next();
 });
+
 
 /* -------- methods -------- */
 usersSchema.methods.checkPassword = function (plain) {
