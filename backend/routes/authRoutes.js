@@ -1401,6 +1401,7 @@ router.post("/register", async (req, res) => {
       const [firstName, ...lastParts] = name.trim().split(" ");
       const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
 
+      // ✅ Create Stripe Express Account for payouts
       const account = await stripe.accounts.create({
         type: "express",
         country: "US",
@@ -1429,6 +1430,7 @@ router.post("/register", async (req, res) => {
       let accountLink = null;
       let clientSecret = null;
 
+      // ✅ Create subscription if billingTier is "hybrid"
       if (billingTier === "hybrid") {
         const stripeCustomer = await stripe.customers.create({
           email,
@@ -1445,19 +1447,22 @@ router.post("/register", async (req, res) => {
         const subscription = await stripe.subscriptions.create({
           customer: stripeCustomer.id,
           items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+          trial_period_days: 1, // 👈 payment starts next day
           payment_behavior: "default_incomplete",
-          trial_period_days: 1,
           collection_method: "charge_automatically",
           metadata: { userId: newUser._id.toString() },
+          payment_settings: {
+            payment_method_types: ["card"],
+          },
           expand: ["latest_invoice.payment_intent"],
         });
 
-        if (!subscription || !subscription.id) {
-          throw new Error("Failed to create subscription for hybrid tier.");
-        }
+        const paymentIntent = subscription.latest_invoice?.payment_intent;
+        clientSecret = paymentIntent?.client_secret;
 
-        const paymentIntent = subscription.latest_invoice.payment_intent;
-        clientSecret = paymentIntent.client_secret;
+        if (!clientSecret) {
+          throw new Error("Stripe subscription missing client secret.");
+        }
       }
 
       accountLink = await stripe.accountLinks.create({
@@ -1490,7 +1495,7 @@ router.post("/register", async (req, res) => {
         refreshToken,
         stripeOnboardingUrl: accountLink.url,
         stripeDashboardUrl: `https://dashboard.stripe.com/express/${newUser.stripeAccountId}`,
-        subscriptionClientSecret: clientSecret, // for frontend PaymentSheet
+        subscriptionClientSecret: clientSecret,
       });
     } else {
       const token = jwt.sign(
@@ -1526,6 +1531,7 @@ router.post("/register", async (req, res) => {
     });
   }
 });
+
 
 
 
