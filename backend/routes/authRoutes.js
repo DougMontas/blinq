@@ -7,7 +7,7 @@ import Users from "../models/Users.js";
 import sendEmail from "../utils/sendEmail.js";
 import { auth } from "../middlewares/auth.js";
 import mongoose from "mongoose";
-
+import Stripe from "stripe";
 
 const router = express.Router();
 const baseUrl = process.env.FRONTEND_BASE_URL;
