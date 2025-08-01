@@ -1494,7 +1494,7 @@ router.post("/register", async (req, res) => {
           expand: ["latest_invoice.payment_intent"],
         });
         
-        const clientSecret = subscription?.latest_invoice?.payment_intent?.client_secret;
+         clientSecret = subscription?.latest_invoice?.payment_intent?.client_secret;
         
         if (!clientSecret) {
           console.error("⚠️ subscription.latest_invoice:", subscription.latest_invoice);
