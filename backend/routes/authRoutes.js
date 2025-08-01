@@ -735,7 +735,8 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 router.post("/register", async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  
   try {
     let {
       name,
