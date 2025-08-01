@@ -892,220 +892,223 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 //   }
 // });
 
-router.post("/register", async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+//latest working but no subs
+// router.post("/register", async (req, res) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+//   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 
-  try {
-    let {
-      name,
-      email,
-      password,
-      role = "customer",
-      address,
-      phoneNumber,
-      zipcode,
-      serviceType,
-      billingTier,
-      ssnLast4,
-      dob,
-      location,
-      isActive,
-      optInSms,
-    } = req.body;
+//   try {
+//     let {
+//       name,
+//       email,
+//       password,
+//       role = "customer",
+//       address,
+//       phoneNumber,
+//       zipcode,
+//       serviceType,
+//       billingTier,
+//       ssnLast4,
+//       dob,
+//       location,
+//       isActive,
+//       optInSms,
+//     } = req.body;
 
-    if (!name || !email || !password || !address || !phoneNumber) {
-      return res.status(400).json({
-        msg: "Name, email, password, address and phoneNumber are required.",
-      });
-    }
+//     if (!name || !email || !password || !address || !phoneNumber) {
+//       return res.status(400).json({
+//         msg: "Name, email, password, address and phoneNumber are required.",
+//       });
+//     }
 
-    email = email.toLowerCase().trim();
-    const existingUser = await Users.findOne({ email });
-    if (existingUser) return res.status(400).json({ msg: "User already exists" });
+//     email = email.toLowerCase().trim();
+//     const existingUser = await Users.findOne({ email });
+//     if (existingUser) return res.status(400).json({ msg: "User already exists" });
 
-    const zipArray = Array.isArray(zipcode) ? zipcode.map(Number) : [Number(zipcode)];
+//     const zipArray = Array.isArray(zipcode) ? zipcode.map(Number) : [Number(zipcode)];
 
-    const userData = {
-      name,
-      email,
-      password,
-      role,
-      address,
-      phoneNumber,
-      zipcode: zipArray,
-      location,
-      optInSms,
-      isActive: role === "serviceProvider" ? false : true,
-    };
+//     const userData = {
+//       name,
+//       email,
+//       password,
+//       role,
+//       address,
+//       phoneNumber,
+//       zipcode: zipArray,
+//       location,
+//       optInSms,
+//       isActive: role === "serviceProvider" ? false : true,
+//     };
 
-    let dobDate;
-    if (role === "serviceProvider") {
-      if (!ssnLast4 || !dob) {
-        return res.status(400).json({
-          msg: "SSN last 4 digits and DOB are required for providers.",
-        });
-      }
+//     let dobDate;
+//     if (role === "serviceProvider") {
+//       if (!ssnLast4 || !dob) {
+//         return res.status(400).json({
+//           msg: "SSN last 4 digits and DOB are required for providers.",
+//         });
+//       }
 
-      dobDate = new Date(dob);
-      if (isNaN(dobDate.getTime())) {
-        return res.status(400).json({
-          msg: "Invalid DOB format. Use YYYY-MM-DD.",
-        });
-      }
+//       dobDate = new Date(dob);
+//       if (isNaN(dobDate.getTime())) {
+//         return res.status(400).json({
+//           msg: "Invalid DOB format. Use YYYY-MM-DD.",
+//         });
+//       }
 
-      Object.assign(userData, {
-        serviceType,
-        billingTier,
-        serviceZipcode: zipArray,
-        ssnLast4,
-        dob,
-        w9: null,
-        businessLicense: null,
-        proofOfInsurance: null,
-        independentContractorAgreement: null,
-      });
-    }
+//       Object.assign(userData, {
+//         serviceType,
+//         billingTier,
+//         serviceZipcode: zipArray,
+//         ssnLast4,
+//         dob,
+//         w9: null,
+//         businessLicense: null,
+//         proofOfInsurance: null,
+//         independentContractorAgreement: null,
+//       });
+//     }
 
-    const [newUser] = await Users.create([userData], { session });
+//     const [newUser] = await Users.create([userData], { session });
 
-    if (role === "serviceProvider") {
-      try {
-        const [firstName, ...lastParts] = name.trim().split(" ");
-        const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
+//     if (role === "serviceProvider") {
+//       try {
+//         const [firstName, ...lastParts] = name.trim().split(" ");
+//         const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
 
-        const account = await stripe.accounts.create({
-          type: "express",
-          country: "US",
-          email,
-          business_type: "individual",
-          individual: {
-            first_name: firstName,
-            last_name: lastName,
-            ssn_last_4: ssnLast4,
-            dob: {
-              day: dobDate.getUTCDate(),
-              month: dobDate.getUTCMonth() + 1,
-              year: dobDate.getUTCFullYear(),
-            },
-            phone: phoneNumber,
-            email,
-          },
-          capabilities: {
-            card_payments: { requested: true },
-            transfers: { requested: true },
-          },
-        });
+//         const account = await stripe.accounts.create({
+//           type: "express",
+//           country: "US",
+//           email,
+//           business_type: "individual",
+//           individual: {
+//             first_name: firstName,
+//             last_name: lastName,
+//             ssn_last_4: ssnLast4,
+//             dob: {
+//               day: dobDate.getUTCDate(),
+//               month: dobDate.getUTCMonth() + 1,
+//               year: dobDate.getUTCFullYear(),
+//             },
+//             phone: phoneNumber,
+//             email,
+//           },
+//           capabilities: {
+//             card_payments: { requested: true },
+//             transfers: { requested: true },
+//           },
+//         });
 
-        newUser.stripeAccountId = account.id;
+//         newUser.stripeAccountId = account.id;
 
-        let accountLink = null;
+//         let accountLink = null;
 
-        if (billingTier === "hybrid") {
-          const stripeCustomer = await stripe.customers.create({
-            email,
-            name,
-            phone: phoneNumber,
-            metadata: {
-              userId: newUser._id.toString(),
-              billingTier: "hybrid",
-            },
-          });
+//         if (billingTier === "hybrid") {
+//           const stripeCustomer = await stripe.customers.create({
+//             email,
+//             name,
+//             phone: phoneNumber,
+//             metadata: {
+//               userId: newUser._id.toString(),
+//               billingTier: "hybrid",
+//             },
+//           });
 
-          newUser.stripeCustomerId = stripeCustomer.id;
+//           newUser.stripeCustomerId = stripeCustomer.id;
 
-          const subscription = await stripe.subscriptions.create({
-            customer: stripeCustomer.id,
-            items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
-            payment_behavior: "default_incomplete",
-            trial_period_days: 1,
-            collection_method: "charge_automatically",
-            metadata: { userId: newUser._id.toString() },
-            expand: ["latest_invoice.payment_intent"],
-          });
+//           const subscription = await stripe.subscriptions.create({
+//             customer: stripeCustomer.id,
+//             items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+//             payment_behavior: "default_incomplete",
+//             trial_period_days: 1,
+//             collection_method: "charge_automatically",
+//             metadata: { userId: newUser._id.toString() },
+//             expand: ["latest_invoice.payment_intent"],
+//           });
 
-          if (!subscription || !subscription.id) {
-            throw new Error("Failed to create subscription for hybrid tier.");
-          }
-        }
+//           if (!subscription || !subscription.id) {
+//             throw new Error("Failed to create subscription for hybrid tier.");
+//           }
+//         }
 
-        accountLink = await stripe.accountLinks.create({
-          account: newUser.stripeAccountId,
-          refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
-          return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
-          type: "account_onboarding",
-        });
+//         accountLink = await stripe.accountLinks.create({
+//           account: newUser.stripeAccountId,
+//           refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+//           return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+//           type: "account_onboarding",
+//         });
 
-        const token = jwt.sign(
-          { id: newUser._id, role: newUser.role },
-          process.env.JWT_SECRET,
-          { expiresIn: "15m" }
-        );
+//         const token = jwt.sign(
+//           { id: newUser._id, role: newUser.role },
+//           process.env.JWT_SECRET,
+//           { expiresIn: "15m" }
+//         );
 
-        const refreshToken = jwt.sign(
-          { id: newUser._id },
-          process.env.REFRESH_SECRET,
-          { expiresIn: "30d" }
-        );
+//         const refreshToken = jwt.sign(
+//           { id: newUser._id },
+//           process.env.REFRESH_SECRET,
+//           { expiresIn: "30d" }
+//         );
 
-        newUser.refreshToken = refreshToken;
-        await newUser.save({ session });
+//         newUser.refreshToken = refreshToken;
+//         await newUser.save({ session });
 
-        await session.commitTransaction();
-        session.endSession();
+//         await session.commitTransaction();
+//         session.endSession();
 
-        return res.json({
-          token,
-          refreshToken,
-          stripeOnboardingUrl: accountLink.url,
-          stripeDashboardUrl: `https://dashboard.stripe.com/express/${newUser.stripeAccountId}`,
-        });
-      } catch (stripeErr) {
-        await session.abortTransaction();
-        session.endSession();
-        console.error("❌ Stripe onboarding failed:", stripeErr);
-        return res.status(500).json({
-          msg: "Registration failed",
-          error: "Stripe onboarding failed: " + stripeErr.message,
-        });
-      }
-    } else {
-      const token = jwt.sign(
-        { id: newUser._id, role: newUser.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "15m" }
-      );
+//         return res.json({
+//           token,
+//           refreshToken,
+//           stripeOnboardingUrl: accountLink.url,
+//           stripeDashboardUrl: `https://dashboard.stripe.com/express/${newUser.stripeAccountId}`,
+//         });
+//       } catch (stripeErr) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error("❌ Stripe onboarding failed:", stripeErr);
+//         return res.status(500).json({
+//           msg: "Registration failed",
+//           error: "Stripe onboarding failed: " + stripeErr.message,
+//         });
+//       }
+//     } else {
+//       const token = jwt.sign(
+//         { id: newUser._id, role: newUser.role },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "15m" }
+//       );
 
-      const refreshToken = jwt.sign(
-        { id: newUser._id },
-        process.env.REFRESH_SECRET,
-        { expiresIn: "30d" }
-      );
+//       const refreshToken = jwt.sign(
+//         { id: newUser._id },
+//         process.env.REFRESH_SECRET,
+//         { expiresIn: "30d" }
+//       );
 
-      newUser.refreshToken = refreshToken;
-      await newUser.save({ session });
+//       newUser.refreshToken = refreshToken;
+//       await newUser.save({ session });
 
-      await session.commitTransaction();
-      session.endSession();
+//       await session.commitTransaction();
+//       session.endSession();
 
-      return res.json({
-        token,
-        refreshToken,
-      });
-    }
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("❌ Registration failed:", err);
-    return res.status(500).json({
-      msg: "Registration failed",
-      error: err.message,
-    });
-  }
-});
+//       return res.json({
+//         token,
+//         refreshToken,
+//       });
+//     }
+//   } catch (err) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error("❌ Registration failed:", err);
+//     return res.status(500).json({
+//       msg: "Registration failed",
+//       error: err.message,
+//     });
+//   }
+// });
+
+
 
 //onboard works but no subs
 // router.post("/register", async (req, res) => {
@@ -1315,6 +1318,214 @@ router.post("/register", async (req, res) => {
 //   }
 // });
 
+router.post("/register", async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+  try {
+    let {
+      name,
+      email,
+      password,
+      role = "customer",
+      address,
+      phoneNumber,
+      zipcode,
+      serviceType,
+      billingTier,
+      ssnLast4,
+      dob,
+      location,
+      isActive,
+      optInSms,
+    } = req.body;
+
+    if (!name || !email || !password || !address || !phoneNumber) {
+      return res.status(400).json({
+        msg: "Name, email, password, address and phoneNumber are required.",
+      });
+    }
+
+    email = email.toLowerCase().trim();
+    const existingUser = await Users.findOne({ email });
+    if (existingUser) return res.status(400).json({ msg: "User already exists" });
+
+    const zipArray = Array.isArray(zipcode) ? zipcode.map(Number) : [Number(zipcode)];
+
+    const userData = {
+      name,
+      email,
+      password,
+      role,
+      address,
+      phoneNumber,
+      zipcode: zipArray,
+      location,
+      optInSms,
+      isActive: role === "serviceProvider" ? false : true,
+    };
+
+    let dobDate;
+    if (role === "serviceProvider") {
+      if (!ssnLast4 || !dob) {
+        return res.status(400).json({
+          msg: "SSN last 4 digits and DOB are required for providers.",
+        });
+      }
+
+      dobDate = new Date(dob);
+      if (isNaN(dobDate.getTime())) {
+        return res.status(400).json({
+          msg: "Invalid DOB format. Use YYYY-MM-DD.",
+        });
+      }
+
+      Object.assign(userData, {
+        serviceType,
+        billingTier,
+        serviceZipcode: zipArray,
+        ssnLast4,
+        dob,
+        w9: null,
+        businessLicense: null,
+        proofOfInsurance: null,
+        independentContractorAgreement: null,
+      });
+    }
+
+    const [newUser] = await Users.create([userData], { session });
+
+    if (role === "serviceProvider") {
+      const [firstName, ...lastParts] = name.trim().split(" ");
+      const lastName = lastParts.length ? lastParts.join(" ") : "Provider";
+
+      const account = await stripe.accounts.create({
+        type: "express",
+        country: "US",
+        email,
+        business_type: "individual",
+        individual: {
+          first_name: firstName,
+          last_name: lastName,
+          ssn_last_4: ssnLast4,
+          dob: {
+            day: dobDate.getUTCDate(),
+            month: dobDate.getUTCMonth() + 1,
+            year: dobDate.getUTCFullYear(),
+          },
+          phone: phoneNumber,
+          email,
+        },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      });
+
+      newUser.stripeAccountId = account.id;
+
+      let accountLink = null;
+      let clientSecret = null;
+
+      if (billingTier === "hybrid") {
+        const stripeCustomer = await stripe.customers.create({
+          email,
+          name,
+          phone: phoneNumber,
+          metadata: {
+            userId: newUser._id.toString(),
+            billingTier: "hybrid",
+          },
+        });
+
+        newUser.stripeCustomerId = stripeCustomer.id;
+
+        const subscription = await stripe.subscriptions.create({
+          customer: stripeCustomer.id,
+          items: [{ price: process.env.STRIPE_HYBRID_PRICE_ID }],
+          payment_behavior: "default_incomplete",
+          trial_period_days: 1,
+          collection_method: "charge_automatically",
+          metadata: { userId: newUser._id.toString() },
+          expand: ["latest_invoice.payment_intent"],
+        });
+
+        if (!subscription || !subscription.id) {
+          throw new Error("Failed to create subscription for hybrid tier.");
+        }
+
+        const paymentIntent = subscription.latest_invoice.payment_intent;
+        clientSecret = paymentIntent.client_secret;
+      }
+
+      accountLink = await stripe.accountLinks.create({
+        account: newUser.stripeAccountId,
+        refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+        return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+        type: "account_onboarding",
+      });
+
+      const token = jwt.sign(
+        { id: newUser._id, role: newUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      const refreshToken = jwt.sign(
+        { id: newUser._id },
+        process.env.REFRESH_SECRET,
+        { expiresIn: "30d" }
+      );
+
+      newUser.refreshToken = refreshToken;
+      await newUser.save({ session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.json({
+        token,
+        refreshToken,
+        stripeOnboardingUrl: accountLink.url,
+        stripeDashboardUrl: `https://dashboard.stripe.com/express/${newUser.stripeAccountId}`,
+        subscriptionClientSecret: clientSecret, // for frontend PaymentSheet
+      });
+    } else {
+      const token = jwt.sign(
+        { id: newUser._id, role: newUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      const refreshToken = jwt.sign(
+        { id: newUser._id },
+        process.env.REFRESH_SECRET,
+        { expiresIn: "30d" }
+      );
+
+      newUser.refreshToken = refreshToken;
+      await newUser.save({ session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.json({
+        token,
+        refreshToken,
+      });
+    }
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("❌ Registration failed:", err);
+    return res.status(500).json({
+      msg: "Registration failed",
+      error: err.message,
+    });
+  }
+});
 
 
 
