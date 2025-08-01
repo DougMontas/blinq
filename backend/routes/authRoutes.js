@@ -2366,41 +2366,24 @@ router.post("/register", async (req, res) => {
               payment_method_types: ["card"],
             },
             metadata: { userId: newUser._id.toString() },
-            expand: ["latest_invoice.payment_intent"],
+            expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
           });
         } catch (stripeSubErr) {
           console.error("❌ Stripe subscription creation failed:", stripeSubErr);
           throw new Error("Stripe subscription creation error: " + stripeSubErr.message);
         }
 
-        const latestInvoice = subscription.latest_invoice;
+        const paymentIntent = subscription.latest_invoice?.payment_intent;
+        const setupIntent = subscription.pending_setup_intent;
 
-        if (!latestInvoice || !latestInvoice.id) {
-          console.error("❌ Missing latest_invoice from subscription:", subscription);
-          throw new Error("Stripe subscription missing latest invoice.");
-        }
-
-        // Fallback attempt: fetch invoice directly to confirm intent
-        let invoiceData = latestInvoice;
-        if (!latestInvoice.payment_intent) {
-          try {
-            invoiceData = await stripe.invoices.retrieve(latestInvoice.id, {
-              expand: ["payment_intent"],
-            });
-            console.log("📦 Fetched invoice fallback:", invoiceData.id);
-          } catch (err) {
-            console.error("❌ Failed to fetch invoice fallback:", err);
-          }
-        }
-
-        const paymentIntent = invoiceData.payment_intent;
-
-        if (!paymentIntent || !paymentIntent.client_secret) {
-          console.error("❌ Missing payment_intent or client_secret after fallback:", paymentIntent);
+        if (paymentIntent?.client_secret) {
+          clientSecret = paymentIntent.client_secret;
+        } else if (setupIntent?.client_secret) {
+          clientSecret = setupIntent.client_secret;
+        } else {
+          console.error("❌ Missing both paymentIntent and setupIntent:", subscription);
           throw new Error("Stripe subscription missing client secret.");
         }
-
-        clientSecret = paymentIntent.client_secret;
       }
 
       const accountLink = await stripe.accountLinks.create({
@@ -2469,6 +2452,7 @@ router.post("/register", async (req, res) => {
     });
   }
 });
+
 
 
 
