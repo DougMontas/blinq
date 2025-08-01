@@ -6,6 +6,7 @@ import crypto from "crypto"; // for reset tokens
 import Users from "../models/Users.js";
 import sendEmail from "../utils/sendEmail.js";
 import { auth } from "../middlewares/auth.js";
+import mongoose from "mongoose";
 
 
 const router = express.Router();
