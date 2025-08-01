@@ -895,7 +895,9 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 router.post("/register", async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
   try {
     let {
       name,
@@ -922,12 +924,9 @@ router.post("/register", async (req, res) => {
 
     email = email.toLowerCase().trim();
     const existingUser = await Users.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ msg: "User already exists" });
+    if (existingUser) return res.status(400).json({ msg: "User already exists" });
 
-    const zipArray = Array.isArray(zipcode)
-      ? zipcode.map(Number)
-      : [Number(zipcode)];
+    const zipArray = Array.isArray(zipcode) ? zipcode.map(Number) : [Number(zipcode)];
 
     const userData = {
       name,
@@ -972,7 +971,6 @@ router.post("/register", async (req, res) => {
 
     const [newUser] = await Users.create([userData], { session });
 
-    // 🔐 Perform Stripe onboarding BEFORE committing transaction
     if (role === "serviceProvider") {
       try {
         const [firstName, ...lastParts] = name.trim().split(" ");
@@ -1002,7 +1000,6 @@ router.post("/register", async (req, res) => {
         });
 
         newUser.stripeAccountId = account.id;
-        await newUser.save({ session });
 
         if (billingTier === "hybrid") {
           const stripeCustomer = await stripe.customers.create({
@@ -1023,9 +1020,41 @@ router.post("/register", async (req, res) => {
             trial_period_days: 1,
             metadata: { userId: newUser._id.toString() },
           });
-
-          await newUser.save({ session });
         }
+
+        const accountLink = await stripe.accountLinks.create({
+          account: newUser.stripeAccountId,
+          refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+          return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+          type: "account_onboarding",
+        });
+
+        await newUser.save({ session });
+
+        const token = jwt.sign(
+          { id: newUser._id, role: newUser.role },
+          process.env.JWT_SECRET,
+          { expiresIn: "15m" }
+        );
+
+        const refreshToken = jwt.sign(
+          { id: newUser._id },
+          process.env.REFRESH_SECRET,
+          { expiresIn: "30d" }
+        );
+
+        newUser.refreshToken = refreshToken;
+        await newUser.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.json({
+          token,
+          refreshToken,
+          stripeOnboardingUrl: accountLink.url,
+          stripeDashboardUrl: `https://dashboard.stripe.com/express/${newUser.stripeAccountId}`,
+        });
       } catch (stripeErr) {
         await session.abortTransaction();
         session.endSession();
@@ -1035,27 +1064,30 @@ router.post("/register", async (req, res) => {
           error: "Stripe onboarding failed: " + stripeErr.message,
         });
       }
+    } else {
+      const token = jwt.sign(
+        { id: newUser._id, role: newUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      const refreshToken = jwt.sign(
+        { id: newUser._id },
+        process.env.REFRESH_SECRET,
+        { expiresIn: "30d" }
+      );
+
+      newUser.refreshToken = refreshToken;
+      await newUser.save({ session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.json({
+        token,
+        refreshToken,
+      });
     }
-
-    const token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
-
-    const refreshToken = jwt.sign(
-      { id: newUser._id },
-      process.env.REFRESH_SECRET,
-      { expiresIn: "30d" }
-    );
-
-    newUser.refreshToken = refreshToken;
-    await newUser.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.json({ token, refreshToken });
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -1066,6 +1098,8 @@ router.post("/register", async (req, res) => {
     });
   }
 });
+
+
 
 
 router.post("/login", async (req, res) => {
