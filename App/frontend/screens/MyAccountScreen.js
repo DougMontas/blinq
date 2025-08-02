@@ -1893,7 +1893,7 @@ export default function MyAccountScreen() {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
       const { data } = await api.post(
-        "/api/routes/stripe/update-billing",
+        "/stripe/update-billing",
         { billingTier: tier },
         {
           headers: { Authorization: `Bearer ${token}` },

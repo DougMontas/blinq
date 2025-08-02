@@ -421,6 +421,7 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import BackButton from "../components/BackButton";
 import Checkbox from "expo-checkbox";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const SERVICE_TYPES = ["Electrician", "HVAC", "Plumbing", "Roofing", "Handyman"];
 
@@ -638,6 +639,7 @@ IN WITNESS WHEREOF, the parties hereto have executed this Independent Contractor
   
 
   return (
+    <ScreenWrapper>
     <ScrollView contentContainerStyle={s.container}>
       <BackButton />
       <Text style={s.header}>Complete Your Profile</Text>
@@ -792,6 +794,7 @@ IN WITNESS WHEREOF, the parties hereto have executed this Independent Contractor
         <Text style={s.submitBtnText}>Update Profile</Text>
       </TouchableOpacity>
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 

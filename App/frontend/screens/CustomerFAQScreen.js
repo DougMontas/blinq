@@ -1,9 +1,11 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import BackButton from "../components/BackButton";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 export default function CustomerFAQScreen() {
   return (
+    <ScreenWrapper>
     <ScrollView contentContainerStyle={styles.container}>
       <BackButton />
       <Text style={styles.header}>BlinqFix Customer FAQ</Text>
@@ -105,6 +107,7 @@ export default function CustomerFAQScreen() {
         Our support team is available Monday through Friday, 9 AM to 5 PM EST.
       </Text>
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 

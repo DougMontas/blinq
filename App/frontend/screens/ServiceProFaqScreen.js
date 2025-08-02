@@ -2,6 +2,7 @@ import React from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import BackButton from "../components/BackButton";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const faqs = [
   {
@@ -55,6 +56,7 @@ export default function ServiceProFaqScreen() {
   const navigation = useNavigation();
 
   return (
+    <ScreenWrapper>
     <ScrollView style={styles.container}>
       <BackButton onPress={() => navigation.goBack()} />
       <Text style={styles.title}>FAQ – For Service Pros</Text>
@@ -65,6 +67,7 @@ export default function ServiceProFaqScreen() {
         </View>
       ))}
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 

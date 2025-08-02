@@ -273,6 +273,7 @@ import LogoutButton from "../components/LogoutButton";
 import ComingSoon from "../assets/coming_soon.jpeg";
 import DeleteAccountButton from "../components/DeleteAccountButton";
 import Footer from "../components/Footer";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const categories = [
   {
@@ -358,6 +359,7 @@ export default function CustomerDashboard() {
   }
 
   return (
+    <ScreenWrapper>
     <ScrollView contentContainerStyle={styles.container}>
       <LogoutButton />
 
@@ -443,6 +445,7 @@ export default function CustomerDashboard() {
 
       <View style={{ height: 40, marginVertical: 50 }} />
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 

@@ -915,6 +915,7 @@ import JobDetails from "../components/JobDetails";
 import FooterPro from "../components/FooterPro";
 // import DeleteAccountButton from "../components/DeleteAccountButton";
 import MyAccountScreen from "./MyAccountScreen";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const SOCKET_HOST = "https://blinqfix.onrender.com";
 const { width } = Dimensions.get("window");
@@ -1117,6 +1118,7 @@ export default function ServiceProviderDashboard() {
 
   return (
     <View style={styles.wrapper}>
+      <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.container}>
         <LogoutButton />
 
@@ -1235,6 +1237,7 @@ export default function ServiceProviderDashboard() {
           My Account
         </Text>
       </TouchableOpacity>
+    </ScreenWrapper>
     </View>
   );
 }

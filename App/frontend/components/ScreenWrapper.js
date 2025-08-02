@@ -15,5 +15,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#fff", // optional global bg
+    marginTop:0,
   },
 });

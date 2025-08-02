@@ -1,9 +1,11 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import BackButton from "../components/BackButton";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 export default function PrivacyPolicyScreen() {
   return (
+    <ScreenWrapper>
     <ScrollView contentContainerStyle={styles.container}>
       <BackButton />
       <Text style={styles.title}>Privacy Policy for BlinqFix Official App</Text>
@@ -104,6 +106,7 @@ export default function PrivacyPolicyScreen() {
         {"\n"}Email: support@blinqfix.com
       </Text>
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 

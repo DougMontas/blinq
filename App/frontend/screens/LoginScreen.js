@@ -949,6 +949,7 @@ import { Ionicons } from "@expo/vector-icons";
 import api from "../api/client";
 import { useAuth, navigationRef } from "../context/AuthProvider";
 import Footer from "../components/Footer";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const { width } = Dimensions.get("window");
 const LOGO_SIZE = width * 0.55;
@@ -1615,6 +1616,7 @@ const onSubmit = async () => {
   // 🔐 LoginScreen with onboarding recheck for service providers
 
   return (
+    <ScreenWrapper>
     <ScrollView contentContainerStyle={styles.container}>
       <LinearGradient
         colors={["#1976d2", "#2f80ed"]}
@@ -1699,13 +1701,14 @@ const onSubmit = async () => {
 
       <Footer />
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 0,
     backgroundColor: "#fff",
   },
   containerLogo: {},

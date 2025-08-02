@@ -1853,6 +1853,7 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import JobDetails from "../components/JobDetails";
 import api from "../api/client";
 import { saveSession, clearSession } from "../utils/sessionManager";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const TRAVEL_FEE = 100;
 const { width } = Dimensions.get("window");
@@ -2077,6 +2078,7 @@ export default function ProviderJobStatus() {
   }, [job?.status]);
 
   return (
+    <ScreenWrapper>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -2221,6 +2223,7 @@ export default function ProviderJobStatus() {
 )}
 
     </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 }
 

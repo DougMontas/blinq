@@ -24,7 +24,7 @@ export default function FooterPro() {
 
   const handlePress = async (url) => {
     // external
-    if (url.startsWith("http")) {
+    if (url.startsWith("mailto:")) {
       try {
         const ok = await Linking.canOpenURL(url);
         if (ok) {

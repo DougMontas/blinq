@@ -180,10 +180,11 @@
 import React from "react";
 import { View, ScrollView, Text, StyleSheet } from "react-native";
 import BackButton from "../components/BackButton";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 export default function TermsOfUse() {
   return (
-
+<ScreenWrapper>
     <ScrollView contentContainerStyle={styles.container}>
       <BackButton />
       <Text style={styles.header}>BlinqFix Terms of Use for Customers and Service Pros</Text>
@@ -228,6 +229,7 @@ export default function TermsOfUse() {
 
       <Text style={styles.sectionTitle}>... (continued for remaining sections) ...</Text>
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 
