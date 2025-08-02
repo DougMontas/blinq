@@ -1076,6 +1076,41 @@ router.post("/onboard-stripe", auth, async (req, res) => {
   }
 });
 
+router.post("/check-onboarding", async (req, res) => {
+  const { stripeAccountId } = req.body;
+
+  if (!stripeAccountId) {
+    return res.status(400).json({ msg: "Missing stripeAccountId" });
+  }
+
+  try {
+    const account = await stripe.accounts.retrieve(stripeAccountId);
+
+    const missingFields = account.requirements?.currently_due || [];
+    const pastDue = account.requirements?.past_due || [];
+
+    if (missingFields.length > 0 || pastDue.length > 0) {
+      const accountLink = await stripe.accountLinks.create({
+        account: stripeAccountId,
+        refresh_url: process.env.STRIPE_ONBOARDING_REFRESH_URL,
+        return_url: process.env.STRIPE_ONBOARDING_RETURN_URL,
+        type: "account_onboarding",
+      });
+
+      return res.status(200).json({
+        needsOnboarding: true,
+        stripeOnboardingUrl: accountLink.url,
+      });
+    }
+
+    return res.status(200).json({ needsOnboarding: false });
+  } catch (err) {
+    console.error("❌ check-onboarding error:", err);
+    res.status(500).json({ msg: "Failed to check onboarding status", error: err.message });
+  }
+});
+
+
 
 
 
