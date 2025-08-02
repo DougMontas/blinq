@@ -497,6 +497,11 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 //   }
 // });
 
+router.get("/ping", (req, res) => {
+  console.log("✅ /stripe/ping route is live");
+  res.json({ msg: "Stripe route is alive" });
+});
+
 router.post("/update-billing", auth, async (req, res) => {
   console.log("📥 POST /update-billing hit");
 
