@@ -541,7 +541,8 @@ router.post("/update-billing", auth, async (req, res) => {
       }
 
       user.billingTier = billingTier;
-      await user.save();
+      await user.save({ validateBeforeSave: false });
+      // await user.save();
       console.log("💾 User updated to profit_sharing:", user._id);
 
       return res.status(200).json({ msg: "Downgraded to profit sharing", billingTier });
@@ -588,7 +589,6 @@ router.post("/update-billing", auth, async (req, res) => {
     return res.status(500).json({ msg: "Internal server error" });
   }
 });
-
 
 // router.post("/onboard-stripe", auth, async (req, res) => {
 //   try {
