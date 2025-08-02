@@ -1350,6 +1350,186 @@ export default function LoginScreen() {
 // };
 
 // 🔐 LoginScreen with onboarding recheck + Stripe external redirect fallback + debug logs
+//semi working latest
+// const onSubmit = async () => {
+//   try {
+//     console.log("➡️ Attempting login for:", form.email);
+
+//     const { data } = await api.post("/auth/login", form, {
+//       headers: { "Content-Type": "application/json" },
+//     });
+
+//     if (!data?.token) throw new Error("Token missing from response");
+
+//     await AsyncStorage.setItem("token", data.token);
+//     if (data.refreshToken) {
+//       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//     }
+
+//     const payload = parseJwt(data.token);
+//     const role = payload?.role || "customer";
+//     const stripeAccountId = payload?.stripeAccountId;
+//     // 🧠 Helpful log for debugging role recognition after login
+//     console.log("🎯 Role:", role);
+//     // 🧠 Confirms stripeAccountId is correctly embedded in token
+//     console.log("🏦 Stripe Account ID from token:", stripeAccountId);
+//     setRole(role);
+
+//     if (role === "serviceProvider" && stripeAccountId) {
+//       try {
+//         console.log("🔍 Calling /check-onboarding with:", stripeAccountId);
+
+//         // 🔁 Onboarding check call to backend
+//         const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//           stripeAccountId,
+//         });
+
+//         console.log("📬 Onboarding check response:", checkRes.data);
+
+//         const { stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data;
+
+//         if (checkRes.data?.needsOnboarding) {
+//           const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
+
+//           if (!redirectUrl || typeof redirectUrl !== "string") {
+//             console.warn("⚠️ Invalid redirect URL:", redirectUrl);
+//             Alert.alert("Error", "Onboarding link is invalid or missing.");
+//             return;
+//           }
+
+//           console.log("🔗 Redirecting to:", redirectUrl);
+//           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+
+//           try {
+//             await Linking.openURL(redirectUrl);
+//           } catch (linkErr) {
+//             console.error("❌ Failed to open link:", linkErr);
+//             Alert.alert("Error", "Could not open onboarding link.");
+//           }
+//           return;
+//         }
+//       } catch (stripeCheckErr) {
+//         console.error("❌ Failed onboarding check:", stripeCheckErr.response?.data || stripeCheckErr);
+//         Alert.alert("Error", "Unable to check onboarding. Please try again later.");
+//         return;
+//       }
+//     }
+
+//     const target = roleToScreen(role);
+//     const action = { index: 0, routes: [{ name: target }] };
+//     if (navigationRef?.isReady?.()) {
+//       // 🧭 Prefer navigationRef if initialized
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       // 🧭 Fallback to direct navigation reset
+//       navigation.reset(action);
+//     } else {
+//       console.warn("⚠️ Navigation not ready: fallback route not applied.");
+//     }
+//   } catch (err) {
+//     console.error("❌ Login error:", err.message);
+//     console.log("❌ Full error:", err.response?.data || err);
+//     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+//     Alert.alert("Error", msg);
+//   }
+// };
+
+//last working
+// const onSubmit = async () => {
+//   try {
+//     console.log("➡️ Attempting login for:", form.email);
+
+//     const { data } = await api.post("/auth/login", form, {
+//       headers: { "Content-Type": "application/json" },
+//     });
+
+//     if (!data?.token) throw new Error("Token missing from response");
+
+//     await AsyncStorage.setItem("token", data.token);
+//     if (data.refreshToken) {
+//       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//     }
+
+//     const payload = parseJwt(data.token);
+//     const role = payload?.role || "customer";
+//     const stripeAccountId = payload?.stripeAccountId;
+//     // 🧠 Helpful log for debugging role recognition after login
+//     console.log("🎯 Role:", role);
+//     // 🧠 Confirms stripeAccountId is correctly embedded in token
+//     console.log("🏦 Stripe Account ID from token:", stripeAccountId);
+//     setRole(role);
+
+//     // ✅ Customer logic: route to PaymentScreen
+//     if (role === "customer") {
+//       console.log("💳 Redirecting customer to PaymentScreen");
+//       navigation.reset({ index: 0, routes: [{ name: "PaymentScreen" }] });
+//       return;
+//     }
+
+//     // ✅ Service provider onboarding logic
+//     if (role === "serviceProvider" && stripeAccountId) {
+//       try {
+//         console.log("🔍 Calling /check-onboarding with:", stripeAccountId);
+
+//         // 🔁 Onboarding check call to backend
+//         const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//           stripeAccountId,
+//         });
+
+//         console.log("📬 Onboarding check response:", checkRes.data);
+
+//         const { stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data;
+
+//         if (checkRes.data?.needsOnboarding) {
+//           const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
+
+//           if (!redirectUrl || typeof redirectUrl !== "string") {
+//             console.warn("⚠️ Invalid redirect URL:", redirectUrl);
+//             Alert.alert("Error", "Onboarding link is invalid or missing.");
+//             return;
+//           }
+
+//           console.log("🔗 Redirecting to:", redirectUrl);
+//           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+
+//           try {
+//             await Linking.openURL(redirectUrl);
+//           } catch (linkErr) {
+//             console.error("❌ Failed to open link:", linkErr);
+//             Alert.alert("Error", "Could not open onboarding link.");
+//           }
+//           return;
+//         }
+//       } catch (stripeCheckErr) {
+//         console.error("❌ Failed onboarding check:", stripeCheckErr.response?.data || stripeCheckErr);
+//         Alert.alert("Error", "Unable to check onboarding. Please try again later.");
+//         return;
+//       }
+//     }
+
+//     const target = roleToScreen(role);
+//     // const action = { index: 0, routes: [{ name: target }] };
+//     const action = {
+//       index: 0,
+//       routes: [{ name: "PaymentScreen", params: { jobId: "placeholder-id" } }],
+//     };
+    
+//     if (navigationRef?.isReady?.()) {
+//       // 🧭 Prefer navigationRef if initialized
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       // 🧭 Fallback to direct navigation reset
+//       navigation.reset(action);
+//     } else {
+//       console.warn("⚠️ Navigation not ready: fallback route not applied.");
+//     }
+//   } catch (err) {
+//     console.error("❌ Login error:", err.message);
+//     console.log("❌ Full error:", err.response?.data || err);
+//     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+//     Alert.alert("Error", msg);
+//   }
+// };
 
 const onSubmit = async () => {
   try {
@@ -1369,9 +1549,7 @@ const onSubmit = async () => {
     const payload = parseJwt(data.token);
     const role = payload?.role || "customer";
     const stripeAccountId = payload?.stripeAccountId;
-    // 🧠 Helpful log for debugging role recognition after login
     console.log("🎯 Role:", role);
-    // 🧠 Confirms stripeAccountId is correctly embedded in token
     console.log("🏦 Stripe Account ID from token:", stripeAccountId);
     setRole(role);
 
@@ -1379,7 +1557,6 @@ const onSubmit = async () => {
       try {
         console.log("🔍 Calling /check-onboarding with:", stripeAccountId);
 
-        // 🔁 Onboarding check call to backend
         const checkRes = await api.post("/routes/stripe/check-onboarding", {
           stripeAccountId,
         });
@@ -1415,13 +1592,13 @@ const onSubmit = async () => {
       }
     }
 
+    // ✅ Default routing for all roles (excluding direct PaymentScreen navigation)
     const target = roleToScreen(role);
     const action = { index: 0, routes: [{ name: target }] };
+
     if (navigationRef?.isReady?.()) {
-      // 🧭 Prefer navigationRef if initialized
       navigationRef.reset(action);
     } else if (navigation && typeof navigation.reset === "function") {
-      // 🧭 Fallback to direct navigation reset
       navigation.reset(action);
     } else {
       console.warn("⚠️ Navigation not ready: fallback route not applied.");
@@ -1433,7 +1610,6 @@ const onSubmit = async () => {
     Alert.alert("Error", msg);
   }
 };
-
 
 
   // 🔐 LoginScreen with onboarding recheck for service providers

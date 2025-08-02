@@ -3373,6 +3373,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import api from "../api/client";
 import BackButton from "../components/BackButton";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const SERVICES = ["Electrician", "HVAC", "Plumbing", "Roofing", "Handyman"];
 const BILLING = ["profit_sharing", "hybrid"];
@@ -4021,6 +4022,7 @@ export default function RegistrationScreen() {
 
 
   return (
+    <ScreenWrapper>
         <ScrollView
           style={styles.container}
           contentContainerStyle={{ padding: 16, marginBottom: "2rem" }}
@@ -4198,6 +4200,7 @@ export default function RegistrationScreen() {
             </Text>
           </Text>
         </ScrollView>
+        </ScreenWrapper>
       );
     }
     
