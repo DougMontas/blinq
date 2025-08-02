@@ -265,11 +265,22 @@ router.post("/login", async (req, res) => {
     }
 
     // 3. Generate short-lived access token
+    // const token = jwt.sign(
+    //   { id: user._id, role: user.role },
+    //   process.env.JWT_SECRET,
+    //   { expiresIn: "1h" }
+    // );
+
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+        stripeAccountId: user.stripeAccountId, // ✅ add this
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
+    
 
     // 4. Generate long-lived refresh token
     const refreshToken = jwt.sign(
