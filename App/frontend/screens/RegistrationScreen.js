@@ -3404,9 +3404,42 @@ export default function RegistrationScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [optInSms, setOptInSms] = useState(false);
 
+  // useEffect(() => {
+  //   (async () => {
+  //     try {
+  //       const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
+  //       if (locStatus === "granted") {
+  //         const pos = await Location.getCurrentPositionAsync({});
+  //         setLocation([pos.coords.latitude, pos.coords.longitude]);
+  //       } else {
+  //         Alert.alert("Location Required", "Enable location in settings.", [
+  //           {
+  //             text: "Go to Settings",
+  //             onPress: () => {
+  //               if (Platform.OS === "ios") {
+  //                 Linking.openURL("app-settings:");
+  //               } else {
+  //                 IntentLauncher.startActivityAsync(
+  //                   IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+  //                 );
+  //               }
+  //             },
+  //           },
+  //         ]);
+  //       }
+
+  //       await Notifications.requestPermissionsAsync();
+  //       await Permissions.askAsync(Permissions.SMS);
+  //     } catch (err) {
+  //       Alert.alert("Permissions Error", "Unable to check device settings.");
+  //     }
+  //   })();
+  // }, []);
+  
   useEffect(() => {
     (async () => {
       try {
+        // 📍 Location permission
         const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
         if (locStatus === "granted") {
           const pos = await Location.getCurrentPositionAsync({});
@@ -3427,14 +3460,32 @@ export default function RegistrationScreen() {
             },
           ]);
         }
-
-        await Notifications.requestPermissionsAsync();
-        await Permissions.askAsync(Permissions.SMS);
+  
+        // 🔔 Notification permission
+        const { status: notifStatus } = await Notifications.requestPermissionsAsync();
+        if (notifStatus !== "granted") {
+          Alert.alert("Notifications", "Enable notifications for updates.", [
+            {
+              text: "Open Settings",
+              onPress: () => Linking.openSettings(),
+            },
+            { text: "Cancel", style: "cancel" },
+          ]);
+        }
+  
+        // 📱 SMS (optional/logging only on Android)
+        if (Platform.OS === "android") {
+          console.log("ℹ️ Skipping SMS permission — not available in expo-permissions");
+        }
+  
       } catch (err) {
-        Alert.alert("Permissions Error", "Unable to check device settings.");
+        console.warn("⚠️ Device permission check failed:", err.message);
+        Alert.alert("Permissions Error", "Could not check device permissions.");
       }
     })();
   }, []);
+  
+  
 
   const onChange = (field, value) => {
     setFormData((prev) => {
@@ -3450,19 +3501,436 @@ export default function RegistrationScreen() {
     });
   };
 
+  // const onSubmit = async () => {
+  //   const requiredFields = ["name", "email", "password", "address", "phoneNumber", "zipcode"];
+  //   if (formData.role === "serviceProvider") {
+  //     requiredFields.push("dob", "ssnLast4", "billingTier", "serviceType");
+  //   }
+
+  //   for (let field of requiredFields) {
+  //     if (!formData[field] || !formData[field].trim()) {
+  //       Alert.alert("Error", `Please enter your ${field}`);
+  //       return;
+  //     }
+  //   }
+
+  //   setLoading(true);
+  //   try {
+  //     const payload = { ...formData, optInSms };
+  //     if (location) {
+  //       payload.location = {
+  //         type: "Point",
+  //         coordinates: [location[1], location[0]],
+  //       };
+  //     }
+
+  //     if (formData.role === "customer") {
+  //       payload.isActive = true;
+  //       delete payload.serviceType;
+  //       delete payload.billingTier;
+  //     } else {
+  //       payload.isActive = false;
+  //       payload.stripeProductId = BILLING_PRODUCTS[formData.billingTier];
+  //     }
+
+  //     const signupRes = await api.post("/auth/register", payload);
+  //     let token = signupRes.data.token || signupRes.data.jwt;
+  //     const refreshToken = signupRes.data.refreshToken;
+
+  //     if (!token) {
+  //       const loginRes = await api.post("/auth/login", {
+  //         email: formData.email,
+  //         password: formData.password,
+  //       });
+  //       token = loginRes.data.token || loginRes.data.jwt;
+  //       if (loginRes.data.refreshToken) {
+  //         await AsyncStorage.setItem("refreshToken", loginRes.data.refreshToken);
+  //       }
+  //     }
+
+  //     if (!token) throw new Error("No JWT returned.");
+
+  //     await AsyncStorage.setItem("token", token);
+  //     if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
+  //     await AsyncStorage.setItem("userName", signupRes.data.name || formData.name);
+
+  //     if (formData.role === "customer") {
+  //       Alert.alert("Success", "Signed up! Please log in.");
+  //       navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  //     } else {
+  //       const onboardRes = await api.post("/onboard-stripe");
+  //       const { stripeOnboardingUrl, stripeDashboardUrl } = onboardRes.data || {};
+
+  //       if (formData.billingTier === "hybrid") {
+  //         const sheetRes = await api.post("/create-payment-sheet", {
+  //           email: formData.email,
+  //           name: formData.name,
+  //           phoneNumber: formData.phoneNumber,
+  //         });
+
+  //         const { clientSecret, ephemeralKey, customer } = sheetRes.data;
+  //         const { error: initError } = await initPaymentSheet({
+  //           customerId: customer,
+  //           customerEphemeralKeySecret: ephemeralKey,
+  //           paymentIntentClientSecret: clientSecret,
+  //         });
+
+  //         if (initError) {
+  //           Alert.alert("Stripe Error", initError.message);
+  //           return;
+  //         }
+
+  //         const { error: presentError } = await presentPaymentSheet();
+
+  //         if (presentError) {
+  //           Alert.alert("Payment Error", presentError.message);
+  //           return;
+  //         }
+
+  //         const subscribeRes = await api.post("/subscribe", {});
+  //         const stripeUrl =
+  //           subscribeRes.data.stripeOnboardingUrl ||
+  //           subscribeRes.data.stripeDashboardUrl;
+
+  //         if (stripeUrl) {
+  //           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+  //           Linking.openURL(stripeUrl);
+  //           return;
+  //         }
+  //       } else if (formData.billingTier === "profit_sharing") {
+  //         if (stripeOnboardingUrl || stripeDashboardUrl) {
+  //           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+  //           Linking.openURL(stripeOnboardingUrl || stripeDashboardUrl);
+  //           return;
+  //         }
+  //       }
+
+  //       navigation.reset({ index: 0, routes: [{ name: "ServiceProviderDashboard" }] });
+  //     }
+  //   } catch (err) {
+  //     Alert.alert("Error", err.response?.data?.msg || "Signup failed");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  
+  // const onSubmit = async () => {
+  //   const requiredFields = ["name", "email", "password", "address", "phoneNumber", "zipcode"];
+  //   if (formData.role === "serviceProvider") {
+  //     requiredFields.push("dob", "ssnLast4", "billingTier", "serviceType");
+  //   }
+  
+  //   for (let field of requiredFields) {
+  //     if (!formData[field] || !formData[field].trim()) {
+  //       Alert.alert("Error", `Please enter your ${field}`);
+  //       return;
+  //     }
+  //   }
+  
+  //   setLoading(true);
+  //   try {
+  //     const payload = { ...formData, optInSms };
+  //     if (location) {
+  //       payload.location = {
+  //         type: "Point",
+  //         coordinates: [location[1], location[0]],
+  //       };
+  //     }
+  
+  //     if (formData.role === "customer") {
+  //       payload.isActive = true;
+  //       delete payload.serviceType;
+  //       delete payload.billingTier;
+  //     } else {
+  //       payload.isActive = false;
+  //       payload.stripeProductId = BILLING_PRODUCTS[formData.billingTier];
+  //     }
+  
+  //     console.log("📤 Registering user with payload:", payload);
+  //     const signupRes = await api.post("/auth/register", payload);
+  
+  //     let token = signupRes.data.token || signupRes.data.jwt;
+  //     const refreshToken = signupRes.data.refreshToken;
+  
+  //     if (!token) {
+  //       console.warn("⚠️ No token returned from register, trying login fallback...");
+  //       const loginRes = await api.post("/auth/login", {
+  //         email: formData.email,
+  //         password: formData.password,
+  //       });
+  //       token = loginRes.data.token || loginRes.data.jwt;
+  //       if (loginRes.data.refreshToken) {
+  //         await AsyncStorage.setItem("refreshToken", loginRes.data.refreshToken);
+  //       }
+  //     }
+  
+  //     if (!token) throw new Error("No JWT returned after registration or login.");
+  
+  //     await AsyncStorage.setItem("token", token);
+  //     if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
+  //     await AsyncStorage.setItem("userName", signupRes.data.name || formData.name);
+  
+  //     if (formData.role === "customer") {
+  //       Alert.alert("Success", "Signed up! Please log in.");
+  //       navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  //     } else {
+  //       console.log("📨 Calling /onboard-stripe...");
+  //       const onboardRes = await api.post("/routes/stripe/onboard-stripe");
+  //       console.log("✅ Onboard response:", onboardRes.data);
+  //       const { stripeOnboardingUrl, stripeDashboardUrl } = onboardRes.data || {};
+  
+  //       if (formData.billingTier === "hybrid") {
+  //         console.log("🧾 Creating Payment Sheet...");
+  //         const sheetRes = await api.post("/billing/create-payment-sheet", {
+  //           email: formData.email,
+  //           name: formData.name,
+  //           phoneNumber: formData.phoneNumber,
+  //         });
+  
+  //         console.log("💳 Payment Sheet initialized:", sheetRes.data);
+  
+  //         const { clientSecret, ephemeralKey, customer } = sheetRes.data;
+  //         const { error: initError } = await initPaymentSheet({
+  //           customerId: customer,
+  //           customerEphemeralKeySecret: ephemeralKey,
+  //           paymentIntentClientSecret: clientSecret,
+  //           merchantDisplayName: "BlinqFix",
+  //         });
+  
+  //         if (initError) {
+  //           console.warn("❌ PaymentSheet init error:", initError.message);
+  //           Alert.alert("Stripe Error", initError.message);
+  //           return;
+  //         }
+  
+  //         const { error: presentError } = await presentPaymentSheet();
+  //         if (presentError) {
+  //           console.warn("❌ PaymentSheet present error:", presentError.message);
+  //           Alert.alert("Payment Error", presentError.message);
+  //           return;
+  //         }
+  
+  //         console.log("📬 Subscribing user...");
+  //         const subscribeRes = await api.post("/billing/subscribe", {
+  //           paymentMethodId: paymentIntent.payment_method,
+  //         });
+  //         console.log("✅ Subscribe response:", subscribeRes.data);
+  
+  //         const stripeUrl = subscribeRes.data.stripeOnboardingUrl || subscribeRes.data.stripeDashboardUrl;
+  //         if (stripeUrl) {
+  //           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+  //           Linking.openURL(stripeUrl);
+  //           return;
+  //         }
+  //       } else if (formData.billingTier === "profit_sharing") {
+  //         if (stripeOnboardingUrl || stripeDashboardUrl) {
+  //           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+  //           Linking.openURL(stripeOnboardingUrl || stripeDashboardUrl);
+  //           return;
+  //         }
+  //       }
+  
+  //       navigation.reset({ index: 0, routes: [{ name: "ServiceProviderDashboard" }] });
+  //     }
+  //   } catch (err) {
+  //     console.error("❌ Registration flow failed:", err.response?.data || err.message || err);
+  //     Alert.alert("Error", err.response?.data?.msg || "Signup failed.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  
+  // const onSubmit = async () => {
+  //   const requiredFields = ["name", "email", "password", "address", "phoneNumber", "zipcode"];
+  //   if (formData.role === "serviceProvider") {
+  //     requiredFields.push("dob", "ssnLast4", "billingTier", "serviceType");
+  //   }
+  
+  //   for (let field of requiredFields) {
+  //     if (!formData[field] || !formData[field].trim()) {
+  //       Alert.alert("Error", `Please enter your ${field}`);
+  //       return;
+  //     }
+  //   }
+  
+  //   setLoading(true);
+  //   try {
+  //     const payload = { ...formData, optInSms };
+  //     if (location) {
+  //       payload.location = {
+  //         type: "Point",
+  //         coordinates: [location[1], location[0]],
+  //       };
+  //     }
+  
+  //     if (formData.role === "customer") {
+  //       payload.isActive = true;
+  //       delete payload.serviceType;
+  //       delete payload.billingTier;
+  //     } else {
+  //       payload.isActive = false;
+  //       payload.stripeProductId = BILLING_PRODUCTS[formData.billingTier];
+  //     }
+  
+  //     console.log("📤 Registering user with payload:", payload);
+  //     const signupRes = await api.post("/auth/register", payload);
+  
+  //     const { token, refreshToken, stripeOnboardingUrl, stripeDashboardUrl } = signupRes.data || {};
+  //     if (!token) throw new Error("No token returned.");
+  
+  //     await AsyncStorage.setItem("token", token);
+  //     if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
+  //     await AsyncStorage.setItem("userName", formData.name);
+  
+  //     if (formData.role === "customer") {
+  //       Alert.alert("Success", "Signed up! Please log in.");
+  //       navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  //       return;
+  //     }
+  
+  //     // For service providers, open onboarding link
+  //     if (stripeOnboardingUrl || stripeDashboardUrl) {
+  //       Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+  //       Linking.openURL(stripeOnboardingUrl || stripeDashboardUrl);
+  //     }
+  
+  //     navigation.reset({ index: 0, routes: [{ name: "ServiceProviderDashboard" }] });
+  //   } catch (err) {
+  //     console.error("❌ Registration flow failed:", err.response?.data || err.message);
+  //     Alert.alert("Error", err.response?.data?.msg || "Signup failed.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const onSubmit = async () => {
+  //   const requiredFields = ["name", "email", "password", "address", "phoneNumber", "zipcode"];
+  //   if (formData.role === "serviceProvider") {
+  //     requiredFields.push("dob", "ssnLast4", "billingTier", "serviceType");
+  //   }
+  
+  //   for (let field of requiredFields) {
+  //     if (!formData[field] || !formData[field].trim()) {
+  //       Alert.alert("Error", `Please enter your ${field}`);
+  //       return;
+  //     }
+  //   }
+  
+  //   setLoading(true);
+  //   try {
+  //     const payload = { ...formData, optInSms };
+  //     if (location) {
+  //       payload.location = {
+  //         type: "Point",
+  //         coordinates: [location[1], location[0]],
+  //       };
+  //     }
+  
+  //     if (formData.role === "customer") {
+  //       payload.isActive = true;
+  //       delete payload.serviceType;
+  //       delete payload.billingTier;
+  //     } else {
+  //       payload.isActive = false;
+  //       payload.stripeProductId = BILLING_PRODUCTS[formData.billingTier];
+  //     }
+  
+  //     console.log("📤 Registering user with payload:", payload);
+  //     const signupRes = await api.post("/auth/register", payload);
+  
+  //     const { token, refreshToken, stripeOnboardingUrl, stripeDashboardUrl, subscriptionClientSecret } = signupRes.data || {};
+  //     // if (formData.billingTier === "hybrid" && subscriptionClientSecret) {
+  //     //   console.log("💳 Initializing PaymentSheet with:", subscriptionClientSecret);
+      
+  //     //   const { error: initError } = await initPaymentSheet({
+  //     //     paymentIntentClientSecret: subscriptionClientSecret,
+  //     //     merchantDisplayName: "BlinqFix",
+  //     //   });
+      
+  //     //   if (initError) {
+  //     //     console.error("❌ PaymentSheet init error:", initError);
+  //     //     Alert.alert("Stripe Error", initError.message);
+  //     //     return;
+  //     //   }
+      
+  //     //   const { error: presentError } = await presentPaymentSheet();
+  //     //   if (presentError) {
+  //     //     console.error("❌ PaymentSheet present error:", presentError);
+  //     //     Alert.alert("Payment Error", presentError.message);
+  //     //     return;
+  //     //   }
+  //     // }
+      
+  //     if (formData.billingTier === "hybrid") {
+  //       if (!subscriptionClientSecret) {
+  //         Alert.alert("Stripe Error", "Missing client secret for setup intent.");
+  //         return;
+  //       }
+      
+  //       console.log("💳 Initializing PaymentSheet with SetupIntent:", subscriptionClientSecret);
+      
+  //       const { error: initError } = await initPaymentSheet({
+  //         setupIntentClientSecret: subscriptionClientSecret,
+  //         merchantDisplayName: "BlinqFix",
+  //       });
+      
+  //       if (initError) {
+  //         console.error("❌ PaymentSheet init error:", initError);
+  //         Alert.alert("Stripe Error", initError.message);
+  //         return;
+  //       }
+      
+  //       const { error: presentError } = await presentPaymentSheet();
+  //       if (presentError) {
+  //         console.error("❌ PaymentSheet present error:", presentError);
+  //         Alert.alert("Payment Error", presentError.message);
+  //         return;
+  //       }
+      
+  //       console.log("✅ Payment method collected for hybrid subscription");
+  //     }
+      
+
+  //     // const { token, refreshToken, stripeOnboardingUrl, stripeDashboardUrl } = signupRes.data || {};
+  //     if (!token) throw new Error("No token returned.");
+  
+  //     await AsyncStorage.setItem("token", token);
+  //     if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
+  //     await AsyncStorage.setItem("userName", formData.name);
+  
+  //     if (formData.role === "customer") {
+  //       Alert.alert("Success", "Signed up! Please log in.");
+  //       navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  //       return;
+  //     }
+  
+  //     if (stripeOnboardingUrl || stripeDashboardUrl) {
+  //       Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+  //       Linking.openURL(stripeOnboardingUrl || stripeDashboardUrl);
+  //     }
+  
+  //     navigation.reset({ index: 0, routes: [{ name: "ServiceProviderDashboard" }] });
+  //   } catch (err) {
+  //     console.error("❌ Registration flow failed:", err.response?.data || err.message);
+  //     Alert.alert("Error", err.response?.data?.msg || "Signup failed.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  
   const onSubmit = async () => {
     const requiredFields = ["name", "email", "password", "address", "phoneNumber", "zipcode"];
     if (formData.role === "serviceProvider") {
       requiredFields.push("dob", "ssnLast4", "billingTier", "serviceType");
     }
-
+  
     for (let field of requiredFields) {
       if (!formData[field] || !formData[field].trim()) {
         Alert.alert("Error", `Please enter your ${field}`);
         return;
       }
     }
-
+  
     setLoading(true);
     try {
       const payload = { ...formData, optInSms };
@@ -3472,7 +3940,7 @@ export default function RegistrationScreen() {
           coordinates: [location[1], location[0]],
         };
       }
-
+  
       if (formData.role === "customer") {
         payload.isActive = true;
         delete payload.serviceType;
@@ -3481,87 +3949,77 @@ export default function RegistrationScreen() {
         payload.isActive = false;
         payload.stripeProductId = BILLING_PRODUCTS[formData.billingTier];
       }
-
+  
+      console.log("📤 Registering user with payload:", payload);
       const signupRes = await api.post("/auth/register", payload);
-      let token = signupRes.data.token || signupRes.data.jwt;
-      const refreshToken = signupRes.data.refreshToken;
-
-      if (!token) {
-        const loginRes = await api.post("/auth/login", {
-          email: formData.email,
-          password: formData.password,
-        });
-        token = loginRes.data.token || loginRes.data.jwt;
-        if (loginRes.data.refreshToken) {
-          await AsyncStorage.setItem("refreshToken", loginRes.data.refreshToken);
+  
+      const {
+        token,
+        refreshToken,
+        stripeOnboardingUrl,
+        stripeDashboardUrl,
+        subscriptionClientSecret,
+      } = signupRes.data || {};
+  
+      // ✅ Confirm SetupIntent via PaymentSheet for hybrid tier
+      if (formData.role === "serviceProvider" && formData.billingTier === "hybrid") {
+        if (!subscriptionClientSecret) {
+          Alert.alert("Stripe Error", "Missing client secret for setup intent.");
+          return;
         }
+  
+        console.log("💳 Initializing PaymentSheet with SetupIntent:", subscriptionClientSecret);
+  
+        const { error: initError } = await initPaymentSheet({
+          setupIntentClientSecret: subscriptionClientSecret,
+          merchantDisplayName: "BlinqFix",
+        });
+  
+        if (initError) {
+          console.error("❌ PaymentSheet init error:", initError);
+          Alert.alert("Stripe Error", initError.message);
+          return;
+        }
+  
+        const { error: presentError } = await presentPaymentSheet();
+        if (presentError) {
+          console.error("❌ PaymentSheet present error:", presentError);
+          Alert.alert("Payment Error", presentError.message);
+          return;
+        }
+  
+        console.log("✅ Payment method setup complete");
       }
-
-      if (!token) throw new Error("No JWT returned.");
-
+  
+      if (!token) throw new Error("No token returned.");
       await AsyncStorage.setItem("token", token);
       if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
-      await AsyncStorage.setItem("userName", signupRes.data.name || formData.name);
-
+      await AsyncStorage.setItem("userName", formData.name);
+  
       if (formData.role === "customer") {
         Alert.alert("Success", "Signed up! Please log in.");
         navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-      } else {
-        const onboardRes = await api.post("/onboard-stripe");
-        const { stripeOnboardingUrl, stripeDashboardUrl } = onboardRes.data || {};
-
-        if (formData.billingTier === "hybrid") {
-          const sheetRes = await api.post("/create-payment-sheet", {
-            email: formData.email,
-            name: formData.name,
-            phoneNumber: formData.phoneNumber,
-          });
-
-          const { clientSecret, ephemeralKey, customer } = sheetRes.data;
-          const { error: initError } = await initPaymentSheet({
-            customerId: customer,
-            customerEphemeralKeySecret: ephemeralKey,
-            paymentIntentClientSecret: clientSecret,
-          });
-
-          if (initError) {
-            Alert.alert("Stripe Error", initError.message);
-            return;
-          }
-
-          const { error: presentError } = await presentPaymentSheet();
-
-          if (presentError) {
-            Alert.alert("Payment Error", presentError.message);
-            return;
-          }
-
-          const subscribeRes = await api.post("/subscribe", {});
-          const stripeUrl =
-            subscribeRes.data.stripeOnboardingUrl ||
-            subscribeRes.data.stripeDashboardUrl;
-
-          if (stripeUrl) {
-            Alert.alert("Redirecting", "Complete onboarding with Stripe.");
-            Linking.openURL(stripeUrl);
-            return;
-          }
-        } else if (formData.billingTier === "profit_sharing") {
-          if (stripeOnboardingUrl || stripeDashboardUrl) {
-            Alert.alert("Redirecting", "Complete onboarding with Stripe.");
-            Linking.openURL(stripeOnboardingUrl || stripeDashboardUrl);
-            return;
-          }
-        }
-
-        navigation.reset({ index: 0, routes: [{ name: "ServiceProviderDashboard" }] });
+        return;
       }
+  
+      if (stripeOnboardingUrl || stripeDashboardUrl) {
+        Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+        Linking.openURL(stripeOnboardingUrl || stripeDashboardUrl);
+      }
+  
+      navigation.reset({ index: 0, routes: [{ name: "ServiceProviderDashboard" }] });
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.msg || "Signup failed");
+      console.error("❌ Registration flow failed:", err.response?.data || err.message);
+      Alert.alert("Error", err.response?.data?.msg || "Signup failed.");
     } finally {
       setLoading(false);
     }
   };
+  
+ 
+  
+
+
   return (
         <ScrollView
           style={styles.container}

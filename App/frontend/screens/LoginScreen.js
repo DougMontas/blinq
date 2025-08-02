@@ -1038,348 +1038,405 @@ export default function LoginScreen() {
   }, []);
 
   const onChange = (field, value) => setForm((f) => ({ ...f, [field]: value }));
-
-  const onSubmit = async () => {
-    try {
-      console.log("➡️ Attempting login for:", form.email);
-      console.log("📡 Full Login URL:", api.defaults.baseURL + "/auth/login");
+//latest
+  // const onSubmit = async () => {
+  //   try {
+  //     console.log("➡️ Attempting login for:", form.email);
+  //     console.log("📡 Full Login URL:", api.defaults.baseURL + "/auth/login");
   
-      const { data } = await api.post("/auth/login", form, {
-        headers: { "Content-Type": "application/json" },
-      });
+  //     const { data } = await api.post("/auth/login", form, {
+  //       headers: { "Content-Type": "application/json" },
+  //     });
   
-      console.log("✅ Login response:", data);
+  //     console.log("✅ Login response:", data);
 
-      if (!data?.token) throw new Error("Token missing from response");
-      await AsyncStorage.setItem("token", data.token);
-      if (data.refreshToken) {
-        await AsyncStorage.setItem("refreshToken", data.refreshToken);
-      }
-      const payload = parseJwt(data.token);
-      const role = payload.role || "customer";
-      setRole(role);
-      const target = roleToScreen(role);
-      const action = { index: 0, routes: [{ name: target }] };
-      if (navigationRef.isReady()) {
-        navigationRef.reset(action);
-      } else {
-        navigation.reset(action);
-      }
-    } catch (err) {
-      console.error("❌ Login error:", err.message);
-      console.log("❌ Full error:", err.response?.data || err);
-      const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
-      Alert.alert("Error", msg);
+  //     if (!data?.token) throw new Error("Token missing from response");
+  //     await AsyncStorage.setItem("token", data.token);
+  //     if (data.refreshToken) {
+  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+  //     }
+  //     const payload = parseJwt(data.token);
+  //     const role = payload.role || "customer";
+  //     setRole(role);
+  //     const target = roleToScreen(role);
+  //     const action = { index: 0, routes: [{ name: target }] };
+  //     if (navigationRef.isReady()) {
+  //       navigationRef.reset(action);
+  //     } else {
+  //       navigation.reset(action);
+  //     }
+  //   } catch (err) {
+  //     console.error("❌ Login error:", err.message);
+  //     console.log("❌ Full error:", err.response?.data || err);
+  //     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+  //     Alert.alert("Error", msg);
+  //   }
+  // };
+
+//   const onSubmit = async () => {
+//   try {
+//     console.log("➡️ Attempting login for:", form.email);
+
+//     const { data } = await api.post("/auth/login", form, {
+//       headers: { "Content-Type": "application/json" },
+//     });
+
+//     if (!data?.token) throw new Error("Token missing from response");
+
+//     await AsyncStorage.setItem("token", data.token);
+//     if (data.refreshToken) {
+//       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//     }
+
+//     const payload = parseJwt(data.token);
+//     const role = payload?.role || "customer";
+//     setRole(role);
+
+//     if (role === "serviceProvider") {
+//       const stripeAccountId = payload?.stripeAccountId;
+//       if (stripeAccountId) {
+//         try {
+//           console.log("🔍 Checking onboarding for account:", stripeAccountId);
+
+//           const checkRes = await api.post("/check-onboarding", {
+//             stripeAccountId,
+//           });
+
+//           console.log("📬 Onboarding check response:", checkRes.data);
+
+//           if (checkRes.data?.needsOnboarding && checkRes.data?.stripeOnboardingUrl) {
+//             console.log("🔗 Redirecting to Stripe onboarding...");
+
+//             const url = checkRes.data.stripeOnboardingUrl;
+//             if (url && typeof url === "string") {
+//               await Linking.openURL(url);
+//               return;
+//             } else {
+//               Alert.alert("Missing URL", "Stripe onboarding link is invalid.");
+//             }
+//           }
+//         } catch (stripeCheckErr) {
+//           console.error("❌ Failed onboarding check:", stripeCheckErr);
+//           Alert.alert("Error", "Unable to check onboarding. Please try again later.");
+//           return;
+//         }
+//       }
+//     }
+
+//     const target = roleToScreen(role);
+//     const action = { index: 0, routes: [{ name: target }] };
+//     if (navigationRef.isReady()) {
+//       navigationRef.reset(action);
+//     } else {
+//       navigation.reset(action);
+//     }
+//   } catch (err) {
+//     console.error("❌ Login error:", err.message);
+//     console.log("❌ Full error:", err.response?.data || err);
+//     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+//     Alert.alert("Error", msg);
+//   }
+// };
+
+// const onSubmit = async () => {
+//   try {
+//     console.log("➡️ Attempting login for:", form.email);
+
+//     const { data } = await api.post("/auth/login", form, {
+//       headers: { "Content-Type": "application/json" },
+//     });
+
+//     if (!data?.token) throw new Error("Token missing from response");
+
+//     await AsyncStorage.setItem("token", data.token);
+//     if (data.refreshToken) {
+//       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//     }
+
+//     const payload = parseJwt(data.token);
+//     const role = payload?.role || "customer";
+//     setRole(role);
+
+//     if (role === "serviceProvider") {
+//       const stripeAccountId = payload?.stripeAccountId;
+//       if (stripeAccountId) {
+//         try {
+//           console.log("🔍 Checking onboarding for account:", stripeAccountId);
+
+//           const checkRes = await api.post("/check-onboarding", {
+//             stripeAccountId,
+//           });
+
+//           console.log("📬 Onboarding check response:", checkRes.data);
+
+//           const { stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data;
+
+//           if (checkRes.data?.needsOnboarding && (stripeOnboardingUrl || stripeDashboardUrl)) {
+//             Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+//             console.log("Needs to compete onboarding")
+//             const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
+//             await Linking.openURL(redirectUrl);
+//             return; // ⛔ prevent nav until complete
+//           }
+//         } catch (stripeCheckErr) {
+//           console.error("❌ Failed onboarding check:", stripeCheckErr);
+//           Alert.alert("Error", "Unable to check onboarding. Please try again later.");
+//           return;
+//         }
+//       }
+//     }
+
+//     const target = roleToScreen(role);
+//     const action = { index: 0, routes: [{ name: target }] };
+//     if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.reset(action);
+//     }
+//   } catch (err) {
+//     console.error("❌ Login error:", err.message);
+//     console.log("❌ Full error:", err.response?.data || err);
+//     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+//     Alert.alert("Error", msg);
+//   }
+// };
+
+// const onSubmit = async () => {
+//   try {
+//     console.log("➡️ Attempting login for:", form.email);
+
+//     const { data } = await api.post("/auth/login", form, {
+//       headers: { "Content-Type": "application/json" },
+//     });
+
+//     if (!data?.token) throw new Error("Token missing from response");
+
+//     await AsyncStorage.setItem("token", data.token);
+//     if (data.refreshToken) {
+//       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//     }
+
+//     const payload = parseJwt(data.token);
+//     const role = payload?.role || "customer";
+//     const stripeAccountId = payload?.stripeAccountId;
+//     console.log("🎯 Role:", role);
+//     console.log("🏦 Stripe Account ID from token:", stripeAccountId);
+//     setRole(role);
+
+//     if (role === "serviceProvider" && stripeAccountId) {
+//       try {
+//         console.log("🔍 Calling /check-onboarding with:", stripeAccountId);
+
+//         const checkRes = await api.post("/stripe/check-onboarding", {
+//           stripeAccountId,
+//         });
+
+//         console.log("📬 Onboarding check response:", checkRes.data);
+
+//         const { stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data;
+
+//         if (checkRes.data?.needsOnboarding) {
+//           const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
+
+//           if (!redirectUrl || typeof redirectUrl !== "string") {
+//             console.warn("⚠️ Invalid redirect URL:", redirectUrl);
+//             Alert.alert("Error", "Onboarding link is invalid or missing.");
+//             return;
+//           }
+
+//           console.log("🔗 Redirecting to:", redirectUrl);
+//           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+
+//           try {
+//             await Linking.openURL(redirectUrl);
+//           } catch (linkErr) {
+//             console.error("❌ Failed to open link:", linkErr);
+//             Alert.alert("Error", "Could not open onboarding link.");
+//           }
+//           return;
+//         }
+//       } catch (stripeCheckErr) {
+//         console.error("❌ Failed onboarding check:", stripeCheckErr);
+//         Alert.alert("Error", "Unable to check onboarding. Please try again later.");
+//         return;
+//       }
+//     }
+
+//     const target = roleToScreen(role);
+//     const action = { index: 0, routes: [{ name: target }] };
+//     if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     }
+//   } catch (err) {
+//     console.error("❌ Login error:", err.message);
+//     console.log("❌ Full error:", err.response?.data || err);
+//     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+//     Alert.alert("Error", msg);
+//   }
+// };
+
+// const onSubmit = async () => {
+//   try {
+//     console.log("➡️ Attempting login for:", form.email);
+
+//     const { data } = await api.post("/auth/login", form, {
+//       headers: { "Content-Type": "application/json" },
+//     });
+
+//     if (!data?.token) throw new Error("Token missing from response");
+
+//     await AsyncStorage.setItem("token", data.token);
+//     if (data.refreshToken) {
+//       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//     }
+
+//     const payload = parseJwt(data.token);
+//     const role = payload?.role || "customer";
+//     const stripeAccountId = payload?.stripeAccountId;
+//     console.log("🎯 Role:", role);
+//     console.log("🏦 Stripe Account ID from token:", stripeAccountId);
+//     setRole(role);
+
+//     if (role === "serviceProvider" && stripeAccountId) {
+//       try {
+//         console.log("🔍 Calling /stripe/check-onboarding with:", stripeAccountId);
+
+//         const checkRes = await api.post("/stripe/check-onboarding", {
+//           stripeAccountId,
+//         });
+
+//         console.log("📬 Onboarding check response:", checkRes.data);
+
+//         const { stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data;
+
+//         if (checkRes.data?.needsOnboarding) {
+//           const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
+
+//           if (!redirectUrl || typeof redirectUrl !== "string") {
+//             console.warn("⚠️ Invalid redirect URL:", redirectUrl);
+//             Alert.alert("Error", "Onboarding link is invalid or missing.");
+//             return;
+//           }
+
+//           console.log("🔗 Redirecting to:", redirectUrl);
+//           Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+
+//           try {
+//             await Linking.openURL(redirectUrl);
+//           } catch (linkErr) {
+//             console.error("❌ Failed to open link:", linkErr);
+//             Alert.alert("Error", "Could not open onboarding link.");
+//           }
+//           return;
+//         }
+//       } catch (stripeCheckErr) {
+//         console.error("❌ Failed onboarding check:", stripeCheckErr);
+//         Alert.alert("Error", "Unable to check onboarding. Please try again later.");
+//         return;
+//       }
+//     }
+
+//     const target = roleToScreen(role);
+//     const action = { index: 0, routes: [{ name: target }] };
+//     if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     }
+//   } catch (err) {
+//     console.error("❌ Login error:", err.message);
+//     console.log("❌ Full error:", err.response?.data || err);
+//     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+//     Alert.alert("Error", msg);
+//   }
+// };
+
+// 🔐 LoginScreen with onboarding recheck + Stripe external redirect fallback + debug logs
+
+const onSubmit = async () => {
+  try {
+    console.log("➡️ Attempting login for:", form.email);
+
+    const { data } = await api.post("/auth/login", form, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!data?.token) throw new Error("Token missing from response");
+
+    await AsyncStorage.setItem("token", data.token);
+    if (data.refreshToken) {
+      await AsyncStorage.setItem("refreshToken", data.refreshToken);
     }
-  };
 
-  // const onSubmit = async () => {
-  //   try {
-  //     console.log("\u2B05\uFE0F Attempting login for:", form.email);
-  
-  //     const { data } = await api.post("/auth/login", form, {
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //     });
-  
-  //     console.log("\u2705 Login response:", data);
-  //     console.log("\ud83d\udd10 Raw Token:", data.token);
-  
-  //     if (!data?.token) throw new Error("Token missing from response");
-  
-  //     await AsyncStorage.setItem("token", data.token);
-  //     if (data.refreshToken) {
-  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
-  //     }
-  
-  //     let payload;
-  //     try {
-  //       payload = parseJwt(data.token);
-  //     } catch (parseErr) {
-  //       throw new Error("Invalid token format");
-  //     }
-  
-  //     const role = payload.role || "customer";
-  //     setRole(role);
-  //     const target = roleToScreen(role);
-  //     const action = { index: 0, routes: [{ name: target }] };
-  
-  //     if (navigationRef.isReady()) {
-  //       navigationRef.reset(action);
-  //     } else {
-  //       navigation.reset(action);
-  //     }
-  
-  //   } catch (err) {
-  //     const isNetworkError = err.message === "Network Error";
-  //     if (isNetworkError) {
-  //       console.warn("\ud83d\udd52 Network issue detected. Retrying in 3 seconds...");
-  //       Alert.alert("Waking up server", "Please wait a few seconds...");
-  //       setTimeout(() => onSubmit(), 3000);
-  //       return;
-  //     }
-  
-  //     await AsyncStorage.removeItem("token");
-  //     await AsyncStorage.removeItem("refreshToken");
-  
-  //     console.error("\u274C Login error:", err.message);
-  //     console.log("\u274C Full error:", err.response?.data || err);
-  
-  //     const msg =
-  //       err.response?.data?.msg || err.message || "Login failed – check credentials.";
-  //     Alert.alert("Error", msg);
-  //   }
-  // };
-  // const onSubmit = async () => {
-  //   try {
-  //     console.log("➡️ Attempting login for:", form.email);
-  
-  //     const response = await api.post("/auth/login", form, {
-  //       headers: { "Content-Type": "application/json" }
-  //     });
-  
-  //     console.log("✅ Login API success:", response?.data);
-  
-  //     const { token, refreshToken } = response.data;
-  
-  //     if (!token) {
-  //       console.error("❌ Missing token in response");
-  //       throw new Error("Token missing from response");
-  //     }
-  
-  //     await AsyncStorage.setItem("token", token);
-  //     if (refreshToken) {
-  //       await AsyncStorage.setItem("refreshToken", refreshToken);
-  //     }
-  
-  //     console.log("🔐 Tokens saved. Parsing role...");
-  
-  //     const payload = parseJwt(token);
-  //     const role = payload.role || "customer";
-  //     setRole(role);
-  
-  //     const target = roleToScreen(role);
-  //     const action = { index: 0, routes: [{ name: target }] };
-  
-  //     if (navigationRef.isReady()) {
-  //       navigationRef.reset(action);
-  //     } else {
-  //       navigation.reset(action);
-  //     }
-  
-  //   } catch (err) {
-  //     console.error("❌ Login error:", err.message);
-  //     console.log("❌ Full error:", err.response?.data || err);
-  //     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
-  //     Alert.alert("Error", msg);
-  //   }
-  // };
-  
+    const payload = parseJwt(data.token);
+    const role = payload?.role || "customer";
+    const stripeAccountId = payload?.stripeAccountId;
+    // 🧠 Helpful log for debugging role recognition after login
+    console.log("🎯 Role:", role);
+    // 🧠 Confirms stripeAccountId is correctly embedded in token
+    console.log("🏦 Stripe Account ID from token:", stripeAccountId);
+    setRole(role);
 
-  // const onSubmit = async () => {
-  //   try {
-  //     console.log("➡️ Attempting login for:", form.email);
-  //     const { data } = await api.post("/auth/login", form, {
-  //       headers: { "Content-Type": "application/json" },
-  //     });
-  
-  //     if (!data?.token) throw new Error("Token missing from response");
-  
-  //     // Force wait for storage to complete
-  //     await AsyncStorage.setItem("token", data.token);
-  //     if (data.refreshToken) {
-  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
-  //     }
-  
-  //     console.log("✅ Tokens saved to AsyncStorage");
-  
-  //     const payload = parseJwt(data.token);
-  //     const role = payload.role || "customer";
-  //     setRole(role);
-  
-  //     const target = roleToScreen(role);
-  //     const action = { index: 0, routes: [{ name: target }] };
-  
-  //     if (navigationRef.isReady()) {
-  //       navigationRef.reset(action);
-  //     } else {
-  //       navigation.reset(action);
-  //     }
-  //   } catch (err) {
-  //     console.error("❌ Login error:", err.message);
-  //     console.log("❌ Full error:", err.response?.data || err);
-  //     const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
-  //     Alert.alert("Error", msg);
-  //   }
-  // };
-  
-  // const onSubmit = async () => {
-  //   try {
-  //     console.log("➡️ Attempting login for:", form.email);
-  
-  //     const { data } = await api.post("/auth/login", form, {
-  //       headers: { "Content-Type": "application/json" },
-  //     });
-  
-  //     if (!data?.token) throw new Error("Token missing from response");
-  
-  //     await AsyncStorage.setItem("token", data.token);
-  //     if (data.refreshToken) {
-  //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
-  //     }
-  
-  //     console.log("✅ Tokens saved to AsyncStorage");
-  
-  //     const payload = parseJwt(data.token);
-  //     const role = payload.role || "customer";
-  //     setRole(role);
-  
-  //     const target = roleToScreen(role);
-  //     const action = { index: 0, routes: [{ name: target }] };
-  
-  //     if (navigationRef.isReady()) {
-  //       navigationRef.reset(action);
-  //     } else {
-  //       navigation.reset(action);
-  //     }
-  //   } catch (err) {
-  //     console.error("❌ Login error:", err.message);
-  //     console.log("❌ Full error:", err.response?.data || err);
-  
-  //     if (err.message === "Network Error") {
-  //       Alert.alert("Network Error", "Please check your internet connection or verify the server URL.");
-  //     } else {
-  //       const msg =
-  //         err.response?.data?.msg ||
-  //         err.message ||
-  //         "Login failed – check credentials.";
-  //       Alert.alert("Error", msg);
-  //     }
-  //   }
-  // };
-  
-  // const onSubmit = async () => {
-  //   try {
-  //     console.log("➡️ Attempting login for:", form.email);
-  
-  //     const response = await api.post("/auth/login", form, {
-  //       headers: { "Content-Type": "application/json" },
-  //       timeout: 60000, // 10s timeout to catch slow/stuck requests
-  //     });
-  
-  //     console.log("✅ Login API success:", response?.data);
-  
-  //     const { token, refreshToken } = response.data;
-  
-  //     if (!token) {
-  //       console.error("❌ Missing token in response");
-  //       throw new Error("Token missing from response");
-  //     }
-  
-  //     // Clear old tokens first to avoid race conditions
-  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
-  
-  //     // Save new tokens
-  //     await AsyncStorage.setItem("token", token);
-  //     if (refreshToken) {
-  //       await AsyncStorage.setItem("refreshToken", refreshToken);
-  //     }
-  
-  //     console.log("🔐 Tokens saved. Parsing role...");
-  
-  //     const payload = parseJwt(token);
-  //     const role = payload?.role || "customer";
-  //     setRole(role);
-  
-  //     const target = roleToScreen(role);
-  //     const action = { index: 0, routes: [{ name: target }] };
-  
-  //     if (navigationRef.isReady()) {
-  //       console.log("🔁 Resetting navigation via ref");
-  //       navigationRef.reset(action);
-  //     } else {
-  //       console.log("🔁 Resetting navigation via navigation");
-  //       navigation.reset(action);
-  //     }
-  
-  //   } catch (err) {
-  //     console.error("❌ Login error:", err.message);
-  //     console.log("❌ Full error:", err.response?.data || err);
-  
-  //     // Fallback cleanup and reroute to Login if token fails
-  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
-  //     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-  
-  //     const msg =
-  //       err.response?.data?.msg ||
-  //       (err.message.includes("Network") ? "Network error: Please check your internet or certificate settings." : err.message) ||
-  //       "Login failed – check credentials.";
-  //     Alert.alert("Error", msg);
-  //   }
-  // };
-  
-  // const onSubmit = async () => {
-  //   try {
-  //     console.log("➡️ Attempting login for:", form.email);
-  
-  //     const response = await api.post("/auth/login", form, {
-  //       headers: { "Content-Type": "application/json" },
-  //       timeout: 60000,
-  //     });
-  
-  //     console.log("✅ Login API success:", response?.data);
-  
-  //     const { token, refreshToken } = response.data;
-  
-  //     if (!token) {
-  //       console.error("❌ Missing token in response");
-  //       throw new Error("Token missing from response");
-  //     }
-  
-  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
-  //     await AsyncStorage.setItem("token", token);
-  //     if (refreshToken) {
-  //       await AsyncStorage.setItem("refreshToken", refreshToken);
-  //     }
-  
-  //     console.log("🔐 Tokens saved. Parsing role...");
-  
-  //     const payload = parseJwt(token);
-  //     const role = payload?.role || "customer";
-  //     setRole(role);
-  
-  //     const target = roleToScreen(role);
-  //     const action = { index: 0, routes: [{ name: target }] };
-  
-  //     if (navigationRef.isReady()) {
-  //       console.log("🔁 Resetting navigation via ref");
-  //       navigationRef.reset(action);
-  //     } else {
-  //       console.log("🔁 Resetting navigation via navigation");
-  //       navigation.reset(action);
-  //     }
-  
-  //   } catch (err) {
-  //     console.error("❌ Login error:", err.message);
-  //     console.log("❌ Full error:", err);
-  
-  //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
-  //     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-  
-  //     let msg;
-  //     if (err?.response?.data?.msg) {
-  //       msg = err.response.data.msg;
-  //     } else if (err?.message?.includes("Network")) {
-  //       msg = "Network error: Please check your internet or certificate settings.";
-  //     } else {
-  //       msg = err.message || "Login failed – check credentials.";
-  //     }
-  
-  //     Alert.alert("Error", msg);
-  //   }
-  // };
+    if (role === "serviceProvider" && stripeAccountId) {
+      try {
+        console.log("🔍 Calling /check-onboarding with:", stripeAccountId);
 
+        // 🔁 Onboarding check call to backend
+        const checkRes = await api.post("/routes/stripe/check-onboarding", {
+          stripeAccountId,
+        });
+
+        console.log("📬 Onboarding check response:", checkRes.data);
+
+        const { stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data;
+
+        if (checkRes.data?.needsOnboarding) {
+          const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
+
+          if (!redirectUrl || typeof redirectUrl !== "string") {
+            console.warn("⚠️ Invalid redirect URL:", redirectUrl);
+            Alert.alert("Error", "Onboarding link is invalid or missing.");
+            return;
+          }
+
+          console.log("🔗 Redirecting to:", redirectUrl);
+          Alert.alert("Redirecting", "Complete onboarding with Stripe.");
+
+          try {
+            await Linking.openURL(redirectUrl);
+          } catch (linkErr) {
+            console.error("❌ Failed to open link:", linkErr);
+            Alert.alert("Error", "Could not open onboarding link.");
+          }
+          return;
+        }
+      } catch (stripeCheckErr) {
+        console.error("❌ Failed onboarding check:", stripeCheckErr.response?.data || stripeCheckErr);
+        Alert.alert("Error", "Unable to check onboarding. Please try again later.");
+        return;
+      }
+    }
+
+    const target = roleToScreen(role);
+    const action = { index: 0, routes: [{ name: target }] };
+    if (navigationRef?.isReady?.()) {
+      // 🧭 Prefer navigationRef if initialized
+      navigationRef.reset(action);
+    } else if (navigation && typeof navigation.reset === "function") {
+      // 🧭 Fallback to direct navigation reset
+      navigation.reset(action);
+    } else {
+      console.warn("⚠️ Navigation not ready: fallback route not applied.");
+    }
+  } catch (err) {
+    console.error("❌ Login error:", err.message);
+    console.log("❌ Full error:", err.response?.data || err);
+    const msg = err.response?.data?.msg || err.message || "Login failed – check credentials.";
+    Alert.alert("Error", msg);
+  }
+};
+
+
+
+  // 🔐 LoginScreen with onboarding recheck for service providers
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
