@@ -846,6 +846,7 @@ import serviceMatrix, { getCoveredDescription } from "../utils/serviceMatrix";
 import { Audio } from "expo-av";
 import * as Notifications from "expo-notifications";
 import BackButton from "../components/BackButton";
+import ScreenWrapper from "../components/ScreenWrapper";
 
 const { width } = Dimensions.get("window");
 const LOGO_SIZE = width * 0.55;
@@ -967,6 +968,7 @@ export default function ProviderInvitationScreen() {
   const isTeaser = !clickable;
 
   return (
+    <ScreenWrapper>
     <ScrollView contentContainerStyle={styles.container}>
       <BackButton />
       <View style={styles.containerLogo}>
@@ -1038,6 +1040,7 @@ export default function ProviderInvitationScreen() {
         </View>
       )}
     </ScrollView>
+    </ScreenWrapper>
   );
 }
 
