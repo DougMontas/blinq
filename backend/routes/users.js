@@ -401,7 +401,9 @@ router.put("/location", auth, async (req, res) => {
       type: "Point",
       coordinates: [Number(loc[1]), Number(loc[0])],
     };
-    await user.save();
+    // await user.save();
+    await user.save({ validateBeforeSave: false }); // ✅ prevents validation on incomplete fields
+
     res.json({ msg: "Location updated", location: user.location });
   } catch (err) {
     console.error("PUT /location error:", err);
