@@ -371,7 +371,9 @@ router.put("/profile",
         user.independentContractorAgreement = files.independentContractorAgreement[0].buffer.toString("base64");
       }
 
-      await user.save();
+      // await user.save();
+      await user.save({ validateBeforeSave: false });
+
       res.json({ msg: "Profile updated", user });
     } catch (err) {
       console.error("PUT /profile error:", err);
