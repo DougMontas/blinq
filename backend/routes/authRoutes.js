@@ -196,7 +196,8 @@ router.post("/register", async (req, res) => {
       );
 
       newUser.refreshToken = refreshToken;
-      await newUser.save({ session });
+      // await newUser.save({ session });
+      await newUser.save({ session, validateBeforeSave: false }); // ✅ prevents required field error
 
       await session.commitTransaction();
       session.endSession();
@@ -222,7 +223,8 @@ router.post("/register", async (req, res) => {
       );
 
       newUser.refreshToken = refreshToken;
-      await newUser.save({ session });
+      // await newUser.save({ session });
+      await newUser.save({ session, validateBeforeSave: false }); // ✅ prevents required field error
 
       await session.commitTransaction();
       session.endSession();
@@ -291,7 +293,9 @@ router.post("/login", async (req, res) => {
 
     // 5. Save refresh token to DB
     user.refreshToken = refreshToken;
-    await user.save();
+    // await user.save();
+    await user.save({ validateBeforeSave: false });
+
 
     // 6. Send both tokens back to client
     res.json({ token, refreshToken });
