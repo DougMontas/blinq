@@ -431,51 +431,134 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 
 // routes/stripe.js
 
+//latest
+// router.post("/update-billing", auth, async (req, res) => {
+//   try {
+//     const { billingTier } = req.body;
+
+//     if (!["profit_sharing", "hybrid"].includes(billingTier)) {
+//       return res.status(400).json({ msg: "Invalid billing tier." });
+//     }
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found." });
+
+//     // ⛔ Downgrade: cancel active hybrid subscription if it exists
+//     if (billingTier === "profit_sharing" && user.stripeCustomerId) {
+//       const subs = await stripe.subscriptions.list({
+//         customer: user.stripeCustomerId,
+//         status: "active",
+//         limit: 1,
+//       });
+
+//       if (subs.data.length) {
+//         await stripe.subscriptions.del(subs.data[0].id);
+//         console.log(`📉 Cancelled hybrid subscription for user ${user._id}`);
+//       }
+
+//       user.billingTier = billingTier;
+//       await user.save();
+//       return res.status(200).json({ msg: "Downgraded to profit sharing", billingTier });
+//     }
+
+//     // ✅ Upgrade to hybrid: Create subscription if needed
+//     if (billingTier === "hybrid") {
+//       if (!user.stripeCustomerId) {
+//         const customer = await stripe.customers.create({ email: user.email });
+//         user.stripeCustomerId = customer.id;
+//         await user.save();
+//       }
+
+//       const session = await stripe.checkout.sessions.create({
+//         payment_method_types: ["card"],
+//         mode: "subscription",
+//         customer: user.stripeCustomerId,
+//         line_items: [
+//           {
+//             price: process.env.STRIPE_HYBRID_SUBSCRIPTION_PRICE_ID, // set in your .env
+//             quantity: 1,
+//           },
+//         ],
+//         success_url: `${process.env.BASE_URL}/onboarding-success`,
+//         cancel_url: `${process.env.BASE_URL}/onboarding-cancelled`,
+//       });
+
+//       user.billingTier = billingTier;
+//       await user.save();
+
+//       // ⏩ Return Stripe Checkout URL to frontend
+//       return res.status(200).json({ url: session.url });
+//     }
+
+//     return res.status(400).json({ msg: "No update performed" });
+//   } catch (err) {
+//     console.error("❌ Error updating billing tier:", err);
+//     res.status(500).json({ msg: "Internal server error" });
+//   }
+// });
 
 router.post("/update-billing", auth, async (req, res) => {
+  console.log("📥 POST /update-billing hit");
+
   try {
     const { billingTier } = req.body;
+    console.log("➡️ Billing tier requested:", billingTier);
 
     if (!["profit_sharing", "hybrid"].includes(billingTier)) {
+      console.warn("⚠️ Invalid billing tier received:", billingTier);
       return res.status(400).json({ msg: "Invalid billing tier." });
     }
 
     const user = await Users.findById(req.user.id);
-    if (!user) return res.status(404).json({ msg: "User not found." });
+    if (!user) {
+      console.error("❌ User not found for ID:", req.user.id);
+      return res.status(404).json({ msg: "User not found." });
+    }
 
-    // ⛔ Downgrade: cancel active hybrid subscription if it exists
+    console.log("👤 User found:", user.email, "| Current tier:", user.billingTier);
+
+    // Handle downgrade
     if (billingTier === "profit_sharing" && user.stripeCustomerId) {
+      console.log("🔻 Initiating downgrade to profit_sharing");
+
       const subs = await stripe.subscriptions.list({
         customer: user.stripeCustomerId,
         status: "active",
         limit: 1,
       });
 
+      console.log("📄 Active subscriptions found:", subs.data.length);
+
       if (subs.data.length) {
         await stripe.subscriptions.del(subs.data[0].id);
-        console.log(`📉 Cancelled hybrid subscription for user ${user._id}`);
+        console.log("✅ Subscription cancelled:", subs.data[0].id);
       }
 
       user.billingTier = billingTier;
       await user.save();
+      console.log("💾 User updated to profit_sharing:", user._id);
+
       return res.status(200).json({ msg: "Downgraded to profit sharing", billingTier });
     }
 
-    // ✅ Upgrade to hybrid: Create subscription if needed
+    // Handle upgrade
     if (billingTier === "hybrid") {
+      console.log("🔺 Initiating upgrade to hybrid");
+
       if (!user.stripeCustomerId) {
         const customer = await stripe.customers.create({ email: user.email });
         user.stripeCustomerId = customer.id;
         await user.save();
+        console.log("👤 Created Stripe customer:", customer.id);
       }
 
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
         mode: "subscription",
+        payment_method_types: ["card"],
         customer: user.stripeCustomerId,
         line_items: [
           {
-            price: process.env.STRIPE_HYBRID_SUBSCRIPTION_PRICE_ID, // set in your .env
+            price: process.env.STRIPE_HYBRID_SUBSCRIPTION_PRICE_ID,
             quantity: 1,
           },
         ],
@@ -483,19 +566,23 @@ router.post("/update-billing", auth, async (req, res) => {
         cancel_url: `${process.env.BASE_URL}/onboarding-cancelled`,
       });
 
+      console.log("✅ Created checkout session:", session.id);
+
       user.billingTier = billingTier;
       await user.save();
+      console.log("💾 User billing tier updated to hybrid");
 
-      // ⏩ Return Stripe Checkout URL to frontend
       return res.status(200).json({ url: session.url });
     }
 
+    console.warn("⚠️ No billing logic matched");
     return res.status(400).json({ msg: "No update performed" });
   } catch (err) {
-    console.error("❌ Error updating billing tier:", err);
-    res.status(500).json({ msg: "Internal server error" });
+    console.error("❌ Error in /update-billing:", err);
+    return res.status(500).json({ msg: "Internal server error" });
   }
 });
+
 
 // router.post("/onboard-stripe", auth, async (req, res) => {
 //   try {
