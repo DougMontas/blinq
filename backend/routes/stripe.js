@@ -499,6 +499,7 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
 
 router.get("/ping", (req, res) => {
   console.log("✅ /stripe/ping route is live");
+  res.send("Yep")
   res.json({ msg: "Stripe route is alive" });
 });
 
