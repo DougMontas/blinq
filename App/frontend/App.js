@@ -39,6 +39,9 @@ import MyAccountScreen from "./screens/MyAccountScreen";
 import { saveSession, loadSession, clearSession } from "./utils/sessionManager";
 import MyAccountCustomer from "./screens/MyAccountCustomer";
 import RequestPasswordResetScreen from "./components/RequestPasswordResetScreen";
+import Home from "./screens/Home";
+import HomeCustomer from "./screens/HomeCustomer";
+import HomeServicePro from "./screens/HomeServicePro";
 
 export const navigationRef = createNavigationContainerRef();
 const AuthContext = createContext();
@@ -55,6 +58,7 @@ const linking = {
   config: {
     screens: {
       Login: "login",
+      Home: "home",
       RequestPasswordReset: "request-password-reset",
       ResetPasswordScreen: {
         path: "reset-password/:token",
@@ -94,7 +98,7 @@ export default function App() {
             } else if (decodedRole === "serviceProvider") {
               setInitialRoute("ProviderJobStatus");
             } else {
-              setInitialRoute("Login");
+              setInitialRoute("Home");
             }
           } else {
             if (decodedRole === "customer") {
@@ -102,15 +106,15 @@ export default function App() {
             } else if (decodedRole === "serviceProvider") {
               setInitialRoute("ServiceProviderDashboard");
             } else {
-              setInitialRoute("Login");
+              setInitialRoute("Home");
             }
           }
         } catch {
           await AsyncStorage.removeItem("token");
-          setInitialRoute("Login");
+          setInitialRoute("Home");
         }
       } else {
-        setInitialRoute("Login");
+        setInitialRoute("Home");
       }
     })();
   }, []);
@@ -183,6 +187,9 @@ export default function App() {
             >
               <Stack.Screen name="Loading" component={LoadingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Home" component={Home} />
+              <Stack.Screen name="HomeCustomer" component={HomeCustomer} />
+              <Stack.Screen name="HomeServicePro" component={HomeServicePro} />
 
               <Stack.Screen
                 name="Registration"
