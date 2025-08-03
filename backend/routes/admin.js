@@ -195,51 +195,6 @@ router.put("/configuration", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// returns every job so your dashboard can count statuses
-// router.get("/jobs", auth, async (req, res) => {
-//   console.log("✅ /admin/jobs hit");
-//   try {
-//     const jobs = await Job.find().lean();
-//     res.json({jobs});
-//   } catch (err) {
-//     console.error("GET /admin/jobs error:", err);
-//     res.status(500).json({ msg: "Server error fetching jobs." });
-//   }
-// });
-
-// router.get("/jobs", auth, async (req, res) => {
-//   console.log("✅ [ADMIN JOBS] /admin/jobs endpoint hit");
-
-//   try {
-//     // Diagnostic: log incoming user if available
-//     console.log("🔐 Authenticated User:", req.user?.id || "Unknown");
-
-//     // Diagnostic: log DB connection state
-//     console.log("📡 DB connection readyState:", mongoose.connection.readyState);
-
-//     // const jobs = await Job.find({}).lean();
-//     const jobs = await Job.find({}).sort({ createdAt: -1 }).limit(100).lean();
-
-//     // Diagnostic: log job count
-//     console.log("📦 Jobs fetched:", jobs.length);
-
-//     // Optional: reduce payload size to avoid crash
-//     const safeJobs = jobs.map((job) => ({
-//       _id: job._id,
-//       status: job.status,
-//       serviceType: job.serviceType,
-//       customer: job.customer,
-//       provider: job.serviceProvider,
-//       createdAt: job.createdAt,
-//     }));
-
-//     res.json({ jobs: safeJobs });
-//   } catch (err) {
-//     console.error("❌ GET /admin/jobs error:", err);
-//     res.status(500).json({ msg: "Server error fetching jobs." });
-//   }
-// });
-
 router.get("/jobs", auth, async (req, res) => {
   console.log("✅ /admin/jobs hit");
 
@@ -273,7 +228,8 @@ router.get("/jobs", auth, async (req, res) => {
   }
 });
 
-router.put("/provider/:providerId/active",
+router.put(
+  "/provider/:providerId/active",
   auth,
   checkAdmin,
   async (req, res) => {
@@ -301,53 +257,8 @@ router.put("/provider/:providerId/active",
   }
 );
 
-//old
-// router.put("/provider/:providerId/zipcodes",
-//   auth,
-//   checkAdmin,
-//   async (req, res) => {
-//     const { providerId } = req.params;
-//     const { zipCodes } = req.body; // <-- grab the array your client is sending
-
-//     if (!zipCodes) {
-//       return res.status(400).json({ msg: "`zipCodes` is required" });
-//     }
-//     if (!Array.isArray(zipCodes)) {
-//       return res
-//         .status(400)
-//         .json({ msg: "`zipCodes` must be an array of zip strings" });
-//     }
-
-//     try {
-//       const provider = await Users.findById(providerId);
-//       if (!provider) {
-//         return res.status(404).json({ msg: "Provider not found" });
-//       }
-//       if (provider.role !== "serviceProvider") {
-//         return res.status(400).json({ msg: "User is not a service provider" });
-//       }
-
-//       // 2) Overwrite with the new array
-//       provider.serviceZipcode = "";
-
-//       if (typeof provider.markModified === "function") {
-//         provider.markModified("serviceZipcode");
-//       }
-
-//       await provider.save();
-
-//       return res.json({
-//         msg: "Zip codes updated successfully",
-//         provider,
-//       });
-//     } catch (err) {
-//       console.error("Update provider zipCodes error:", err);
-//       return res.status(500).send("Server error");
-//     }
-//   }
-// );
-
-router.put("/provider/:providerId/zipcodes",
+router.put(
+  "/provider/:providerId/zipcodes",
   auth,
   checkAdmin,
   async (req, res) => {

@@ -122,7 +122,9 @@ router.get("/active-providers", async (req, res) => {
 // backend/routes/users.js
 router.get("/billing-info", auth, async (req, res) => {
   try {
-    const user = await Users.findById(req.user.id).select("billingTier isActive").lean();
+    const user = await Users.findById(req.user.id)
+      .select("billingTier isActive")
+      .lean();
     if (!user) return res.status(404).json({ msg: "User not found" });
     res.json(user);
   } catch (err) {
@@ -130,28 +132,6 @@ router.get("/billing-info", auth, async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
-
-// router.get("/invitation-stats", auth, async (req, res) => {
-//   try {
-//     const providerId = req.user._id || req.user.id;
-
-//     const sentCount = await Job.countDocuments({ invitedProviders: providerId });
-//     const acceptedCount = await Job.countDocuments({ acceptedProvider: providerId });
-
-//     res.json({ sent: sentCount, accepted: acceptedCount });
-//   } catch (err) {
-//     console.error("Error fetching invitation stats:", err);
-//     res.status(500).json({ msg: "Failed to fetch invitation statistics." });
-//   }
-// });
-
-// router.use("/:id", (req, res, next) => {
-//   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(req.params.id);
-//   if (!isValidObjectId) return next("route"); // skip to next matching route (like /invitation-stats)
-//   next(); // allow through to /:id route
-// });
-
-
 
 router.get("/:id([0-9a-fA-F]{24})", auth, async (req, res) => {
   try {
@@ -258,70 +238,8 @@ router.get("/providers/active", async (req, res) => {
   }
 });
 
-// router.put(
-//   "/profile",
-//   auth,
-//   upload.fields([
-//     { name: "w9", maxCount: 1 },
-//     { name: "businessLicense", maxCount: 1 },
-//     { name: "proofOfInsurance", maxCount: 1 },
-//     { name: "independentContractorAgreement", maxCount: 1 },
-//     { name: "profilePicture", maxCount: 1 },
-//   ]),
-//   async (req, res) => {
-//     try {
-//       const user = await Users.findById(req.user.id);
-//       if (!user) return res.status(404).json({ msg: "User not found" });
-
-//       // ✅ Merge text fields (avoid empty overwrites)
-//       for (const [key, value] of Object.entries(req.body)) {
-//         if (value !== undefined && value !== "") {
-//           user[key] = value;
-//         }
-//       }
-
-//       // ✅ Save file uploads
-//       const files = req.files;
-
-//       if (files?.profilePicture?.[0]) {
-//         const { buffer, mimetype } = files.profilePicture[0];
-//         user.profilePicture = `data:${mimetype};base64,${buffer.toString(
-//           "base64"
-//         )}`;
-//       }
-
-//       if (files?.w9?.[0]) {
-//         user.w9 = files.w9[0].buffer.toString("base64");
-//       }
-
-//       if (files?.businessLicense?.[0]) {
-//         user.businessLicense =
-//           files.businessLicense[0].buffer.toString("base64");
-//       }
-
-//       if (files?.proofOfInsurance?.[0]) {
-//         user.proofOfInsurance =
-//           files.proofOfInsurance[0].buffer.toString("base64");
-//       }
-
-//       if (files?.independentContractorAgreement?.[0]) {
-//         user.independentContractorAgreement =
-//           files.independentContractorAgreement[0].buffer.toString("base64");
-//       }
-
-//       await user.save();
-//       res.json({ msg: "Profile updated", user });
-//     } catch (err) {
-//       console.error("PUT /profile error:", err);
-//       if (err instanceof multer.MulterError) {
-//         return res.status(400).json({ msg: `MulterError: ${err.message}` });
-//       }
-//       res.status(500).json({ msg: "Server error updating profile" });
-//     }
-//   }
-// );
-
-router.put("/profile",
+router.put(
+  "/profile",
   auth,
   upload.fields([
     { name: "w9", maxCount: 1 },
@@ -352,7 +270,9 @@ router.put("/profile",
 
       if (files?.profilePicture?.[0]) {
         const { buffer, mimetype } = files.profilePicture[0];
-        user.profilePicture = `data:${mimetype};base64,${buffer.toString("base64")}`;
+        user.profilePicture = `data:${mimetype};base64,${buffer.toString(
+          "base64"
+        )}`;
       }
 
       if (files?.w9?.[0]) {
@@ -360,15 +280,18 @@ router.put("/profile",
       }
 
       if (files?.businessLicense?.[0]) {
-        user.businessLicense = files.businessLicense[0].buffer.toString("base64");
+        user.businessLicense =
+          files.businessLicense[0].buffer.toString("base64");
       }
 
       if (files?.proofOfInsurance?.[0]) {
-        user.proofOfInsurance = files.proofOfInsurance[0].buffer.toString("base64");
+        user.proofOfInsurance =
+          files.proofOfInsurance[0].buffer.toString("base64");
       }
 
       if (files?.independentContractorAgreement?.[0]) {
-        user.independentContractorAgreement = files.independentContractorAgreement[0].buffer.toString("base64");
+        user.independentContractorAgreement =
+          files.independentContractorAgreement[0].buffer.toString("base64");
       }
 
       // await user.save();
@@ -384,7 +307,6 @@ router.put("/profile",
     }
   }
 );
-
 
 /**
  * PUT /api/users/location
@@ -412,99 +334,6 @@ router.put("/location", auth, async (req, res) => {
     res.status(500).json({ msg: "Server error updating location" });
   }
 });
-
-// DELETE /users/:id
-// router.delete("/delete", auth, async (req, res) => {
-//   try {
-//     const user = await Users.findByIdAndUpdate(
-//       req.user._id,
-//       { isDeleted: true, isActive: false },
-//       { new: true }
-//       );
-//       console.log('user>>>:', user),
-//       // await user.save()
-//     // if (!updatedUser) {
-//     //   return res.status(404).json({ msg: "User not found" });
-//     // }
-
-//     res.json({ msg: "Account successfully marked as deleted" });
-//   } catch (err) {
-//     console.error("❌ Delete user error", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// router.delete("/delete", auth, async (req, res) => {
-//   console.log("✅ req.user in delete route:", req.user); // <== debug
-//   try {
-//     if (!req.user) {
-//       return res.status(401).json({ msg: "Unauthorized: User not found in request" });
-//     }
-
-//     const updatedUser = await Users.findByIdAndUpdate(
-//       req.user._id,
-//       { isDeleted: true, isActive: false },
-//       { new: true }
-//     );
-
-//     if (!updatedUser) {
-//       return res.status(404).json({ msg: "User not found" });
-//     }
-//     console.log("updatedUser::::", updatedUser);
-//     res.json({ msg: "Account successfully marked as deleted" });
-//   } catch (err) {
-//     console.error("❌ Delete user error", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-  
-// });
-
-// router.delete("/delete", auth, async (req, res) => {
-//   console.log("✅ req.user in delete route:", req.user);
-
-//   try {
-//     const userId = req.user._id || req.user.id;
-
-//     const updatedUser = await Users.findByIdAndUpdate(
-//       userId,
-//       { isDeleted: true, isActive: false },
-//       { new: true }
-//     );
-
-//     if (!updatedUser) {
-//       return res.status(404).json({ msg: "User not found" });
-//     }
-
-//     res.json({ msg: "Account successfully marked as deleted" });
-//   } catch (err) {
-//     console.error("❌ Delete user error", err);
-//     res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// router.post("/push-token", auth, async (req, res) => {
-//   try {
-//     const user = await Users.findById(req.user.id);
-//     user.expoPushToken = req.body.expoPushToken;
-//     await user.save();
-//     res.json({ msg: "Push token saved." });
-//   } catch (err) {
-//     console.error("Error saving push token:", err);
-//     res.status(500).json({ msg: "Failed to save push token." });
-//   }
-// });
-
-
-// router.post("/save-push-token", auth, async (req, res) => {
-//   try {
-//     req.user.pushToken = req.body.token;
-//     await req.user.save();
-//     res.sendStatus(200);
-//   } catch (err) {
-//     console.error("❌ Saving push token failed:", err);
-//     res.status(500).send("Error saving push token");
-//   }
-// });
 
 router.post("/push-token", auth, async (req, res) => {
   try {
@@ -543,28 +372,6 @@ router.post("/save-session", auth, async (req, res) => {
     res.status(500).json({ msg: "Server error saving session." });
   }
 });
-
-
-// router.get("/invitation-stats", auth, async (req, res) => {
-//   try {
-//     const providerId = req.user._id || req.user.id
-
-//     // Total invitations sent to this provider
-//     const sentCount = await Job.countDocuments({ invitedProviders: providerId });
-
-//     // Invitations that were accepted by this provider
-//     const acceptedCount = await Job.countDocuments({ acceptedProvider: providerId });
-
-//     res.json({
-//       sent: sentCount,
-//       accepted: acceptedCount,
-//     });
-//   } catch (err) {
-//     console.error("Error fetching invitation stats:", err);
-//     res.status(500).json({ msg: "Failed to fetch invitation statistics." });
-//   }
-// });
-
 
 router.delete("/delete", auth, async (req, res) => {
   try {

@@ -14,7 +14,7 @@ import { invitePhaseOne } from "../jobs/invitePhaseOne.js";
 import { invitePhaseTwo } from "../jobs/invitePhaseTwo.js";
 import cron from "node-cron";
 import { chargeTravelFee, issueRefund } from "../utils/refunds.js"; // add these helpers if needed
-import nodemailer from "nodemailer"
+import nodemailer from "nodemailer";
 
 const router = express.Router();
 const storage = multer.memoryStorage();
@@ -156,7 +156,6 @@ router.post("/", auth, async (req, res) => {
       .json({ msg: "Could not create job", error: err.message });
   }
 });
-
 
 /**
  * PUT /api/jobs/:jobId/accept
@@ -430,7 +429,8 @@ router.get("/pending", auth, async (req, res) => {
 
 // ———————— MULTER UPLOAD CONFIG ————————
 
-router.post("/:jobId/upload/arrival",
+router.post(
+  "/:jobId/upload/arrival",
   auth,
   upload.single("image"),
   async (req, res) => {
@@ -458,7 +458,8 @@ router.post("/:jobId/upload/arrival",
 );
 
 // Completion photo
-router.post("/:jobId/upload/completion",
+router.post(
+  "/:jobId/upload/completion",
   auth,
   upload.single("image"),
   async (req, res) => {
@@ -597,43 +598,6 @@ router.post("/payments/payment-sheet", async (req, res) => {
   });
 });
 
-/**
- * PUT /api/jobs/:jobId/finalize
- * Customer confirms the job is done.
- */
-// router.put("/:jobId/finalize", auth, async (req, res) => {
-//   try {
-//     const { jobId } = req.params;
-//     if (!mongoose.Types.ObjectId.isValid(jobId))
-//       return res.status(400).json({ msg: "Invalid job id." });
-
-//     const job = await Job.findById(jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found." });
-
-//     // flag customer done
-//     job.customerCompleted = true;
-
-//     // if provider already marked done, complete the workflow
-//     if (job.providerCompleted) {
-//       job.status = "completed";
-//     }
-
-//     await job.save();
-
-//     // notify the provider if you want:
-//     if (job.acceptedProvider) {
-//       req.io.to(job.acceptedProvider.toString()).emit("jobFinalized", {
-//         jobId: job._id.toString(),
-//       });
-//     }
-
-//     return res.json(job);
-//   } catch (err) {
-//     console.error("PUT /api/jobs/:jobId/finalize error:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
 router.put("/:jobId/finalize", auth, async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -669,8 +633,6 @@ router.put("/:jobId/finalize", auth, async (req, res) => {
     return res.status(500).json({ msg: "Server error" });
   }
 });
-
-
 
 router.put("/:jobId/complete/provider", auth, async (req, res) => {
   const job = await Job.findById(req.params.jobId);
@@ -903,119 +865,6 @@ router.put("/:jobId/cancel", auth, async (req, res) => {
   }
 });
 
-// router.put("/:jobId/cancelled", auth, async (req, res) => {
-//   const { jobId } = req.params;
-//   const { travelFee = 0, cancelledBy = "unknown" } = req.body;
-
-//   try {
-//     const job = await Job.findById(jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found." });
-
-//     // Audit log setup
-//     job.auditLog = job.auditLog || [];
-//     job.auditLog.push({
-//       action: "cancel",
-//       by: cancelledBy,
-//       user: req.user.id,
-//       timestamp: new Date(),
-//     });
-
-//     // Apply cancellation metadata
-//     job.status = `cancelled_by_${cancelledBy}`;
-//     job.paymentStatus = "refunded"; // Or other appropriate enum
-//     job.travelFee = travelFee;
-//     job.cancelledBy = cancelledBy;
-//     job.cancelledAt = new Date();
-
-//     await job.save();
-//     return res.json({ msg: "Job successfully cancelled.", job });
-//   } catch (err) {
-//     console.error("Cancel job error:", err);
-//     return res.status(500).json({ msg: "Server error" });
-//   }
-// });
-
-// router.put("/:jobId/cancelled", async (req, res) => {
-//   const job = await Job.findById(req.params.jobId); // ✅ Correct param
-//   if (!job) return res.status(404).json({ msg: "Job not found" });
-
-//   const { cancelledBy } = req.body;
-
-//   if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
-//     return res.status(400).json({ msg: 'Invalid cancellation source' });
-//   }
-  
-//   job.status = `cancelled-by-${cancelledBy}`;
-
-//   if (cancelledBy === "serviceProvider") {
-//     // Reset accepted provider
-//     job.acceptedProvider = null;
-//     await job.save();
-
-//     // Reinvite logic
-//     invitePhaseOne(job, null, req.io, 1);
-//   } else {
-//     await job.save();
-//   }
-
-//   res.json(job);
-// });
-
-
-
-// router.put("/:jobId/cancelled", async (req, res) => {
-//   const job = await Job.findById(req.params.id);
-//   if (!job) return res.status(404).json({ msg: "Job not found" });
-
-//   const { cancelledBy } = req.body;
-//   job.status = `cancelled-by-${cancelledBy}`;
-
-//   if (cancelledBy === "serviceProvider") {
-//     // Reinvite logic (phase 1)
-//     job.acceptedProvider = null;
-//     await job.save();
-//     invitePhaseOne(job, null, io, 1);
-//   } else {
-//     await job.save();
-//   }
-//   res.json(job);
-// });
-
-// router.put("/:jobId/cancelled", async (req, res) => {
-//   try {
-//     const job = await Job.findById(req.params.jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found" });
-
-//     const { cancelledBy } = req.body;
-
-//     if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
-//       return res.status(400).json({ msg: 'Invalid cancellation source' });
-//     }
-
-//     job.status = `cancelled-by-${cancelledBy}`;
-
-//     if (cancelledBy === "serviceProvider") {
-//       job.acceptedProvider = null;
-//       await job.save();
-
-//       if (req.io) {
-//         invitePhaseOne(job, null, req.io, 1);
-//       } else {
-//         console.warn("⚠️ Socket.io instance (req.io) is missing");
-//       }
-//     } else {
-//       await job.save();
-//     }
-
-//     res.json(job);
-//   } catch (err) {
-//     console.error("❌ Job cancel error:", err);
-//     res.status(500).json({ msg: "Server error during cancellation" });
-//   }
-// });
-
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-
 router.put("/:jobId/cancelled", async (req, res) => {
   try {
     const job = await Job.findById(req.params.jobId);
@@ -1023,8 +872,8 @@ router.put("/:jobId/cancelled", async (req, res) => {
 
     const { cancelledBy, refundEligible } = req.body;
 
-    if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
-      return res.status(400).json({ msg: 'Invalid cancellation source' });
+    if (!["serviceProvider", "customer"].includes(cancelledBy)) {
+      return res.status(400).json({ msg: "Invalid cancellation source" });
     }
 
     // Log cancellation
@@ -1059,7 +908,9 @@ router.put("/:jobId/cancelled", async (req, res) => {
 
     if (job.paymentIntentId) {
       try {
-        const paymentIntent = await stripe.paymentIntents.retrieve(job.paymentIntentId);
+        const paymentIntent = await stripe.paymentIntents.retrieve(
+          job.paymentIntentId
+        );
 
         const fullAmount = paymentIntent.amount; // in cents
         const partialAmount = fullAmount - 12000; // deduct $120 travel fee if refundEligible === false
@@ -1097,278 +948,6 @@ router.put("/:jobId/cancelled", async (req, res) => {
   }
 });
 
-
-//latest
-// router.put("/:jobId/cancelled", async (req, res) => {
-//   try {
-//     const job = await Job.findById(req.params.jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found" });
-
-//     const { cancelledBy } = req.body;
-
-//     if (!['serviceProvider', 'customer'].includes(cancelledBy)) {
-//       return res.status(400).json({ msg: 'Invalid cancellation source' });
-//     }
-
-//     // Log cancellation
-//     job.auditLog.push({
-//       action: "cancel",
-//       by: cancelledBy,
-//       user: req.user?._id, // If available
-//       timestamp: new Date(),
-//     });
-
-//     if (cancelledBy === "serviceProvider") {
-//       job.acceptedProvider = null;
-//       job.status = "invited"; // ✅ Reset status for reinvite
-//       job.invitationPhase = 1;
-//       job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // Optional: new 5 min window
-
-//       await job.save();
-
-//       if (req.io) {
-//         invitePhaseOne(job, null, req.io, 1);
-//       } else {
-//         console.warn("⚠️ Socket.io instance (req.io) is missing");
-//       }
-//     } else {
-//       job.status = "cancelled-by-customer";
-//       await job.save();
-//     }
-
-//     res.json(job);
-//   } catch (err) {
-//     console.error("❌ Job cancel error:", err);
-//     res.status(500).json({ msg: "Server error during cancellation" });
-//   }
-// });
-
-// router.post("/:jobId/dispute", async (req, res) => {
-//   const { jobId, message = "Customer has disputed this job." } = req.body;
-
-//   try {
-//     const transporter = nodemailer.createTransport({
-//       service: "gmail",
-//       auth: {
-//         user: process.env.GODADDY_EMAIL_USER, // e.g. blinqfixmailer@gmail.com
-//         pass: process.env.GODADDY_EMAIL_PASS,
-//       },
-//     });
-
-//     await transporter.sendMail({
-//       from: `"BlinqFix Support" <${process.env.GODADDY_EMAIL_USER}>`,
-//       to: "support@blinqfix.com",
-//       subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
-//       text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
-//     });
-
-//     res.status(200).json({ msg: "Support email sent." });
-//   } catch (err) {
-//     console.error("❌ Failed to send dispute email:", err);
-//     res.status(500).json({ msg: "Failed to send email" });
-//   }
-// });
-
-
-
-// PUT /jobs/:jobId/cancelled
-// router.put("/:jobId/cancelled", auth, async (req, res) => {
-//   try {
-//     const { jobId } = req.params;
-//     const { cancelledBy } = req.body; // Expect 'customer' or 'serviceProvider'
-
-//     const job = await Job.findById(jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found" });
-
-//     job.status = "cancelled";
-//     job.cancelledBy = cancelledBy;
-//     job.updatedAt = new Date();
-
-//     // Optional: stop invitation logic if needed
-//     job.invitationActive = false;
-
-//     await job.save();
-
-//     // Emit update via socket (optional)
-//     const io = req.app.get("io");
-//     if (io) io.to(jobId).emit("jobUpdated", job);
-
-//     return res.json(job);
-//   } catch (err) {
-//     console.error("❌ Error cancelling job:", err);
-//     res.status(500).json({ msg: "Server error cancelling job" });
-//   }
-// });
-
-//nope
-// router.put("/:jobId/cancelled", auth, async (req, res) => {
-//   try {
-//     const { jobId } = req.params;
-//     const { cancelledBy } = req.body; // 'customer' or 'serviceProvider'
-//     const userId = req.user._id;
-
-//     const job = await Job.findById(jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found" });
-
-//     const now = new Date();
-//     const acceptedAt = job.acceptedAt || job.updatedAt || job.createdAt;
-//     const minutesSinceAcceptance = (now - new Date(acceptedAt)) / (1000 * 60);
-
-//     job.status =
-//     cancelledBy === "customer"
-//       ? "cancelled-by-customer"
-//       : "cancelled-by-serviceProvider";
-  
-//     job.cancelledBy = cancelledBy;
-//     job.updatedAt = now;
-//     job.invitationActive = false;
-
-//     await job.save();
-
-//     const io = req.app.get("io");
-//     if (io) io.to(jobId).emit("jobUpdated", job);
-
-//     if (cancelledBy === "customer") {
-//       if (minutesSinceAcceptance <= 5) {
-//         console.log("💰 Customer cancelled within 5 minutes – full refund");
-//         await issueRefund(job.paymentIntentId, "Full refund due to quick cancellation");
-//       } else {
-//         console.log("💰 Customer cancelled after 5 minutes – applying travel fee");
-//         await chargeTravelFee(job);
-//       }
-
-//       return res.json({ msg: "Job cancelled by customer", fee: minutesSinceAcceptance > 5 });
-//     }
-
-//     if (cancelledBy === "serviceProvider") {
-//       console.log("🔁 Reopening job after provider cancellation");
-//       job.status = "invited";
-//       job.cancelledBy = "serviceProvider";
-//       await job.save();
-
-//       if (io) io.to(jobId).emit("jobUpdated", job);
-
-//       invitePhaseOne(job, null, io, 1); // re-trigger invites
-//       return res.json({ msg: "Job reopened and reinvited", status: "invited" });
-//     }
-
-//     return res.json({ msg: "Job cancelled", job });
-
-//   } catch (err) {
-//     console.error("❌ Error cancelling job:", err);
-//     res.status(500).json({ msg: "Server error cancelling job" });
-//   }
-// });
-
-// router.put("/:jobId/cancelled", auth, async (req, res) => {
-//   try {
-//     const { jobId } = req.params;
-//     const { cancelledBy } = req.body; // 'customer' or 'serviceProvider'
-//     const userId = req.user?._id;
-
-//     console.log("🚨 /:jobId/cancelled HIT", { jobId, cancelledBy, userId });
-
-//     if (!mongoose.Types.ObjectId.isValid(jobId)) {
-//       console.warn("❌ Invalid jobId");
-//       return res.status(400).json({ msg: "Invalid job ID format" });
-//     }
-
-//     const job = await Job.findById(jobId);
-//     if (!job) {
-//       console.warn("❌ Job not found");
-//       return res.status(404).json({ msg: "Job not found" });
-//     }
-
-//     const now = new Date();
-//     const acceptedAt = job.acceptedAt || job.updatedAt || job.createdAt;
-//     const minutesSinceAcceptance = (now - new Date(acceptedAt)) / (1000 * 60);
-
-//     console.log("🕒 Minutes since acceptance:", minutesSinceAcceptance);
-
-//     // Set basic cancellation metadata
-//     job.status =
-//       cancelledBy === "customer"
-//         ? "cancelled-by-customer"
-//         : "cancelled-by-serviceProvider";
-
-//     job.cancelledBy = cancelledBy;
-//     job.updatedAt = now;
-//     job.invitationActive = false;
-
-//     await job.save();
-//     console.log("✅ Job cancelled:", job._id, job.status);
-
-//     const io = req.app.get("io");
-//     if (io) io.to(jobId).emit("jobUpdated", job);
-
-//     if (cancelledBy === "customer") {
-//       if (minutesSinceAcceptance <= 5) {
-//         console.log("💰 Customer cancelled within 5 minutes — issuing refund");
-//         await issueRefund(job.paymentIntentId, "Quick cancel within 5 min");
-//       } else {
-//         console.log("💰 Customer cancelled after 5 min — applying travel fee");
-//         await chargeTravelFee(job);
-//       }
-
-//       return res.json({
-//         msg: "Job cancelled by customer",
-//         fee: minutesSinceAcceptance > 5,
-//       });
-//     }
-
-//     if (cancelledBy === "serviceProvider") {
-//       console.log("🔁 Reopening job after provider cancellation");
-
-//       job.status = "invited";
-//       job.cancelledBy = "serviceProvider";
-//       job.invitationPhase = 1;
-//       await job.save();
-
-//       if (io) io.to(jobId).emit("jobUpdated", job);
-
-//       try {
-//         await invitePhaseOne(job, null, io, 1); // Re-trigger invitations
-//         console.log("📣 Re-invitation triggered");
-//       } catch (inviteErr) {
-//         console.error("🔥 invitePhaseOne error:", inviteErr);
-//       }
-
-//       return res.json({ msg: "Job reopened and reinvited", status: "invited" });
-//     }
-
-//     return res.json({ msg: "Job cancelled", job });
-//   } catch (err) {
-//     console.error("❌ Error cancelling job:", err);
-//     return res.status(500).json({ msg: "Server error cancelling job" });
-//   }
-// });
-
-// router.put('/:jobId/status', auth, async (req, res) => {
-//   const { jobId } = req.params;
-//   const { status, inDispute } = req.body;
-
-//   if (!status) return res.status(400).json({ msg: "Missing status." });
-
-//   try {
-//     const job = await Job.findById(jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found." });
-
-//     job.status = status;
-
-//     if (typeof inDispute === "boolean") {
-//       job.inDispute = inDispute;
-//     }
-
-//     await job.save();
-//     req.io.to(job._id.toString()).emit("jobUpdated", job);
-
-//     res.json({ msg: "Status updated.", job });
-//   } catch (err) {
-//     console.error("PUT /:jobId/status error:", err);
-//     res.status(500).json({ msg: "Server error updating job status" });
-//   }
-// });
-
 router.put("/:jobId/status", auth, async (req, res) => {
   const { jobId } = req.params;
   const { status, inDispute, providerCompleted } = req.body;
@@ -1383,7 +962,8 @@ router.put("/:jobId/status", auth, async (req, res) => {
 
     if (status) job.status = status;
     if (inDispute !== undefined) job.inDispute = inDispute;
-    if (typeof providerCompleted === "boolean") job.providerCompleted = providerCompleted;
+    if (typeof providerCompleted === "boolean")
+      job.providerCompleted = providerCompleted;
 
     await job.save();
 
@@ -1401,73 +981,6 @@ router.put("/:jobId/status", auth, async (req, res) => {
     res.status(500).json({ msg: "Server error updating job status." });
   }
 });
-
-
-// router.post("/:jobId/dispute", async (req, res) => {
-//   const { jobId } = req.params;
-//   const { message = "Customer has disputed this job." } = req.body;
-
-//   try {
-//     // Create transporter using SMTP (not 'service') to support any provider
-//     const transporter = nodemailer.createTransport({
-//       host: process.env.EMAIL_SMTP_HOST,         // e.g., "smtp.secureserver.net" for GoDaddy
-//       port: parseInt(process.env.EMAIL_SMTP_PORT), // typically 465 or 587
-//       secure: process.env.EMAIL_SMTP_SECURE === "true", // true for port 465, false for 587
-//       auth: {
-//         user: process.env.GODADDY_EMAIL_USER,
-//         pass: process.env.GODADDY_EMAIL_PASS,
-//       },
-//     });
-
-//     // Send support email
-//     await transporter.sendMail({
-//       from: `"BlinqFix Support" <${process.env.EMAIL_USER}>`,
-//       to: "support@blinqfix.com",
-//       subject: `🚨 Job Dispute Raised – Job ID: ${jobId}`,
-//       text: `A dispute was raised for job ${jobId}.\n\nDetails: ${message}`,
-//     });
-
-//     // Mark the job in dispute
-//     const job = await Job.findByIdAndUpdate(
-//       jobId,
-//       { inDispute: true, status: "disputed" },
-//       { new: true }
-//     );
-
-//     if (!job) return res.status(404).json({ msg: "Job not found." });
-
-//     res.status(200).json({ msg: "Dispute submitted and job flagged." });
-//   } catch (err) {
-//     console.error("❌ Failed to process dispute:", err);
-//     res.status(500).json({ msg: "Failed to process dispute." });
-//   }
-// });
-
-// router.put("/:jobId/status", auth, async (req, res) => {
-//   const { jobId } = req.params;
-//   const { status, inDispute } = req.body;
-
-//   if (!status && inDispute === undefined) {
-//     return res.status(400).json({ msg: "Nothing to update." });
-//   }
-
-//   try {
-//     const job = await Job.findById(jobId);
-//     if (!job) return res.status(404).json({ msg: "Job not found." });
-
-//     if (status) job.status = status;
-//     if (inDispute !== undefined) job.inDispute = inDispute;
-
-//     await job.save();
-//     req.io.to(job._id.toString()).emit("jobUpdated", job); // optional
-
-//     res.json(job);
-//   } catch (err) {
-//     console.error("PUT /jobs/:jobId/status error:", err);
-//     res.status(500).json({ msg: "Server error updating job status." });
-//   }
-// });
-
 
 router.post("/:jobId/dispute", async (req, res) => {
   const { jobId } = req.params;
@@ -1505,46 +1018,6 @@ router.post("/:jobId/dispute", async (req, res) => {
   }
 });
 
-// POST /jobs/:jobId/notify-not-complete
-// router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
-//   try {
-//     const job = await Job.findById(req.params.jobId);
-//     if (!job || !job.acceptedProvider) {
-//       return res.status(404).json({ msg: "Job or provider not found" });
-//     }
-
-//     req.io.to(job.acceptedProvider.toString()).emit("jobNotComplete", {
-//       jobId: job._id.toString(),
-//       msg: "The customer marked the job as not complete.",
-//     });
-
-//     res.json({ msg: "Notification sent" });
-//   } catch (err) {
-//     console.error("notify-not-complete error:", err);
-//     res.status(500).json({ msg: "Failed to notify provider" });
-//   }
-// });
-
-// router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
-//   try {
-//     const job = await Job.findById(req.params.jobId);
-//     if (!job || !job.acceptedProvider) {
-//       return res.status(404).json({ msg: "Job or provider not found" });
-//     }
-
-//     req.io.to(job.acceptedProvider.toString()).emit("jobNotComplete", {
-//       jobId: job._id.toString(),
-//       msg: "The customer marked the job as not complete. Please review and mark complete again if ready.",
-//     });
-
-//     res.json({ msg: "Notification sent to service pro" });
-//   } catch (err) {
-//     console.error("notify-not-complete error:", err);
-//     res.status(500).json({ msg: "Failed to notify provider" });
-//   }
-// });
-
-// ✅ Updated route: store event in job doc
 router.post("/:jobId/notify-not-complete", auth, async (req, res) => {
   try {
     const job = await Job.findById(req.params.jobId);
@@ -1577,7 +1050,12 @@ router.post("/:jobId/log", auth, async (req, res) => {
     const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    console.log("📘 Modal Log Event:", { jobId, event, timestamp, triggeredBy });
+    console.log("📘 Modal Log Event:", {
+      jobId,
+      event,
+      timestamp,
+      triggeredBy,
+    });
 
     // Optional: append to logs array if you want to persist it
     // job.logs = job.logs || [];
@@ -1591,10 +1069,6 @@ router.post("/:jobId/log", auth, async (req, res) => {
   }
 });
 
-
-
-
-
 cron.schedule("0 * * * *", async () => {
   const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
   const oldJobs = await Job.find({
@@ -1604,7 +1078,9 @@ cron.schedule("0 * * * *", async () => {
 
   for (const job of oldJobs) {
     if (!job.location?.coordinates) {
-      console.warn(`Skipping auto-cancel for job ${job._id} — missing location`);
+      console.warn(
+        `Skipping auto-cancel for job ${job._id} — missing location`
+      );
       continue;
     }
 
@@ -1612,7 +1088,6 @@ cron.schedule("0 * * * *", async () => {
     await job.save();
   }
 });
-
 
 router.get("/:jobId([0-9a-fA-F]{24})", auth, async (req, res) => {
   try {

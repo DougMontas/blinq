@@ -2,7 +2,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto"; // for reset tokens
+import crypto from "crypto";
 import Users from "../models/Users.js";
 import sendEmail from "../utils/sendEmail.js";
 import { auth } from "../middlewares/auth.js";
@@ -52,9 +52,12 @@ router.post("/register", async (req, res) => {
 
     email = email.toLowerCase().trim();
     const existingUser = await Users.findOne({ email });
-    if (existingUser) return res.status(400).json({ msg: "User already exists" });
+    if (existingUser)
+      return res.status(400).json({ msg: "User already exists" });
 
-    const zipArray = Array.isArray(zipcode) ? zipcode.map(Number) : [Number(zipcode)];
+    const zipArray = Array.isArray(zipcode)
+      ? zipcode.map(Number)
+      : [Number(zipcode)];
 
     const userData = {
       name,
@@ -159,8 +162,13 @@ router.post("/register", async (req, res) => {
             expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
           });
         } catch (stripeSubErr) {
-          console.error("❌ Stripe subscription creation failed:", stripeSubErr);
-          throw new Error("Stripe subscription creation error: " + stripeSubErr.message);
+          console.error(
+            "❌ Stripe subscription creation failed:",
+            stripeSubErr
+          );
+          throw new Error(
+            "Stripe subscription creation error: " + stripeSubErr.message
+          );
         }
 
         const paymentIntent = subscription.latest_invoice?.payment_intent;
@@ -171,7 +179,10 @@ router.post("/register", async (req, res) => {
         } else if (setupIntent?.client_secret) {
           clientSecret = setupIntent.client_secret;
         } else {
-          console.error("❌ Missing both paymentIntent and setupIntent:", subscription);
+          console.error(
+            "❌ Missing both paymentIntent and setupIntent:",
+            subscription
+          );
           throw new Error("Stripe subscription missing client secret.");
         }
       }
@@ -282,7 +293,6 @@ router.post("/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
-    
 
     // 4. Generate long-lived refresh token
     const refreshToken = jwt.sign(
@@ -296,7 +306,6 @@ router.post("/login", async (req, res) => {
     // await user.save();
     await user.save({ validateBeforeSave: false });
 
-
     // 6. Send both tokens back to client
     res.json({ token, refreshToken });
   } catch (err) {
@@ -304,7 +313,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
-
 
 router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
@@ -352,12 +360,14 @@ router.post("/request-password-reset", async (req, res) => {
 });
 
 router.post("/reset-password/:token", async (req, res) => {
-  const { token } = req.params
+  const { token } = req.params;
   const { password } = req.body;
   console.log("🟡 Received token from frontend:", token);
 
   if (!password || typeof password !== "string" || password.length < 6) {
-    return res.status(400).json({ msg: "Password must be at least 6 characters." });
+    return res
+      .status(400)
+      .json({ msg: "Password must be at least 6 characters." });
   }
 
   try {
@@ -403,11 +413,15 @@ router.post("/change-password", auth, async (req, res) => {
 
   if (!user || !user._id) {
     console.warn("❌ No authenticated user found in request.");
-    return res.status(401).json({ msg: "Unauthorized or invalid user context." });
+    return res
+      .status(401)
+      .json({ msg: "Unauthorized or invalid user context." });
   }
 
   if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ msg: "New password must be at least 6 characters." });
+    return res
+      .status(400)
+      .json({ msg: "New password must be at least 6 characters." });
   }
 
   try {
@@ -420,11 +434,17 @@ router.post("/change-password", auth, async (req, res) => {
     console.log("👤 Existing user email:", existingUser.email);
     console.log("🔐 Existing password hash:", existingUser.password);
 
-    const isMatch = await bcrypt.compare(currentPassword, existingUser.password);
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      existingUser.password
+    );
     console.log("🔎 Password match result:", isMatch);
 
     if (!isMatch) {
-      console.warn("❌ Current password does not match for user:", existingUser._id);
+      console.warn(
+        "❌ Current password does not match for user:",
+        existingUser._id
+      );
       return res.status(401).json({ msg: "Current password is incorrect." });
     }
 

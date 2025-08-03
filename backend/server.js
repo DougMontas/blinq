@@ -22,7 +22,7 @@ import zipMultiplierRoute from "./routes/zipMultiplier.js";
 import providers from "./routes/providers.js";
 import stripe from "./routes/stripe.js";
 import mapsRoutes from "./routes/maps.js";
-import userStatsRoutes from "./routes/userStats.js"
+import userStatsRoutes from "./routes/userStats.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,14 +32,16 @@ await connectDB();
 
 const app = express();
 
-app.use(cors({
-  origin: [
-    "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
-    "https://blinqfix.onrender.com",
-    "blinqfix://"
-  ],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: [
+      "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
+      "https://blinqfix.onrender.com",
+      "blinqfix://",
+    ],
+    credentials: true,
+  })
+);
 
 app.options("*", cors());
 app.use(express.json());
@@ -121,7 +123,7 @@ app.use("/api/jobs", auth, jobRoutes);
 app.use("/api/admin", auth, adminRoutes);
 app.use("/api/billing", auth, billingRoutes);
 app.use("/api/payments", auth, paymentsRoutes);
-app.use("/api/routes/stripe", auth, stripe);
+app.use("/api/stripe", auth, stripe);
 
 // File and Image routes
 app.use("/api/files", auth, filesRoutes);
@@ -131,7 +133,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 // const PORT = 8888;
 // const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`
 const PORT = process.env.PORT || 10000;
-const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`
+const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`;
 
 server.listen(PORT, () => {
   console.log(`✅ Server running on ${PUBLIC_URL}`);

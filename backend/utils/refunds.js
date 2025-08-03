@@ -1,6 +1,9 @@
 import stripe from "./stripeClient.js";
 
-export async function issueRefund(paymentIntentId, reason = "Customer cancelled quickly") {
+export async function issueRefund(
+  paymentIntentId,
+  reason = "Customer cancelled quickly"
+) {
   try {
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntentId,
