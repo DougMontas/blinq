@@ -15,7 +15,7 @@ export default function StarRating({ rating = 0, max = 5 }) {
   }
 
   if (hasHalfStar) {
-    stars.push("⋆"); // Use your preferred half-star character or icon
+    stars.push("⋆");
   }
 
   for (let i = 0; i < emptyStars; i++) {

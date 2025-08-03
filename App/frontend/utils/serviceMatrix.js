@@ -673,9 +673,9 @@ const MATRIX = [
     Question: "Please describe the issue in your own words",
     Option: "Click other below",
     Adjustment: 0,
-    AllowFreeText: true
+    AllowFreeText: true,
   },
- 
+
   // {
   //   Service: "Electrical Panel Issues or Outages",
   //   Question: "What issue are you experiencing?",
@@ -1577,7 +1577,7 @@ export const coveredDescriptions = {
   // "Electrical Panel Issues or Outages":
   //   "Breaker replacement, fuse testing, panel servicing, electrical diagnostics",
   "Select Electrical Issues Below":
-  "Troubleshoot and diagnose power outage issue. Includes minor repairs that can be completed within 1 hour without additional parts. Visual inspection of panel and breakers. \n\n Not included: Major rewiring, Permit-related work, Fixture or device installation.",
+    "Troubleshoot and diagnose power outage issue. Includes minor repairs that can be completed within 1 hour without additional parts. Visual inspection of panel and breakers. \n\n Not included: Major rewiring, Permit-related work, Fixture or device installation.",
   "Water Heater Failure":
     "Diagnostics, standard water heater replacement (40–50 gal), reconnection to water/gas lines",
   "Mold or Water Damage Remediation":
@@ -1588,7 +1588,7 @@ export const coveredDescriptions = {
     "Leak location, pipe sealing/replacement (up to 10 ft), pressure testing, valve checks",
   "Appliance Failures":
     "Basic part replacements (thermostat, igniter, valve), diagnosis, labor",
-  "Cleaning":
+  Cleaning:
     "Dusting, sweeping, vacuuming, mopping, kitchen wipe down, bathroom sanitation, trash removal, surface disinfection, bedroom and living room tidying",
   "Drywall Repair":
     "Patching and repair of damaged drywall, includes drywall material, joint compound, sanding supplies, paint supplies, and all necessary materials for finishing and cleanup.",
@@ -1610,8 +1610,6 @@ const BASE_PRICE = {
 };
 
 const RUSH_FEE = 100; // Global rush fee
-
-// Existing MATRIX, BASE_PRICE, coveredDescriptions defined above...
 
 // Exported functions
 export const getBasePrice = (service) => BASE_PRICE[service] ?? 0;

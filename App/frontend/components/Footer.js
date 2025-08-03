@@ -22,25 +22,6 @@ const LINKS = [
 export default function Footer() {
   const navigation = useNavigation();
 
-  // const handlePress = async (url) => {
-  //   try {
-  //     // If it's an external link (http, https, or mailto)
-  //     if (url.startsWith("http") || url.startsWith("mailto:")) {
-  //       const supported = await Linking.canOpenURL(url);
-  //       if (supported) {
-  //         await Linking.openURL(url);
-  //       } else {
-  //         Alert.alert("Error", "Cannot open the link.");
-  //       }
-  //     } else {
-  //       // It's a route name for internal navigation
-  //       navigation.navigate(url);
-  //     }
-  //   } catch (e) {
-  //     console.error("Error handling link:", url, e);
-  //   }
-  // };
-
   const handlePress = async (url) => {
     try {
       if (url.startsWith("mailto:")) {
@@ -66,7 +47,7 @@ export default function Footer() {
       Alert.alert("Error", "Something went wrong.");
     }
   };
-  
+
   return (
     <View style={styles.footer}>
       {LINKS.map((l) => (

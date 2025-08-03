@@ -18,7 +18,7 @@ import api from "../api/client";
 
 export default function DeleteAccountScreen() {
   const navigation = useNavigation();
-  
+
   const [reason, setReason] = useState("");
   const [selectedOption, setSelectedOption] = useState("");
 
@@ -42,14 +42,24 @@ export default function DeleteAccountScreen() {
               const token = await AsyncStorage.getItem("token");
               await api.delete("/users/delete", {
                 headers: { Authorization: `Bearer ${token}` },
-                data: { reason: `${selectedOption ? selectedOption + ' — ' : ''}${reason}` },
+                data: {
+                  reason: `${
+                    selectedOption ? selectedOption + " — " : ""
+                  }${reason}`,
+                },
               });
               await AsyncStorage.clear();
-              Alert.alert("Account Deleted", "Your account has been successfully deleted.");
+              Alert.alert(
+                "Account Deleted",
+                "Your account has been successfully deleted."
+              );
               navigation.reset({ index: 0, routes: [{ name: "Login" }] });
             } catch (err) {
               // Only alert without logging stack trace
-              Alert.alert("Error", "Could not delete account. Please try again.");
+              Alert.alert(
+                "Error",
+                "Could not delete account. Please try again."
+              );
             }
           },
         },
@@ -59,38 +69,48 @@ export default function DeleteAccountScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-     <View style={styles.container}>
+      <View style={styles.container}>
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-           <Text style={styles.label}>Emergencies are unpredictable and it's always best to have a plan for them.
-           But if you must go just remember, you can download the app again, incase you need us. 
-           Please tell us why are you deleting your account today?</Text>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-          <Text style={styles.label}>Why are you deleting your account?</Text>
+          <Text style={styles.label}>
+            Emergencies are unpredictable and it's always best to have a plan
+            for them. But if you must go just remember, you can download the app
+            again, incase you need us. Please tell us why are you deleting your
+            account today?
+          </Text>
+          <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+            <Text style={styles.label}>Why are you deleting your account?</Text>
 
-          {commonOptions.map((option, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[styles.option, selectedOption === option && styles.optionSelected]}
-              onPress={() => setSelectedOption(option)}
-            >
-              <Text style={styles.optionText}>{option}</Text>
-            </TouchableOpacity>
-          ))}
+            {commonOptions.map((option, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.option,
+                  selectedOption === option && styles.optionSelected,
+                ]}
+                onPress={() => setSelectedOption(option)}
+              >
+                <Text style={styles.optionText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
 
-          <TextInput
-            style={styles.input}
-            placeholder="Add additional comments (optional)"
-            multiline
-            numberOfLines={4}
-            value={reason}
-            onChangeText={setReason}
-          />
+            <TextInput
+              style={styles.input}
+              placeholder="Add additional comments (optional)"
+              multiline
+              numberOfLines={4}
+              value={reason}
+              onChangeText={setReason}
+            />
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={confirmDelete}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>Delete My Account</Text>
+          </TouchableOpacity>
         </ScrollView>
-
-        <TouchableOpacity style={styles.button} onPress={confirmDelete} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>Delete My Account</Text>
-        </TouchableOpacity>
-      </ScrollView>
       </View>
     </SafeAreaView>
   );
@@ -98,7 +118,13 @@ export default function DeleteAccountScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  label: { fontSize: 16, marginBottom: 12, fontWeight: "600", padding: 24, paddingBottom: 0 },
+  label: {
+    fontSize: 16,
+    marginBottom: 12,
+    fontWeight: "600",
+    padding: 24,
+    paddingBottom: 0,
+  },
   option: {
     padding: 14,
     marginHorizontal: 24,

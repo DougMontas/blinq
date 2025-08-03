@@ -19,135 +19,140 @@ export default function RequestPasswordResetScreen() {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
-//   const handleRequestReset = async () => {
-//     if (!email.includes("@") || email.length < 6) {
-//       return Alert.alert("Invalid Email", "Please enter a valid email address.");
-//     }
+  //     if (!email.includes("@") || email.length < 6) {
+  //       return Alert.alert("Invalid Email", "Please enter a valid email address.");
+  //     }
 
-//     try {
-//       setLoading(true);
-//       await api.post("/request-password-reset", { email });
-//       Alert.alert(
-//         "Email Sent",
-//         "Check your email for a link to reset your password."
-//       );
-//     } catch (err) {
-//       console.error("Reset Request Error:", err.response?.data || err.message);
-//       Alert.alert(
-//         "Error",
-//         err.response?.data?.msg || "Could not process request."
-//       );
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  //     try {
+  //       setLoading(true);
+  //       await api.post("/request-password-reset", { email });
+  //       Alert.alert(
+  //         "Email Sent",
+  //         "Check your email for a link to reset your password."
+  //       );
+  //     } catch (err) {
+  //       console.error("Reset Request Error:", err.response?.data || err.message);
+  //       Alert.alert(
+  //         "Error",
+  //         err.response?.data?.msg || "Could not process request."
+  //       );
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-// const handleRequestReset = async () => {
-//     const cleanedEmail = email.trim();
-  
-//     if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
-//       return Alert.alert("Invalid Email", "Please enter a valid email address.");
-//     }
-  
-//     try {
-//       setLoading(true);
-//       await api.post("/authRoutes/request-password-reset", { email: cleanedEmail });
-  
-//       Alert.alert(
-//         "Email Sent",
-//         "Check your email for a link to reset your password."
-//       );
-//     } catch (err) {
-//       console.error("Reset Request Error:", err.response?.data || err.message);
-//       Alert.alert(
-//         "Error",
-//         err.response?.data?.msg || "Could not process request."
-//       );
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  // const handleRequestReset = async () => {
+  //     const cleanedEmail = email.trim();
 
-// const handleRequestReset = async () => {
-//     const cleanedEmail = email.trim().toLowerCase();
-  
-//     if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
-//       return Alert.alert("Invalid Email", "Please enter a valid email address.");
-//     }
-  
-//     console.log("[Request Reset] Starting request for:", cleanedEmail);
-  
-//     try {
-//       setLoading(true);
-      
-//       const response = await api.post("/auth/request-password-reset", {
-//         email: cleanedEmail,
-//       });
-  
-//       console.log("[Request Reset] Response:", response.data);
-  
-//       Alert.alert(
-//         "Email Sent",
-//         "Check your email for a link to reset your password.",
-//         [
-//           {
-//             text: "OK",
-//             onPress: () => {
-//               // ✅ Optional: send user back to Login screen
-//               navigation.replace("ResetPasswordScreen");
-//             },
-//           },
-//         ]
-//       );
-//     } catch (err) {
-//       console.log("[Request Reset] Error full object:", err);
-//       console.log("[Request Reset] Error response:", err.response?.data);
-//       console.log("[Request Reset] Error message:", err.message);
-  
-//       Alert.alert(
-//         "Error",
-//         err.response?.data?.msg || "Could not process request."
-//       );
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-const handleRequestReset = async () => {
-  const cleanedEmail = email.trim().toLowerCase();
+  //     if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
+  //       return Alert.alert("Invalid Email", "Please enter a valid email address.");
+  //     }
 
-  if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
-    return Alert.alert("Invalid Email", "Please enter a valid email address.");
-  }
+  //     try {
+  //       setLoading(true);
+  //       await api.post("/authRoutes/request-password-reset", { email: cleanedEmail });
 
-  try {
-    setLoading(true);
-    const response = await api.post("/auth/request-password-reset", {
-      email: cleanedEmail,
-    });
+  //       Alert.alert(
+  //         "Email Sent",
+  //         "Check your email for a link to reset your password."
+  //       );
+  //     } catch (err) {
+  //       console.error("Reset Request Error:", err.response?.data || err.message);
+  //       Alert.alert(
+  //         "Error",
+  //         err.response?.data?.msg || "Could not process request."
+  //       );
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-    console.log("[✅ Email Sent Response]:", response.data);
+  // const handleRequestReset = async () => {
+  //     const cleanedEmail = email.trim().toLowerCase();
 
-    Alert.alert("Email Sent", "Check your inbox to reset your password.", [
-      {
-        text: "OK",
-        onPress: () => navigation.replace("ResetPasswordScreen"),
-      },
-    ]);
-  } catch (err) {
-    console.error("[❌ Request Reset Error]:", err.response?.data || err.message);
-    Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
-  } finally {
-    setLoading(false);
-  }
-};
+  //     if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
+  //       return Alert.alert("Invalid Email", "Please enter a valid email address.");
+  //     }
 
-  
+  //     console.log("[Request Reset] Starting request for:", cleanedEmail);
+
+  //     try {
+  //       setLoading(true);
+
+  //       const response = await api.post("/auth/request-password-reset", {
+  //         email: cleanedEmail,
+  //       });
+
+  //       console.log("[Request Reset] Response:", response.data);
+
+  //       Alert.alert(
+  //         "Email Sent",
+  //         "Check your email for a link to reset your password.",
+  //         [
+  //           {
+  //             text: "OK",
+  //             onPress: () => {
+  //               // ✅ Optional: send user back to Login screen
+  //               navigation.replace("ResetPasswordScreen");
+  //             },
+  //           },
+  //         ]
+  //       );
+  //     } catch (err) {
+  //       console.log("[Request Reset] Error full object:", err);
+  //       console.log("[Request Reset] Error response:", err.response?.data);
+  //       console.log("[Request Reset] Error message:", err.message);
+
+  //       Alert.alert(
+  //         "Error",
+  //         err.response?.data?.msg || "Could not process request."
+  //       );
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  const handleRequestReset = async () => {
+    const cleanedEmail = email.trim().toLowerCase();
+
+    if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
+      return Alert.alert(
+        "Invalid Email",
+        "Please enter a valid email address."
+      );
+    }
+
+    try {
+      setLoading(true);
+      const response = await api.post("/auth/request-password-reset", {
+        email: cleanedEmail,
+      });
+
+      console.log("[✅ Email Sent Response]:", response.data);
+
+      Alert.alert("Email Sent", "Check your inbox to reset your password.", [
+        {
+          text: "OK",
+          onPress: () => navigation.replace("ResetPasswordScreen"),
+        },
+      ]);
+    } catch (err) {
+      console.error(
+        "[❌ Request Reset Error]:",
+        err.response?.data || err.message
+      );
+      Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-        <BackButton />
+      <BackButton />
       <Text style={styles.title}>Forgot Your Password?</Text>
       <Text style={styles.instructions}>
-        Enter the email associated with your account. We'll send you a link to reset your password.
+        Enter the email associated with your account. We'll send you a link to
+        reset your password.
       </Text>
       <TextInput
         style={styles.input}

@@ -83,107 +83,30 @@ export default function AdminDashboard() {
     fetchConfig();
   }, []);
 
-  // useEffect(() => {
-  //   const fetchJobs = async () => {
-  //     try {
-  //       const res = await api.get("/admin/jobs");
-  //       const jobs = Array.isArray(res.data) ? res.data : res.data.jobs || [];
-  //       const counts = jobs.reduce(
-  //         (acc, job) => {
-  //           const s = (job.status || "").toLowerCase();
-  //           if (acc[s] !== undefined) acc[s]++;
-  //           return acc;
-  //         },
-  //         {
-  //           completed: 0,
-  //           pending: 0,
-  //           invited: 0,
-  //           canceled: 0,
-  //           cancelled_by_provider: 0,
-  //         }
-  //       );
-  //       setJobCounts(counts);
-  //     } catch (err) {
-  //       console.error("Error fetching jobs:", err);
-  //     }
-  //   };
-  //   fetchJobs();
-  //   const id = setInterval(fetchJobs, 10000);
-  //   return () => clearInterval(id);
-  // }, []);
-
-  // useEffect(() => {
-  //   const fetchJobs = async () => {
-  //     try {
-  //       const token = await AsyncStorage.getItem("token");
-
-  //       const res = await api.get("/admin/jobs", {
-  //         headers: { Authorization: `Bearer ${token}` },
-  //       });
-
-  //       const jobs = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
-
-  //       const counts = jobs.reduce(
-  //         (acc, job) => {
-  //           let status = (job.status || "").toLowerCase();
-
-  //           // Normalize status keys
-  //           if (status.startsWith("cancelled-by")) {
-  //             status = "cancelled_by_provider"; // Or split by who cancels if needed
-  //           } else if (status === "cancelled-auto") {
-  //             status = "canceled";
-  //           }
-
-  //           if (acc[status] !== undefined) acc[status]++;
-  //           return acc;
-  //         },
-  //         {
-  //           completed: 0,
-  //           pending: 0,
-  //           invited: 0,
-  //           canceled: 0,
-  //           cancelled_by_provider: 0,
-  //         }
-  //       );
-
-  //       setJobCounts(counts);
-  //     } catch (err) {
-  //       console.error(
-  //         "❌ Error fetching jobs:",
-  //         err?.response?.data || err.message
-  //       );
-  //     }
-  //   };
-
-  //   fetchJobs();
-  //   const id = setInterval(fetchJobs, 10000);
-  //   return () => clearInterval(id);
-  // }, []);
-
   useEffect(() => {
     const fetchJobs = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
         // console.log("🔐 Token fetched:", token);
-  
+
         const res = await api.get("/admin/jobs", {
           headers: { Authorization: `Bearer ${token}` },
         });
-  
+
         // console.log("📥 Jobs response:", res.data);
-  
+
         const jobs = Array.isArray(res.data?.jobs) ? res.data.jobs : [];
-  
+
         const counts = jobs.reduce(
           (acc, job) => {
             let status = (job.status || "").toLowerCase();
-  
+
             if (status.startsWith("cancelled-by")) {
               status = "cancelled_by_provider";
             } else if (status === "cancelled-auto") {
               status = "canceled";
             }
-  
+
             if (acc[status] !== undefined) acc[status]++;
             return acc;
           },
@@ -195,20 +118,21 @@ export default function AdminDashboard() {
             cancelled_by_provider: 0,
           }
         );
-  
+
         console.log("📊 Computed job counts:", counts);
         setJobCounts(counts);
       } catch (err) {
-        console.error("❌ Error fetching jobs:", err?.response?.data || err.message);
+        console.error(
+          "❌ Error fetching jobs:",
+          err?.response?.data || err.message
+        );
       }
     };
-  
+
     fetchJobs();
     const id = setInterval(fetchJobs, 10000);
     return () => clearInterval(id);
   }, []);
-  
-
 
   useEffect(() => {
     const fetchProviders = async () => {

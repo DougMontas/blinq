@@ -57,16 +57,16 @@ export default function ServiceProFaqScreen() {
 
   return (
     <ScreenWrapper>
-    <ScrollView style={styles.container}>
-      <BackButton onPress={() => navigation.goBack()} />
-      <Text style={styles.title}>FAQ – For Service Pros</Text>
-      {faqs.map((faq, index) => (
-        <View key={index} style={styles.faqContainer}>
-          <Text style={styles.question}>{faq.question}</Text>
-          <Text style={styles.answer}>{faq.answer}</Text>
-        </View>
-      ))}
-    </ScrollView>
+      <ScrollView style={styles.container}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.title}>FAQ – For Service Pros</Text>
+        {faqs.map((faq, index) => (
+          <View key={index} style={styles.faqContainer}>
+            <Text style={styles.question}>{faq.question}</Text>
+            <Text style={styles.answer}>{faq.answer}</Text>
+          </View>
+        ))}
+      </ScrollView>
     </ScreenWrapper>
   );
 }
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
     textAlign: "center",
-    marginVertical: 120
+    marginVertical: 120,
   },
   faqContainer: {
     marginBottom: 120,
