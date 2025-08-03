@@ -137,7 +137,9 @@ router.post("/update-billing", auth, async (req, res) => {
         cancel_url: `${process.env.BASE_URL}/onboarding-cancelled`,
       });
 
-      await user.save();
+      // await user.save();
+      await user.save({ validateBeforeSave: false }); // ✅ Skip doc validation
+
       return res.status(200).json({ url: session.url });
     } else if (billingTier === "profit_sharing") {
       // For downgrade, also generate new onboarding link if connected account exists
@@ -149,15 +151,21 @@ router.post("/update-billing", auth, async (req, res) => {
           type: "account_onboarding",
         });
 
-        await user.save();
+        // await user.save();
+        await user.save({ validateBeforeSave: false }); // ✅ Skip doc validation
+
         return res.status(200).json({ url: accountLink.url });
       } else {
-        await user.save();
+        // await user.save();
+        await user.save({ validateBeforeSave: false }); // ✅ Skip doc validation
+
         return res.status(200).json({ msg: "Switched to profit_sharing." });
       }
     }
 
-    await user.save();
+    // await user.save();
+    await user.save({ validateBeforeSave: false }); // ✅ Skip doc validation
+
     return res.status(200).json({ msg: `Switched to ${billingTier}` });
   } catch (err) {
     console.error("Billing update error:", err);
