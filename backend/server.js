@@ -123,7 +123,7 @@ app.use("/api/jobs", auth, jobRoutes);
 app.use("/api/admin", auth, adminRoutes);
 app.use("/api/billing", auth, billingRoutes);
 app.use("/api/payments", auth, paymentsRoutes);
-app.use("/api/stripe", auth, stripe);
+app.use("/api/routes/stripe", auth, stripe);
 
 // File and Image routes
 app.use("/api/files", auth, filesRoutes);
