@@ -44,9 +44,11 @@
 
 import nodemailer from "nodemailer";
 
+console.log("📥 sendEmail.js loaded");
+
 // Log environment values (for production debugging)
 console.log("🔐 EMAIL_USER:", process.env.GODADDY_EMAIL_USER);
-console.log("🔐 EMAIL_PASS:", process.env.GODADDY_EMAIL_PASS ? "SET" : "MISSING");
+console.log("🔐 EMAIL_PASS:", process.env.GODADDY_EMAIL_PASS ? "✅ SET" : "❌ MISSING");
 
 // Create transporter
 const transporter = nodemailer.createTransport({
@@ -59,12 +61,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+console.log("🚚 Transporter options:", transporter.options);
+
 // Verify SMTP connection immediately at startup
 transporter.verify((err, success) => {
   if (err) {
-    console.error("❌ SMTP verification failed:", err);
+    console.error("❌ SMTP verification failed:", err.message);
+    console.error("📛 SMTP verification error object:", err);
   } else {
-    console.log("✅ SMTP transporter is ready to send mail");
+    console.log("✅ SMTP transporter is ready to send mail:", success);
   }
 });
 
@@ -76,6 +81,8 @@ transporter.verify((err, success) => {
  * @param {string} options.text - Plain text body
  */
 const sendEmail = async ({ to, subject, text }) => {
+  console.log("📨 sendEmail() called with:", { to, subject });
+
   if (!to || typeof to !== "string") {
     throw new Error("❌ No recipient email address provided (sendEmail.to)");
   }
@@ -93,16 +100,17 @@ const sendEmail = async ({ to, subject, text }) => {
     text,
   };
 
-  console.log("📧 Sending email to:", to);
-  console.log("📦 Mail options:", mailOptions);
+  console.log("📦 mailOptions:", JSON.stringify(mailOptions, null, 2));
 
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Email sent successfully:", info.messageId);
   } catch (err) {
-    console.error("❌ Error sending email:", err);
-    throw err; // rethrow so calling function knows it failed
+    console.error("❌ Error sending email:", err.message);
+    console.error("📛 Full error object:", err);
+    throw err;
   }
 };
 
 export default sendEmail;
+
