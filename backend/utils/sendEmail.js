@@ -80,3 +80,4 @@ try {
   console.error("📛 Full transporter error:", err);
 }
 
+export default sendEmail;
