@@ -343,6 +343,7 @@ router.post("/request-password-reset", async (req, res) => {
 
     console.log("📬 Sending password reset to:", user.email);
     console.log("🔗 Reset link:", resetLink);
+    console.log("🚀 Calling sendEmail() for:", user.email);
 
     await sendEmail({
       to: user.email,
