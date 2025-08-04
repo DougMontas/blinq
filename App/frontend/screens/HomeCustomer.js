@@ -73,13 +73,13 @@ export default function HomeCustomer() {
         <Text style={styles.sectionTitle}>What Customers Are Saying:</Text>
         <View style={styles.testimonialBox}>
           <Text style={styles.testimonial}>
-            "I had a burst pipe at 2 AM and BlinqFix had a pro at my door in 15 minutes. Incredible service!\"
+            "I had a burst pipe at 2 AM and BlinqFix had a pro at my door in 15 minutes. Incredible service!"
           </Text>
           <Text style={styles.testimonialAuthor}>- Maria G., Tampa</Text>
         </View>
         <View style={styles.testimonialBox}>
           <Text style={styles.testimonial}>
-            "The price was fair, the app was easy to use, and the technician was professional.\"
+            "The price was fair, the app was easy to use, and the technician was professional."
           </Text>
           <Text style={styles.testimonialAuthor}>- John M., Miami</Text>
         </View>

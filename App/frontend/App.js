@@ -39,6 +39,7 @@ import MyAccountScreen from "./screens/MyAccountScreen";
 import { saveSession, loadSession, clearSession } from "./utils/sessionManager";
 import MyAccountCustomer from "./screens/MyAccountCustomer";
 import RequestPasswordResetScreen from "./components/RequestPasswordResetScreen";
+import ResetPasswordLost from "./screens/ResetPasswordLost"
 import Home from "./screens/Home";
 import HomeCustomer from "./screens/HomeCustomer";
 import HomeServicePro from "./screens/HomeServicePro";
@@ -59,8 +60,9 @@ const linking = {
     screens: {
       Login: "login",
       Home: "home",
-      RequestPasswordReset: "request-password-reset",
-      ResetPasswordScreen: {
+      RequestPasswordResetScreen: "request-password-reset",
+      // RequestPasswordReset: "request-password-reset",
+      ResetPasswordLost: {
         path: "reset-password/:token",
         parse: {
           token: (token) => token,
@@ -202,6 +204,10 @@ export default function App() {
               <Stack.Screen
                 name="RequestPasswordResetScreen"
                 component={RequestPasswordResetScreen}
+              />
+              <Stack.Screen
+                name="ResetPasswordLost"
+                component={ResetPasswordLost}
               />
               <Stack.Screen
                 name="HandymanCategoryScreen"

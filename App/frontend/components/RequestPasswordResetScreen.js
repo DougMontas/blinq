@@ -132,7 +132,7 @@ export default function RequestPasswordResetScreen() {
       Alert.alert("Email Sent", "Check your inbox to reset your password.", [
         {
           text: "OK",
-          onPress: () => navigation.replace("ResetPasswordScreen"),
+          onPress: () => navigation.navigate("Login"),
         },
       ]);
     } catch (err) {

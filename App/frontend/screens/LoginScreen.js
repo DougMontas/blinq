@@ -285,6 +285,7 @@ export default function LoginScreen() {
                 <Text
                   style={styles.linkText}
                   onPress={() =>
+                    // navigation.navigate("ResetPasswordLost")
                     navigation.navigate("RequestPasswordResetScreen")
                   }
                 >
