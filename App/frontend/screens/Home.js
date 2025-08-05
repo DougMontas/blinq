@@ -248,7 +248,8 @@ export default function Home() {
           resizeMode="contain"
         />
         <Text style={styles.title}>Welcome to BlinqFix</Text>
-        <Text style={styles.subtitle}>Who are you?</Text>
+        <Text style={styles.subtitle}>Instant on-demand emergency repairs</Text>
+        
       </Animatable.View>
 
       <Animatable.View animation="fadeInUp" delay={300} style={styles.options}>
@@ -265,6 +266,7 @@ export default function Home() {
         >
           <Text style={styles.optionTextOutline}>I Am a Service Pro</Text>
         </TouchableOpacity>
+        <Text style={styles.subtitle2}>Residential & Commercial</Text>
       </Animatable.View>
     </View>
   );
@@ -288,15 +290,31 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 26,
+    fontSize: 36,
     fontWeight: "bold",
     textAlign: "center",
     color: "#1976d2",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 22,
     textAlign: "center",
     marginTop: 8,
+    fontWeight: 700,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
+  },
+  subtitle2: {
+    fontSize: 18,
+    textAlign: "center",
+    marginTop: 48,
+    fontWeight: 700,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   options: {
     width: "100%",

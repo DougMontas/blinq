@@ -26,7 +26,7 @@ export default function HomeCustomer() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.title}>Fast Emergency Repairs</Text>
+        <Text style={styles.title}>Instant On-Demand Emergency Repairs</Text>
         <Text style={styles.subtitle}>Book certified pros instantly.</Text>
       </Animatable.View>
 
