@@ -37,8 +37,8 @@ router.post("/register", async (req, res) => {
       zipcode,
       serviceType,
       billingTier,
-      ssnLast4,
-      dob,
+      // ssnLast4,
+      // dob,
       location,
       isActive,
       optInSms,
@@ -80,19 +80,19 @@ router.post("/register", async (req, res) => {
         });
       }
 
-      dobDate = new Date(dob);
-      if (isNaN(dobDate.getTime())) {
-        return res.status(400).json({
-          msg: "Invalid DOB format. Use YYYY-MM-DD.",
-        });
-      }
+      // dobDate = new Date(dob);
+      // if (isNaN(dobDate.getTime())) {
+      //   return res.status(400).json({
+      //     msg: "Invalid DOB format. Use YYYY-MM-DD.",
+      //   });
+      // }
 
       Object.assign(userData, {
         serviceType,
         billingTier,
         serviceZipcode: zipArray,
-        ssnLast4,
-        dob,
+        // ssnLast4,
+        // dob,
         w9: null,
         businessLicense: null,
         proofOfInsurance: null,
@@ -116,12 +116,12 @@ router.post("/register", async (req, res) => {
         individual: {
           first_name: firstName,
           last_name: lastName,
-          ssn_last_4: ssnLast4,
-          dob: {
-            day: dobDate.getUTCDate(),
-            month: dobDate.getUTCMonth() + 1,
-            year: dobDate.getUTCFullYear(),
-          },
+          // ssn_last_4: ssnLast4,
+          // dob: {
+          //   day: dobDate.getUTCDate(),
+          //   month: dobDate.getUTCMonth() + 1,
+          //   year: dobDate.getUTCFullYear(),
+          // },
           phone: phoneNumber,
           email,
         },
