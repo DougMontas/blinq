@@ -169,7 +169,7 @@ router.get("/convenience-fees", auth, async (req, res) => {
 // PUT /admin/jobs/cancel-stale
 router.put("/jobs/cancel-stale", auth, async (req, res) => {
   try {
-    const result = await Jobs.updateMany(
+    const result = await Job.updateMany(
       {
         status: {
           $in: [
