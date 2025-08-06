@@ -228,7 +228,7 @@ router.get("/jobs", auth, async (req, res) => {
   }
 });
 
-router.get("/complete-providers", authAdmin, async (req, res) => {
+router.get("/complete-providers", auth, async (req, res) => {
   try {
     const providers = await Users.find({
       role: "serviceProvider",
@@ -247,7 +247,7 @@ router.get("/complete-providers", authAdmin, async (req, res) => {
 });
 
 // PUT /admin/provider/:id/activate
-router.put("/provider/:id/activate", authAdmin, async (req, res) => {
+router.put("/provider/:id/activate", auth, async (req, res) => {
   try {
     const user = await Users.findByIdAndUpdate(
       req.params.id,
