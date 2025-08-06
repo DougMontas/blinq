@@ -228,8 +228,44 @@ router.get("/jobs", auth, async (req, res) => {
   }
 });
 
-router.put(
-  "/provider/:providerId/active",
+router.get("/admin/complete-providers", authAdmin, async (req, res) => {
+  try {
+    const providers = await Users.find({
+      role: "serviceProvider",
+      isActive: false,
+      w9: { $ne: null },
+      businessLicense: { $ne: null },
+      proofOfInsurance: { $ne: null },
+      independentContractorAgreement: { $ne: null },
+    }).select("_id name");
+
+    res.json({ providers });
+  } catch (err) {
+    console.error("❌ Failed to fetch complete providers:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// PUT /admin/provider/:id/activate
+router.put("/admin/provider/:id/activate", authAdmin, async (req, res) => {
+  try {
+    const user = await Users.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ msg: "User not found." });
+
+    res.json({ msg: "User activated", user });
+  } catch (err) {
+    console.error("❌ Error activating user:", err);
+    res.status(500).json({ msg: "Failed to activate user." });
+  }
+});
+
+
+router.put("/provider/:providerId/active",
   auth,
   checkAdmin,
   async (req, res) => {
