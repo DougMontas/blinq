@@ -72,11 +72,11 @@ router.post("/register", async (req, res) => {
       isActive: role === "serviceProvider" ? false : true,
     };
 
-    let dobDate;
+    // let dobDate;
     if (role === "serviceProvider") {
-      if (!ssnLast4 || !dob) {
+      if (optInSms != true) {
         return res.status(400).json({
-          msg: "SSN last 4 digits and DOB are required for providers.",
+          msg: "For the app to work properly sms notificaiton must be accepted",
         });
       }
 
@@ -97,6 +97,7 @@ router.post("/register", async (req, res) => {
         businessLicense: null,
         proofOfInsurance: null,
         independentContractorAgreement: null,
+        optInSms: null,
       });
     }
 
