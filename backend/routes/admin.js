@@ -125,46 +125,70 @@ router.get("/convenience-fees", auth, async (req, res) => {
   }
 });
 
-router.put("/jobs/cancel-stale", async (req, res) => {
+// router.put("/jobs/cancel-stale", async (req, res) => {
+//   try {
+//     const result = await Job.updateMany(
+//       {
+//         status: {
+//           $nin: [
+//             "pending",
+//             "invited",
+//             "accepted",
+//             "in_progress",
+//             "awaiting-additional-payment",
+//             "paid",
+//             "provider_completed",
+//             "cancelled-by-customer",
+//             "cancelled-by-serviceProvider",
+//             "cancelled-by-customer",
+//             "cancelled-by-serviceProvider",
+//             "cancelled-auto",
+//             "canceled",
+//             "disputed",
+//           ],
+//         },
+//       },
+//       {
+//         $set: {
+//           status: "cancelled",
+//           cancelledAt: new Date(),
+//           cancelledBy: "admin",
+//         },
+//       }
+//     );
+
+//     res.status(200).json({
+//       message: `${result.modifiedCount} stale jobs marked as cancelled.`,
+//     });
+//   } catch (err) {
+//     console.error("Error cancelling stale jobs:", err);
+//     res.status(500).json({ message: "Failed to cancel stale jobs." });
+//   }
+// });
+
+// PUT /admin/jobs/cancel-stale
+router.put("/admin/jobs/cancel-stale", authAdmin, async (req, res) => {
   try {
-    const result = await Job.updateMany(
+    const result = await Jobs.updateMany(
       {
         status: {
-          $nin: [
+          $in: [
             "pending",
-            "invited",
-            "accepted",
-            "in_progress",
-            "awaiting-additional-payment",
-            "paid",
-            "provider_completed",
             "cancelled-by-customer",
             "cancelled-by-serviceProvider",
-            "cancelled-by-customer",
-            "cancelled-by-serviceProvider",
-            "cancelled-auto",
-            "canceled",
-            "disputed",
           ],
         },
       },
-      {
-        $set: {
-          status: "cancelled",
-          cancelledAt: new Date(),
-          cancelledBy: "admin",
-        },
-      }
+      { $set: { status: "cancelled-auto" } }
     );
 
-    res.status(200).json({
-      message: `${result.modifiedCount} stale jobs marked as cancelled.`,
-    });
+    res.json({ message: `Cancelled ${result.modifiedCount} stale jobs.` });
   } catch (err) {
-    console.error("Error cancelling stale jobs:", err);
-    res.status(500).json({ message: "Failed to cancel stale jobs." });
+    console.error("❌ Failed to cancel stale jobs:", err);
+    res.status(500).json({ msg: "Failed to cancel stale jobs" });
   }
 });
+
 
 router.get("/configuration", auth, async (req, res) => {
   try {
