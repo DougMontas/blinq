@@ -40,6 +40,10 @@ const usersSchema = new mongoose.Schema(
       type: String, // base64-encoded string
       default: "",
     },
+    optInSms: {
+      type: Boolean,
+      default: false,
+    },
     trade: [
       {
         type: String,
