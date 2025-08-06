@@ -73,13 +73,12 @@ router.post("/register", async (req, res) => {
     };
 
     // let dobDate;
-    if (role === "serviceProvider") {
-      if (optInSms != true) {
-        return res.status(400).json({
-          msg: "For the app to work properly sms notificaiton must be accepted",
-        });
-      }
-
+    if (typeof optInSms !== "boolean" || optInSms !== true) {
+      return res.status(400).json({
+        msg: "You must accept SMS notifications to register for BlinqFix.",
+      });
+    }
+    
       // dobDate = new Date(dob);
       // if (isNaN(dobDate.getTime())) {
       //   return res.status(400).json({
@@ -87,18 +86,19 @@ router.post("/register", async (req, res) => {
       //   });
       // }
 
-      Object.assign(userData, {
-        serviceType,
-        billingTier,
-        serviceZipcode: zipArray,
-        // ssnLast4,
-        // dob,
-        w9: null,
-        businessLicense: null,
-        proofOfInsurance: null,
-        independentContractorAgreement: null,
-        optInSms: null,
-      });
+      if (role === "serviceProvider") {
+        Object.assign(userData, {
+          serviceType,
+          billingTier,
+          serviceZipcode: zipArray,
+          // ssnLast4,
+          // dob,
+          w9: null,
+          businessLicense: null,
+          proofOfInsurance: null,
+          independentContractorAgreement: null
+          
+        });
     }
 
     const [newUser] = await Users.create([userData], { session });
