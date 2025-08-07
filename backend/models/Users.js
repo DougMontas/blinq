@@ -24,6 +24,16 @@ const usersSchema = new mongoose.Schema(
     pushToken: { type: String },
     expoPushToken: { type: String }, // <-- must be set from frontend after login
 
+    resetToken: {
+      type: String,
+      default: null,
+    },
+    
+    resetTokenExpires: {
+      type: Date,
+      default: null,
+    },
+
     role: {
       type: String,
       enum: ["customer", "serviceProvider", "admin"],
