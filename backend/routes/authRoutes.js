@@ -78,27 +78,26 @@ router.post("/register", async (req, res) => {
         msg: "You must accept SMS notifications to register for BlinqFix.",
       });
     }
-    
-      // dobDate = new Date(dob);
-      // if (isNaN(dobDate.getTime())) {
-      //   return res.status(400).json({
-      //     msg: "Invalid DOB format. Use YYYY-MM-DD.",
-      //   });
-      // }
 
-      if (role === "serviceProvider") {
-        Object.assign(userData, {
-          serviceType,
-          billingTier,
-          serviceZipcode: zipArray,
-          // ssnLast4,
-          // dob,
-          w9: null,
-          businessLicense: null,
-          proofOfInsurance: null,
-          independentContractorAgreement: null
-          
-        });
+    // dobDate = new Date(dob);
+    // if (isNaN(dobDate.getTime())) {
+    //   return res.status(400).json({
+    //     msg: "Invalid DOB format. Use YYYY-MM-DD.",
+    //   });
+    // }
+
+    if (role === "serviceProvider") {
+      Object.assign(userData, {
+        serviceType,
+        billingTier,
+        serviceZipcode: zipArray,
+        // ssnLast4,
+        // dob,
+        w9: null,
+        businessLicense: null,
+        proofOfInsurance: null,
+        independentContractorAgreement: null,
+      });
     }
 
     const [newUser] = await Users.create([userData], { session });
@@ -337,6 +336,11 @@ router.post("/request-password-reset", async (req, res) => {
     user.resetToken = token;
     user.resetTokenExpires = Date.now() + 1000 * 60 * 60; // 1 hour
     await user.save();
+    console.log("📥 Token saved:", user.resetToken);
+    console.log("📆 Expires at:", new Date(user.resetTokenExpires));
+
+    console.log("🔐 Token saved to DB for:", user.email);
+    console.log("📅 Expires at:", new Date(user.resetTokenExpires));
 
     if (!user.email || typeof user.email !== "string") {
       console.error("❌ Invalid user.email:", user.email);
@@ -420,6 +424,8 @@ router.post("/reset-password/:token", async (req, res) => {
 
     console.log("🟡 Decoded token received from frontend:", decodedToken);
     console.log("🔍 Looking for user with resetToken:", decodedToken);
+    console.log("Raw token:", token);
+    console.log("Decoded token:", decodedToken);
 
     const user = await Users.findOne({
       resetToken: decodedToken,
@@ -446,7 +452,6 @@ router.post("/reset-password/:token", async (req, res) => {
     res.status(500).json({ msg: "Failed to reset password." });
   }
 });
-
 
 router.post("/change-password", auth, async (req, res) => {
   console.log("🔐 Incoming /change-password request");
