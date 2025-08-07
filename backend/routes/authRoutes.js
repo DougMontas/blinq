@@ -430,7 +430,8 @@ router.post("/reset-password/:token", async (req, res) => {
     const user = await Users.findOne({
       resetToken: decodedToken,
       resetTokenExpires: { $gt: Date.now() },
-    });
+    }).select("+resetToken");
+    
 
     if (!user) {
       console.warn("❌ Invalid or expired token:", decodedToken);
