@@ -43,8 +43,8 @@ export default function RegistrationScreen() {
     password: "",
     address: "",
     phoneNumber: "",
-    ssnLast4: "",
-    dob: "",
+    // ssnLast4: "",
+    // dob: "",
     zipcode: "",
     role: "customer",
     serviceType: "00000",
@@ -126,7 +126,7 @@ export default function RegistrationScreen() {
   const onSubmit = async () => {
     const requiredFields = ["name", "email", "password", "address", "phoneNumber", "zipcode"];
     if (formData.role === "serviceProvider") {
-      requiredFields.push("dob", "ssnLast4", "billingTier", "serviceType");
+      requiredFields.push("billingTier", "serviceType");
     }
   
     for (let field of requiredFields) {
@@ -227,11 +227,11 @@ export default function RegistrationScreen() {
 
   return (
     <ScreenWrapper>
+      <BackButton />
         <ScrollView
           style={styles.container}
           contentContainerStyle={{ padding: 16, marginBottom: "2rem" }}
         >
-          <BackButton />
           <Text style={styles.title}>Signup</Text>
     
           <Text style={styles.label}>Full Name</Text>

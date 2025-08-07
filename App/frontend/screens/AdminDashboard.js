@@ -29,6 +29,14 @@ export default function AdminDashboard() {
   const [feesData, setFeesData] = useState({ monthlyFees: [], ytdTotal: 0 });
   const [hardcodedEnabled, setHardcodedEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [readyProviders, setReadyProviders] = useState([]);
+  const SERVICE_TYPES = [
+    "Electrician",
+    "HVAC",
+    "Plumbing",
+    "Roofing",
+    "Handyman",
+  ];
 
   const [jobCounts, setJobCounts] = useState({
     completed: 0,
@@ -151,6 +159,46 @@ export default function AdminDashboard() {
     fetchProviders();
   }, []);
 
+  const fetchCompleteProviders = async () => {
+    try {
+      const res = await api.get("/admin/complete-providers");
+      const list = res.data.providers || [];
+      if (list.length === 0) {
+        Alert.alert("None Found", "No ready-to-activate providers.");
+      }
+      setReadyProviders(list);
+    } catch (err) {
+      console.error("❌ Failed to fetch complete providers:", err);
+      Alert.alert("Error", "Could not fetch provider list.");
+    }
+  };
+
+  const activateAllProviders = async () => {
+    try {
+      const results = [];
+      for (let provider of readyProviders) {
+        const res = await api.put(`/admin/provider/${provider._id}/activate`);
+        results.push(res.data.user);
+      }
+      Alert.alert("Success", `${results.length} providers activated.`);
+      setReadyProviders([]);
+    } catch (err) {
+      console.error("❌ Failed to activate all:", err);
+      Alert.alert("Error", "Failed to activate some users.");
+    }
+  };
+
+  const activateOneProvider = async (providerId) => {
+    try {
+      await api.put(`/admin/provider/${providerId}/activate`);
+      setReadyProviders((prev) => prev.filter((p) => p._id !== providerId));
+      Alert.alert("Activated", "Provider marked active.");
+    } catch (err) {
+      console.error("❌ Error activating provider:", err);
+      Alert.alert("Error", "Failed to activate this provider.");
+    }
+  };
+
   const handleToggleActive = async (providerId, currentValue) => {
     try {
       const newValue = !currentValue;
@@ -241,7 +289,7 @@ export default function AdminDashboard() {
       // console.log("Hybrid Providers Found:", count);
       // console.log("Available Slots:", available);
 
-      setZipProCount(`${count} / 7 — ${available} slots available`);
+      setZipProCount(`${count} taken / out of 7 = ${available} slots available`);
     } catch (err) {
       console.error("Error during ZIP search:", err);
       setZipProCount("Error fetching data");
@@ -303,6 +351,64 @@ export default function AdminDashboard() {
           <Switch value={hardcodedEnabled} onValueChange={handleToggleActive} />
         </View>
       </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Ready-to-Activate Providers</Text>
+        <TouchableOpacity
+          style={styles.updateBtn}
+          onPress={fetchCompleteProviders}
+        >
+          <Text style={styles.updateBtnText}>Load Ready Providers</Text>
+        </TouchableOpacity>
+
+        {readyProviders.length > 0 && (
+          <>
+            {readyProviders.map((p) => (
+              <View key={p._id} style={styles.providerRow}>
+                <Text style={styles.providerLabel}>{p.name}</Text>
+                <TouchableOpacity
+                  style={[styles.updateBtn, { padding: 6 }]}
+                  onPress={() => activateOneProvider(p._id)}
+                >
+                  <Text style={{ color: "#fff" }}>Activate</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity
+              style={styles.updateBtn}
+              onPress={activateAllProviders}
+            >
+              <Text style={styles.updateBtnText}>Activate All</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+
+      {/* <View style={styles.card}>
+        <Text style={styles.cardTitle}>Ready-to-Activate Providers</Text>
+        <TouchableOpacity
+          style={styles.updateBtn}
+          onPress={async () => {
+            try {
+              const res = await api.get("/admin/complete-providers");
+              const list = res.data.providers || [];
+              if (list.length === 0) {
+                Alert.alert("None Found", "No ready-to-activate providers.");
+              } else {
+                const names = list
+                  .map((p) => `• ${p.name} (${p._id})`)
+                  .join("\n");
+                Alert.alert("Ready to Activate", names);
+              }
+            } catch (err) {
+              console.error("❌ Failed to fetch complete providers:", err);
+              Alert.alert("Error", "Could not fetch provider list.");
+            }
+          }}
+        >
+          <Text style={styles.updateBtnText}>Show Ready Providers</Text>
+        </TouchableOpacity>
+      </View> */}
 
       <Text style={styles.subtitle}>Job Status Overview</Text>
       <View style={styles.cardRow}>
@@ -383,19 +489,42 @@ export default function AdminDashboard() {
           value={zipSearch}
           onChangeText={setZipSearch}
         />
-        <TextInput
+        {/* <TextInput
           style={styles.input}
           placeholder="Enter Service Type"
           value={serviceTypeSearch}
           onChangeText={setServiceTypeSearch}
-        />
+        /> */}
+        <Text style={styles.label}>Select Service Type</Text>
+        <View style={styles.selectRow}>
+          {SERVICE_TYPES.map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.buttonOption,
+                serviceTypeSearch === type && styles.buttonSelected,
+              ]}
+              onPress={() => setServiceTypeSearch(type)}
+            >
+              <Text
+                style={[
+                  styles.buttonText,
+                  serviceTypeSearch === type && styles.buttonTextSelected,
+                ]}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <TouchableOpacity style={styles.updateBtn} onPress={handleZipSearch}>
           <Text style={styles.updateBtnText}>
             Search ZIP Code + Service Type
           </Text>
         </TouchableOpacity>
         {zipProCount !== null && (
-          <Text style={{ marginTop: 10 }}>
+          <Text style={{ marginTop: 10, fontSize: 20 }}>
             Hybrid pros in {zipSearch} for {serviceTypeSearch}: {zipProCount}
           </Text>
         )}
@@ -452,4 +581,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   updateBtnText: { color: "#fff", fontWeight: "600" },
+  buttonOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 6,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+
+  buttonSelected: {
+    backgroundColor: "#1976d2",
+    borderColor: "#1976d2",
+  },
+
+  buttonText: {
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "500",
+  },
+
+  buttonTextSelected: {
+    color: "#fff",
+  },
 });
