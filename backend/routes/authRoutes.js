@@ -440,7 +440,8 @@ router.post("/reset-password/:token", async (req, res) => {
 
     console.log("🔐 Resetting password for:", user.email || user._id);
 
-    user.password = await bcrypt.hash(password, 10);
+    user.password = password
+    // user.password = await bcrypt.hash(password, 10);
     user.resetToken = undefined;
     user.resetTokenExpires = undefined;
 
