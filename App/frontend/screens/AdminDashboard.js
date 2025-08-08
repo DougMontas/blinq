@@ -540,6 +540,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginVertical: 8,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   subtitle: { fontSize: 18, fontWeight: "600", marginVertical: 12 },
   cardRow: {

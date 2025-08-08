@@ -6,8 +6,8 @@ import ScreenWrapper from "../components/ScreenWrapper";
 export default function CustomerFAQScreen() {
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.container}>
         <BackButton />
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.header}>BlinqFix Customer FAQ</Text>
 
         <Text style={styles.sectionTitle}>General</Text>

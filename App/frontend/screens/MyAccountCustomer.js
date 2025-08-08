@@ -103,6 +103,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center",
     marginTop: 24,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   label: {
     fontSize: 16,

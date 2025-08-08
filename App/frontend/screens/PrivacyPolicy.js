@@ -6,8 +6,8 @@ import ScreenWrapper from "../components/ScreenWrapper";
 export default function PrivacyPolicyScreen() {
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.container}>
         <BackButton />
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>
           Privacy Policy for BlinqFix Official App
         </Text>

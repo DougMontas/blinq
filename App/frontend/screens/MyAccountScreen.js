@@ -68,44 +68,11 @@ export default function MyAccountScreen() {
     );
   };
 
-  // const handleUpdateTier = async (tier) => {
-  //   try {
-  //     setLoading(true);
-  //     const token = await AsyncStorage.getItem("token");
-
-  //     const { data } = await api.post(
-  //       "/stripe/update-billing",
-  //       { billingTier: tier },
-  //       {
-  //         headers: { Authorization: `Bearer ${token}` },
-  //       }
-  //     );
-
-  //     if (data?.url) {
-  //       // Upgrade: Redirect to Stripe Checkout
-  //       navigation.navigate("WebViewScreen", { url: data.url });
-  //     } else {
-  //       // Downgrade or silent success
-  //       setSuccessMessage(`✔️ Subscription updated to ${tier}.`);
-  //       setCurrentTier(tier);
-  //       setTimeout(() => setSuccessMessage(""), 4000);
-  //     }
-  //   } catch (err) {
-  //     console.error("❌ Billing update failed:", err);
-  //     Alert.alert(
-  //       "Error",
-  //       err.response?.data?.msg || "Could not update billing."
-  //     );
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleUpdateTier = async (tier) => {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
-  
+
       const { data } = await api.post(
         "/routes/stripe/update-billing",
         { billingTier: tier },
@@ -113,7 +80,7 @@ export default function MyAccountScreen() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-  
+
       if (data?.url) {
         // Redirect to Stripe Checkout or Account Onboarding
         navigation.navigate("WebViewScreen", { url: data.url });
@@ -133,7 +100,7 @@ export default function MyAccountScreen() {
       setLoading(false);
     }
   };
-  
+
   const handleDeleteAccount = async () => {
     Alert.alert(
       "Confirm Deletion",
@@ -243,6 +210,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center",
     marginTop: 24,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   label: {
     fontSize: 16,

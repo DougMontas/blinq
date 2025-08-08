@@ -6,8 +6,8 @@ import ScreenWrapper from "../components/ScreenWrapper";
 export default function TermsOfUse() {
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.container}>
         <BackButton />
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.header}>
           BlinqFix Terms of Use for Customers and Service Pros
         </Text>

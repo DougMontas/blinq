@@ -39,11 +39,11 @@ export default function HomeServicePro() {
         >
           <Text style={styles.sectionTitle}>Why Join BlinqFix?</Text>
           <View style={styles.featureBox}>
-            <Text style={styles.bullet}>- Instant job alerts in your area</Text>
-            <Text style={styles.bullet}>- Keep more of what you earn</Text>
-            <Text style={styles.bullet}>- Set your own schedule</Text>
+            <Text style={styles.bullet}>{"\u2022"} Instant job alerts in your area</Text>
+            <Text style={styles.bullet}>{"\u2022"} Keep more of what you earn</Text>
+            <Text style={styles.bullet}>{"\u2022"} Set your own schedule</Text>
             <Text style={styles.bullet}>
-              - Two billing options: Free or Priority
+            {"\u2022"} Two billing options: Free or Priority
             </Text>
           </View>
 
@@ -124,6 +124,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#1976d2",
     marginBottom: 10,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   subtitle: {
     fontSize: 16,
@@ -134,10 +137,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "600",
     marginBottom: 12,
+    textAlign: 'center',
     color: "#1976d2",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   featureBox: {
     marginBottom: 24,
@@ -195,7 +202,7 @@ const styles = StyleSheet.create({
   link: {
     color: "#1976d2",
     marginTop: 8,
-    textDecorationLine: "underline",
+    textDecorationLine: "none",
     fontWeight: "500",
   },
 });

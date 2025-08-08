@@ -348,7 +348,7 @@ export default function CustomerJobStatus() {
           </View>
         )}
 
-        <Text style={styles.title}>Job Status</Text>
+        <Text style={styles.title}>Your Job Status</Text>
         <Text style={{ marginBottom: 16, color: "white" }}>
           Status: {job.status}
         </Text>
@@ -489,6 +489,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 0,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   modalOverlay: {
     flex: 1,

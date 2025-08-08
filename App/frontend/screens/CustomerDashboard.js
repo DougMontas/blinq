@@ -168,29 +168,26 @@ export default function CustomerDashboard() {
         </View>
 
         <Footer />
-
-        {/* ✅ Add "My Account" button at the bottom for customers */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: "#1976d2",
-            padding: 16,
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 999,
-          }}
-          onPress={() => navigation.navigate("MyAccountCustomer")}
-        >
-          <Text
-            style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}
-          >
-            My Account
-          </Text>
-        </TouchableOpacity>
-
-        <View style={{ height: 40, marginVertical: 50 }} />
       </ScrollView>
+
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#1976d2",
+          padding: 16,
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 999,
+        }}
+        onPress={() => navigation.navigate("MyAccountCustomer")}
+      >
+        <Text
+          style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}
+        >
+          My Account
+        </Text>
+      </TouchableOpacity>
     </ScreenWrapper>
   );
 }
@@ -228,9 +225,10 @@ const styles = StyleSheet.create({
     marginTop: 18,
     backgroundColor: "#fff",
     borderRadius: 8,
-    alignSelf: "flex-start",
+    alignSelf: "center",
     paddingVertical: 10,
     paddingHorizontal: 16,
+    marginBottom: 16,
   },
   ctaText: {
     color: "red",
@@ -244,12 +242,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 24,
     fontWeight: 700,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
     textAlign: "center",
     marginVertical: 16,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   cardsWrap: {
     flexDirection: "row",

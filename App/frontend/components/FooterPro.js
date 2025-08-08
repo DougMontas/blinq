@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: "#1976d2",
-    textDecorationLine: "underline",
+    textDecorationLine: "none",
     fontSize: 14,
   },
   copy: {

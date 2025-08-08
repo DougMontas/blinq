@@ -356,23 +356,6 @@ export default function ProviderJobStatus() {
             />
           </View>
         </ScrollView>
-        {/* {showNotCompleteModal && (
-        <Modal visible transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.title}>Job Marked as Incomplete</Text>
-              <Text style={{ marginVertical: 10 }}>
-                The customer marked this job as not complete. Please review and
-                address any issues before re-submitting completion.
-              </Text>
-              <CustomButton
-                title="OK"
-                onPress={() => setShowNotCompleteModal(false)}
-              />
-            </View>
-          </View>
-        </Modal>
-      )} */}
 
         {showNotCompleteModal && (
           <Modal visible transparent animationType="slide">

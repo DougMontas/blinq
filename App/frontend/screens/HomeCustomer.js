@@ -49,27 +49,6 @@ export default function HomeCustomer() {
           <Text style={styles.bulletText}>24/7 Availability for Emergencies</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("Registration")}
-        >
-          <Text style={styles.buttonText}>Create an Account</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Login")}
-          style={styles.loginLink}
-        >
-          <Text style={styles.loginText}>Already have an account?</Text>
-          <Text style={styles.loginText}>Log in</Text>
-        </TouchableOpacity>
-
-        <View style={styles.linksRow}>
-          <Text style={styles.link} onPress={() => navigation.navigate("PrivacyPolicy")}>Privacy Policy</Text>
-          <Text style={styles.link} onPress={() => navigation.navigate("CustomerFAQScreen")}>FAQs</Text>
-          <Text style={styles.link} onPress={() => navigation.navigate("TermsAndConditions")}>Terms</Text>
-        </View>
-
         <Text style={styles.sectionTitle}>What Customers Are Saying:</Text>
         <View style={styles.testimonialBox}>
           <Text style={styles.testimonial}>
@@ -82,6 +61,26 @@ export default function HomeCustomer() {
             "The price was fair, the app was easy to use, and the technician was professional."
           </Text>
           <Text style={styles.testimonialAuthor}>- John M., Miami</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("Registration")}
+        >
+          <Text style={styles.buttonText}>Create an Account</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate("Login")}
+          >
+            <Text style={styles.secondaryButtonText}>Login</Text>
+          </TouchableOpacity>
+      
+
+        <View style={styles.linksRow}>
+          <Text style={styles.link} onPress={() => navigation.navigate("PrivacyPolicy")}>Privacy Policy</Text>
+          <Text style={styles.link} onPress={() => navigation.navigate("CustomerFAQScreen")}>FAQs</Text>
+          <Text style={styles.link} onPress={() => navigation.navigate("TermsAndConditions")}>Terms</Text>
         </View>
       </Animatable.View>
     </ScrollView>
@@ -109,6 +108,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1976d2",
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   subtitle: {
     fontSize: 16,
@@ -119,10 +121,14 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   bulletTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "600",
     marginBottom: 12,
-    textAlign: "center",
+    textAlign: 'center',
+    color: "#1976d2",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   bulletItem: {
     flexDirection: "row",
@@ -130,10 +136,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     textAlign: "center",
     marginBottom: 8,
+    
   },
   bullet: {
     fontSize: 20,
     marginRight: 8,
+   
   },
   bulletText: {
     fontSize: 16,
@@ -169,14 +177,34 @@ const styles = StyleSheet.create({
   },
   link: {
     color: "#1976d2",
-    textDecorationLine: "underline",
+    textDecorationLine: "none",
     fontSize: 14,
   },
+  secondaryButton: {
+    borderColor: "#1976d2",
+    borderWidth: 2,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    width: "100%",
+    alignItems: "center",
+    marginTop: 5,
+  },
+  secondaryButtonText: {
+    color: "#1976d2",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "600",
-    marginTop: 32,
-    marginBottom: 10,
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: 'center',
+    color: "#1976d2",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   testimonialBox: {
     backgroundColor: "#f0f0f0",

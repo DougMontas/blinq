@@ -385,6 +385,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginVertical: 82,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   label: { fontSize: 16, fontWeight: "600", marginBottom: 6 },
   input: {
@@ -394,7 +397,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
-  section: { marginBottom: 16 },
+  section: { marginBottom: 16, },
   radioRow: {
     paddingVertical: 8,
     borderWidth: 1,

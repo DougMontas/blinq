@@ -407,10 +407,6 @@ IN WITNESS WHEREOF, the parties hereto have executed this Independent Contractor
         {renderUploadSection("W-9", "w9")}
         {renderUploadSection("Business License", "businessLicense")}
         {renderUploadSection("Proof of Insurance", "proofOfInsurance")}
-        {/* 
-{renderUploadSection("W-9", "w9")}
-{renderUploadSection("Business License", "businessLicense")}
-{renderUploadSection("Proof of Insurance", "proofOfInsurance")} */}
 
         <View style={{ marginTop: 20 }}>
           <TouchableOpacity
@@ -477,6 +473,9 @@ const s = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
     marginVertical: 100,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   label: { marginTop: 12, fontWeight: "600" },
   input: {

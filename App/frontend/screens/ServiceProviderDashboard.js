@@ -341,6 +341,7 @@ export default function ServiceProviderDashboard() {
             left: 0,
             right: 0,
             zIndex: 999,
+            
           }}
           onPress={() => navigation.navigate("MyAccountScreen")}
         >
@@ -350,6 +351,7 @@ export default function ServiceProviderDashboard() {
             My Account
           </Text>
         </TouchableOpacity>
+        
       </ScreenWrapper>
     </View>
   );
@@ -366,12 +368,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 8 },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
+  },
   sectionTitle1: {
     color: "black",
     textAlign: "center",
     fontSize: 24,
     fontWeight: "700",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   subtitle: { marginTop: 20, fontSize: 18, fontWeight: "600" },
   profileBtn: {

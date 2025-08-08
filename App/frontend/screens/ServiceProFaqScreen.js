@@ -57,8 +57,8 @@ export default function ServiceProFaqScreen() {
 
   return (
     <ScreenWrapper>
-      <ScrollView style={styles.container}>
         <BackButton onPress={() => navigation.goBack()} />
+      <ScrollView style={styles.container}>
         <Text style={styles.title}>FAQ – For Service Pros</Text>
         {faqs.map((faq, index) => (
           <View key={index} style={styles.faqContainer}>

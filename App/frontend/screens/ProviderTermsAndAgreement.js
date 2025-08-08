@@ -6,8 +6,8 @@ import ScreenWrapper from "../components/ScreenWrapper";
 export default function ProviderTermsAndAgreement() {
   return (
     <ScreenWrapper>
-      <ScrollView style={styles.container}>
         <BackButton />
+      <ScrollView style={styles.container}>
 
         <Text style={styles.heading}>
           1. Terms and Conditions for Service Providers
