@@ -20,72 +20,6 @@ const returnUrl = process.env.STRIPE_ONBOARDING_RETURN_URL?.startsWith("http")
   ? process.env.STRIPE_ONBOARDING_RETURN_URL
   : "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app/onboarding-success";
 
-  //latest
-// router.post("/update-billing", async (req, res) => {
-//   try {
-//     const { billingTier } = req.body;
-//     const userId = req.user?.id;
-
-//     if (!userId || !["profit_sharing", "hybrid"].includes(billingTier)) {
-//       return res.status(400).json({ msg: "Invalid billing request." });
-//     }
-
-//     const user = await Users.findById(userId);
-//     if (!user) return res.status(404).json({ msg: "User not found." });
-
-//     // Cancel existing subscription if exists
-//     if (user.stripeCustomerId) {
-//       const subs = await stripe.subscriptions.list({
-//         customer: user.stripeCustomerId,
-//         status: "active",
-//         limit: 1,
-//       });
-
-//       if (subs.data.length) {
-//         await stripe.subscriptions.cancel(subs.data[0].id);
-//       }
-//     }
-
-//     user.billingTier = billingTier;
-
-//     if (billingTier === "hybrid") {
-//       if (!user.stripeCustomerId) {
-//         const customer = await stripe.customers.create({
-//           email: user.email,
-//           metadata: { userId: user._id.toString(), billingTier },
-//         });
-//         user.stripeCustomerId = customer.id;
-//       }
-
-//       const session = await stripe.checkout.sessions.create({
-//         mode: "subscription",
-//         payment_method_types: ["card"],
-//         customer: user.stripeCustomerId,
-//         line_items: [
-//           {
-//             price: process.env.STRIPE_HYBRID_SUBSCRIPTION_PRICE_ID,
-//             quantity: 1,
-//           },
-//         ],
-//         success_url: `${process.env.BASE_URL}/onboarding-success`,
-//         cancel_url: `${process.env.BASE_URL}/onboarding-cancelled`,
-//       });
-
-//       await user.save();
-//       return res.status(200).json({ url: session.url });
-//     }
-
-//     // If downgrading
-//     await user.save();
-//     return res.status(200).json({ msg: `Switched to ${billingTier}` });
-//   } catch (err) {
-//     console.error("Billing update error:", err);
-//     return res
-//       .status(500)
-//       .json({ msg: "Billing update failed", error: err.message });
-//   }
-// });
-
 router.post("/update-billing", auth, async (req, res) => {
   try {
     const { billingTier } = req.body;
@@ -169,10 +103,11 @@ router.post("/update-billing", auth, async (req, res) => {
     return res.status(200).json({ msg: `Switched to ${billingTier}` });
   } catch (err) {
     console.error("Billing update error:", err);
-    return res.status(500).json({ msg: "Billing update failed", error: err.message });
+    return res
+      .status(500)
+      .json({ msg: "Billing update failed", error: err.message });
   }
 });
-
 
 router.post("/onboard-stripe", auth, async (req, res) => {
   try {
