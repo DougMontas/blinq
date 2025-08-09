@@ -7,6 +7,7 @@ import Users from "../models/Users.js";
 import Job from "../models/Job.js";
 import Configuration from "../models/Configuration.js";
 import mongoose from "mongoose";
+import { Types } from "mongoose";
 
 // import { isAdmin } from "../middleware/auth"
 
@@ -303,7 +304,138 @@ router.put(
       console.error("PUT /admin/provider/:providerId/zipcodes error:", err);
       return res.status(500).json({ msg: "Server error updating zip codes" });
     }
-  }
+  },
+
+  // helper to unify binary -> base64 data URL
+  function toDataUrl(binOrBuf, mime = "image/jpeg") {
+    if (!binOrBuf) return null;
+    // Mongo Binary or Buffer both handled:
+    const buf = binOrBuf.buffer
+      ? Buffer.from(binOrBuf.buffer) // Mongo Binary
+      : Buffer.isBuffer(binOrBuf)
+      ? binOrBuf
+      : Buffer.from(binOrBuf); // fallback
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  },
+
+  function escapeRegex(str = "") {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  },
+
+  router.get("/job-media", auth, checkAdmin, async (req, res) => {
+    try {
+      const { jobId, address } = req.query;
+
+      if (!jobId && !address) {
+        return res.status(400).json({ msg: "Provide jobId or address" });
+      }
+
+      let query = {};
+      if (jobId) {
+        if (!Types.ObjectId.isValid(jobId)) {
+          return res.status(400).json({ msg: "Invalid jobId" });
+        }
+        query._id = jobId;
+      } else if (address) {
+        // starts-with match; tweak as needed
+        query.address = { $regex: "^" + escapeRegex(address), $options: "i" };
+      }
+
+      // Select only media-related + helpful fields
+      const jobs = await Job.find(query)
+        .select(
+          "_id address arrivalImage arrivalImageMime completionImage completionImageMime progressImages createdAt"
+        )
+        .limit(20)
+        .lean();
+
+      const payload = jobs.map((j) => {
+        const images = [];
+
+        if (j.arrivalImage) {
+          images.push({
+            kind: "arrival",
+            at: j.createdAt,
+            src: toDataUrl(j.arrivalImage, j.arrivalImageMime || "image/jpeg"),
+          });
+        }
+        if (j.completionImage) {
+          images.push({
+            kind: "completion",
+            at: j.createdAt,
+            src: toDataUrl(
+              j.completionImage,
+              j.completionImageMime || "image/jpeg"
+            ),
+          });
+        }
+        if (Array.isArray(j.progressImages)) {
+          for (const p of j.progressImages) {
+            images.push({
+              kind: "progress",
+              id: String(p._id || ""),
+              at: p.createdAt || j.createdAt,
+              src: toDataUrl(p.data, p.mimeType || "image/jpeg"),
+            });
+          }
+        }
+
+        return {
+          jobId: String(j._id),
+          address: j.address,
+          imageCount: images.length,
+          images,
+        };
+      });
+
+      return res.json({ jobs: payload });
+    } catch (err) {
+      console.error("GET /admin/job-media error:", err);
+      return res.status(500).json({ msg: "Server error fetching media" });
+    }
+  }),
+
+
+  // Stream arrival/completion/progress image
+// router.get("/job-media/:jobId/:kindOrImageId", auth, checkAdmin, async (req, res) => {
+//   try {
+//     const { jobId, kindOrImageId } = req.params;
+//     if (!Types.ObjectId.isValid(jobId)) {
+//       return res.status(400).json({ msg: "Invalid jobId" });
+//     }
+
+//     const job = await Job.findById(jobId)
+//       .select("arrivalImage arrivalImageMime completionImage completionImageMime progressImages")
+//       .lean();
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
+
+//     let buf, mime;
+
+//     if (kindOrImageId === "arrival") {
+//       buf = job.arrivalImage?.buffer ? Buffer.from(job.arrivalImage.buffer) : job.arrivalImage;
+//       mime = job.arrivalImageMime || "image/jpeg";
+//     } else if (kindOrImageId === "completion") {
+//       buf = job.completionImage?.buffer ? Buffer.from(job.completionImage.buffer) : job.completionImage;
+//       mime = job.completionImageMime || "image/jpeg";
+//     } else {
+//       // progress image id
+//       const p = (job.progressImages || []).find(pi => String(pi._id) === kindOrImageId);
+//       if (p) {
+//         buf = p.data?.buffer ? Buffer.from(p.data.buffer) : p.data;
+//         mime = p.mimeType || "image/jpeg";
+//       }
+//     }
+
+//     if (!buf) return res.status(404).json({ msg: "Image not found" });
+
+//     res.set("Content-Type", mime);
+//     return res.send(Buffer.isBuffer(buf) ? buf : Buffer.from(buf));
+//   } catch (err) {
+//     console.error("GET /admin/job-media/:jobId/:kind error:", err);
+//     return res.status(500).json({ msg: "Server error streaming image" });
+//   }
+// })
+
 );
 
 export default router;
