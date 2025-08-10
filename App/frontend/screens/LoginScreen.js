@@ -1486,6 +1486,391 @@
 //   },
 // });
 
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /** ---------- helpers ---------- */
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary = typeof atob === "function" ? atob(base64) : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     return tokenData?.data || null;
+//   } catch (e) {
+//     console.warn("Push token registration failed (non-blocking)", e);
+//     return null;
+//   }
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /** ---------- legacy: attempt push token post on mount (best-effort, unauth) ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         const token = await registerForPushNotificationsAsync();
+//         if (token) {
+//           // Some backends allow unauth push-token capture. If your API requires auth, this will be ignored.
+//           await api.post("/users/push-token", { token }).catch(() => {});
+//         }
+//       } catch {}
+//     })();
+//   }, []);
+
+//   /** ---------- permissions (do not block login) ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         // Location
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS);
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         // Notifications
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           if (req.status !== "granted") {
+//             Alert.alert("Notifications", "Enable notifications for updates.", [
+//               { text: "Open Settings", onPress: () => Linking.openSettings() },
+//               { text: "Cancel", style: "cancel" },
+//             ]);
+//           }
+//         }
+//       } catch (e) {
+//         console.warn("Permission precheck failed (non-blocking)", e);
+//       }
+//     })();
+//   }, []);
+
+//   /** ---------- handlers ---------- */
+//   const navigateByRole = (role) => {
+//     const target = roleToScreen(role);
+//     const action = { index: 0, routes: [{ name: target }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     }
+//   };
+
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+//       const creds = { email: email.trim().toLowerCase(), password };
+
+//       console.log("➡️ Attempting login for:", creds.email);
+//       console.log("📡 Login URL:", api.defaults.baseURL + "/auth/login");
+
+//       const { data } = await api.post("/auth/login", creds, {
+//         headers: { "Content-Type": "application/json" },
+//       });
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       // store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) {
+//         await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       }
+
+//       // future requests use auth header
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // register + send push token after auth (authoritative path)
+//       try {
+//         const expoPush = await registerForPushNotificationsAsync();
+//         if (expoPush) await api.post("/users/push-token", { token: expoPush });
+//       } catch (e) {
+//         console.warn("Post-login push-token submit failed (non-blocking)", e);
+//       }
+
+//       // read role + stripe account from access token
+//       const payload = parseJwt(data.token);
+//       const role = payload?.role || "customer";
+//       const stripeAccountId = payload?.stripeAccountId;
+//       setRole(role);
+
+//       // ✅ Allow service providers to log in even if their profile / onboarding is incomplete.
+//       // We *offer* onboarding now, but do not block navigation.
+//       if (role === "serviceProvider" && stripeAccountId) {
+//         try {
+//           console.log("🔍 Checking Stripe onboarding for:", stripeAccountId);
+//           const checkRes = await api.post("/routes/stripe/check-onboarding", { stripeAccountId });
+//           const { needsOnboarding, stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data || {};
+
+//           if (needsOnboarding) {
+//             const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
+//             // Navigate first so they are inside the app regardless
+//             navigateByRole(role);
+//             if (redirectUrl && typeof redirectUrl === "string") {
+//               Alert.alert(
+//                 "Finish Stripe Onboarding?",
+//                 "You can do it now or later from My Account.",
+//                 [
+//                   { text: "Later", style: "cancel" },
+//                   {
+//                     text: "Continue",
+//                     onPress: async () => {
+//                       try { await Linking.openURL(redirectUrl); } catch (e) {
+//                         Alert.alert("Error", "Could not open onboarding link.");
+//                       }
+//                     },
+//                   },
+//                 ]
+//               );
+//             }
+//             return; // we already navigated
+//           }
+//         } catch (stripeCheckErr) {
+//           console.warn("Stripe onboarding check failed (non-blocking)", stripeCheckErr?.response?.data || stripeCheckErr);
+//           // Do NOT block login if check fails
+//           navigateByRole(role);
+//           return;
+//         }
+//       }
+
+//       // No onboarding needed or non-provider
+//       navigateByRole(role);
+//     } catch (err) {
+//       console.error("❌ Login error:", err?.message);
+//       console.log("❌ Full error:", err?.response?.data || err);
+//       const msg = err?.response?.data?.msg || err?.message || "Login failed – check credentials.";
+//       Alert.alert("Error", msg);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                   autoComplete="email"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => navigation.navigate("RequestPasswordResetScreen")}>
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 40 },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: { color: "#60a5fa", fontSize: 16, fontWeight: "bold", marginLeft: 6 },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// });
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -1521,7 +1906,10 @@ function parseJwt(token) {
   const base64Url = token.split(".")[1];
   if (!base64Url) return null;
   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = typeof atob === "function" ? atob(base64) : Buffer.from(base64, "base64").toString("binary");
+  const binary =
+    typeof atob === "function"
+      ? atob(base64)
+      : Buffer.from(base64, "base64").toString("binary");
   const jsonPayload = decodeURIComponent(
     binary
       .split("")
@@ -1551,8 +1939,7 @@ async function registerForPushNotificationsAsync() {
 
     const tokenData = await Notifications.getExpoPushTokenAsync();
     return tokenData?.data || null;
-  } catch (e) {
-    console.warn("Push token registration failed (non-blocking)", e);
+  } catch {
     return null;
   }
 }
@@ -1568,20 +1955,7 @@ export default function LoginScreen() {
   const { width } = Dimensions.get("window");
   const LOGO_SIZE = width * 0.55;
 
-  /** ---------- legacy: attempt push token post on mount (best-effort, unauth) ---------- */
-  useEffect(() => {
-    (async () => {
-      try {
-        const token = await registerForPushNotificationsAsync();
-        if (token) {
-          // Some backends allow unauth push-token capture. If your API requires auth, this will be ignored.
-          await api.post("/users/push-token", { token }).catch(() => {});
-        }
-      } catch {}
-    })();
-  }, []);
-
-  /** ---------- permissions (do not block login) ---------- */
+  /** ---------- side effects: permissions only (no push-token post here) ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -1597,7 +1971,9 @@ export default function LoginScreen() {
                   if (Platform.OS === "ios") {
                     Linking.openURL("app-settings:");
                   } else {
-                    IntentLauncher.startActivityAsync(IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS);
+                    IntentLauncher.startActivityAsync(
+                      IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+                    );
                   }
                 },
               },
@@ -1616,34 +1992,49 @@ export default function LoginScreen() {
             ]);
           }
         }
-      } catch (e) {
-        console.warn("Permission precheck failed (non-blocking)", e);
+      } catch {
+        // permission check shouldn't block login
       }
     })();
   }, []);
 
-  /** ---------- handlers ---------- */
-  const navigateByRole = (role) => {
-    const target = roleToScreen(role);
-    const action = { index: 0, routes: [{ name: target }] };
+  /** ---------- helpers ---------- */
+  const openUrlSafely = async (url) => {
+    try {
+      if (url && (await Linking.canOpenURL(url))) {
+        await Linking.openURL(url);
+        return true;
+      }
+    } catch {}
+    Alert.alert("Error", "Could not open onboarding link.");
+    return false;
+  };
+
+  const goTo = (routeName, params = {}) => {
+    const action = { index: 0, routes: [{ name: routeName, params }] };
     if (navigationRef?.isReady?.()) {
       navigationRef.reset(action);
     } else if (navigation && typeof navigation.reset === "function") {
       navigation.reset(action);
+    } else {
+      // fallback
+      navigation.navigate(routeName, params);
     }
   };
 
+  /** ---------- handlers ---------- */
   const onSubmit = async () => {
     try {
       setLoading(true);
+
+      // Remove any stale tokens so the login request is clean
+      await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
       const creds = { email: email.trim().toLowerCase(), password };
-
-      console.log("➡️ Attempting login for:", creds.email);
-      console.log("📡 Login URL:", api.defaults.baseURL + "/auth/login");
-
       const { data } = await api.post("/auth/login", creds, {
         headers: { "Content-Type": "application/json" },
       });
+
       if (!data?.token) throw new Error("Token missing from response");
 
       // store tokens
@@ -1652,16 +2043,13 @@ export default function LoginScreen() {
         await AsyncStorage.setItem("refreshToken", data.refreshToken);
       }
 
-      // future requests use auth header
+      // ensure future api calls include auth header
       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
 
-      // register + send push token after auth (authoritative path)
-      try {
-        const expoPush = await registerForPushNotificationsAsync();
-        if (expoPush) await api.post("/users/push-token", { token: expoPush });
-      } catch (e) {
-        console.warn("Post-login push-token submit failed (non-blocking)", e);
-      }
+      // non-blocking push token registration
+      registerForPushNotificationsAsync()
+        .then((expoPush) => expoPush && api.post("/users/push-token", { token: expoPush }))
+        .catch(() => {});
 
       // read role + stripe account from access token
       const payload = parseJwt(data.token);
@@ -1669,54 +2057,88 @@ export default function LoginScreen() {
       const stripeAccountId = payload?.stripeAccountId;
       setRole(role);
 
-      // ✅ Allow service providers to log in even if their profile / onboarding is incomplete.
-      // We *offer* onboarding now, but do not block navigation.
-      if (role === "serviceProvider" && stripeAccountId) {
+      const target = roleToScreen(role);
+
+      // ---------- Service provider Stripe logic ----------
+      if ((role || "").toLowerCase() === "serviceprovider" && stripeAccountId) {
         try {
-          console.log("🔍 Checking Stripe onboarding for:", stripeAccountId);
-          const checkRes = await api.post("/routes/stripe/check-onboarding", { stripeAccountId });
-          const { needsOnboarding, stripeOnboardingUrl, stripeDashboardUrl } = checkRes.data || {};
+          const checkRes = await api.post("/routes/stripe/check-onboarding", {
+            stripeAccountId,
+          });
+
+          const {
+            needsOnboarding,
+            stripeOnboardingUrl,
+            stripeDashboardUrl,
+            requirements, // optional, if backend returns missing KYC fields
+          } = checkRes?.data || {};
 
           if (needsOnboarding) {
-            const redirectUrl = stripeOnboardingUrl || stripeDashboardUrl;
-            // Navigate first so they are inside the app regardless
-            navigateByRole(role);
-            if (redirectUrl && typeof redirectUrl === "string") {
-              Alert.alert(
-                "Finish Stripe Onboarding?",
-                "You can do it now or later from My Account.",
-                [
-                  { text: "Later", style: "cancel" },
-                  {
-                    text: "Continue",
-                    onPress: async () => {
-                      try { await Linking.openURL(redirectUrl); } catch (e) {
-                        Alert.alert("Error", "Could not open onboarding link.");
-                      }
-                    },
+            // Let the user choose: Stripe now, fix in app, or continue anyway
+            setLoading(false);
+            Alert.alert(
+              "Finish Stripe Onboarding",
+              "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
+              [
+                {
+                  text: "Open Stripe",
+                  onPress: async () => {
+                    const url = stripeOnboardingUrl || stripeDashboardUrl;
+                    await openUrlSafely(url);
+                    // still allow them into the app after launching Stripe
+                    goTo(target);
                   },
-                ]
-              );
-            }
-            return; // we already navigated
+                },
+                {
+                  text: "Fix in App",
+                  onPress: () => {
+                    // Send them to profile with optional missing requirements
+                    goTo("ProviderProfile", {
+                      missingRequirements: requirements || null,
+                    });
+                  },
+                },
+                {
+                  text: "Later",
+                  style: "cancel",
+                  onPress: () => goTo(target),
+                },
+              ]
+            );
+            return; // wait for user choice, don't auto-navigate below
           }
         } catch (stripeCheckErr) {
-          console.warn("Stripe onboarding check failed (non-blocking)", stripeCheckErr?.response?.data || stripeCheckErr);
-          // Do NOT block login if check fails
-          navigateByRole(role);
+          // If the check fails, allow login anyway and nudge them to profile
+          setLoading(false);
+          Alert.alert(
+            "Stripe Check Unavailable",
+            "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
+          );
+          goTo(target);
           return;
         }
+      } else if ((role || "").toLowerCase() === "serviceprovider" && !stripeAccountId) {
+        // No stripe account on token — still let them in and nudge them
+        setLoading(false);
+        Alert.alert(
+          "Connect Payouts",
+          "To receive payouts, connect your Stripe account from your profile."
+        );
+        goTo(target);
+        return;
       }
 
-      // No onboarding needed or non-provider
-      navigateByRole(role);
-    } catch (err) {
-      console.error("❌ Login error:", err?.message);
-      console.log("❌ Full error:", err?.response?.data || err);
-      const msg = err?.response?.data?.msg || err?.message || "Login failed – check credentials.";
-      Alert.alert("Error", msg);
-    } finally {
+      // ---------- Everyone else (or providers fully onboarded) ----------
       setLoading(false);
+      goTo(target);
+    } catch (err) {
+      setLoading(false);
+      const msg =
+        err?.response?.data?.msg ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Login failed – check credentials.";
+      Alert.alert("Error", msg);
     }
   };
 
@@ -1771,7 +2193,10 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => navigation.navigate("RequestPasswordResetScreen")}>
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+              >
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
