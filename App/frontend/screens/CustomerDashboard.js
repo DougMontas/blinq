@@ -303,6 +303,7 @@ import {
   ChevronRight,
   ClipboardList,
 } from "lucide-react-native";
+import Footer from "../components/Footer";
 
 const categories = [
   { name: "Plumbing", icon: Droplets, color: "#60a5fa" },
@@ -457,26 +458,8 @@ export default function CustomerDashboard() {
               </TouchableOpacity>
             ))}
           </View>
-          <View style={styles.linksRow}>
-            <Text
-              style={styles.link}
-              onPress={() => navigation.navigate("PrivacyPolicy")}
-            >
-              Privacy Policy
-            </Text>
-            <Text
-              style={styles.link}
-              onPress={() => navigation.navigate("CustomerFAQScreen")}
-            >
-              FAQs
-            </Text>
-            <Text
-              style={styles.link}
-              onPress={() => navigation.navigate("TermsAndConditions")}
-            >
-              Terms
-            </Text>
-          </View>
+          
+            <Footer />
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
@@ -575,6 +558,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 20,
+    textAlign: "center",
   },
   cardsWrap: {
     flexDirection: "row",
@@ -607,7 +591,7 @@ const styles = StyleSheet.create({
   linksRow: {
     padding: 16,
     position: "absolute",
-    bottom: -270,
+    bottom: -10,
     right: 100,
     gap:24,
     flexDirection: "row",

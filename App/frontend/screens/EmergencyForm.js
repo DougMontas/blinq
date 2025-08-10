@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
     gap: 12
   },
   optionCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'green',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   optionCardSelected: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
     borderColor: '#22c55e'
   },
   optionText: {
@@ -1188,7 +1188,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   },
   secondaryButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'red',
     borderWidth: 2,
     borderColor: 'rgba(239, 68, 68, 0.3)',
     borderRadius: 16,
@@ -1196,8 +1196,8 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   secondaryButtonText: {
-    color: '#f87171',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold'
   },
   trustSection: {
