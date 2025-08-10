@@ -98,8 +98,7 @@ const steps = [
   {
     icon: Wrench,
     title: "Problem Solved",
-    description:
-      "Service pro arrives within the hour, resolves the issue.",
+    description: "Service pro arrives within the hour, resolves the issue.",
     gradient: ["#22c55e", "#10b981"],
   },
 ];
@@ -206,9 +205,7 @@ export default function LandingPage() {
               style={styles.secondaryButton}
               onPress={() => navigation.navigate("Login")}
             >
-              <Text style={styles.secondaryButtonText}>
-                Earn with Blinqfix
-              </Text>
+              <Text style={styles.secondaryButtonText}>Earn with Blinqfix</Text>
             </TouchableOpacity>
             <View style={styles.heroFeaturesContainer}>
               <View style={styles.heroFeature}>
@@ -350,8 +347,9 @@ export default function LandingPage() {
                 ))}
               </View>
               <Text style={styles.testimonialText}>
-                “Blinqfix just sends me jobs. No drama. No
-                nonsense. Just jobs you can choose. Joining the network was the best decision I ever made.”
+                “Blinqfix just sends me jobs. No drama. No nonsense. Just jobs
+                you can choose. Joining the network was the best decision I ever
+                made.”
               </Text>
               <Text style={styles.testimonialAuthor}>
                 — Micheal S., Lic. Plumber
@@ -368,14 +366,13 @@ export default function LandingPage() {
                 ))}
               </View>
               <Text style={styles.testimonialText}>
-                "I am a property manager. We manage over 1,000 properties. 
+                "I am a property manager. We manage over 1,000 properties.
                 Blinqfix has been fast and reliable also they are 24/7."
               </Text>
               <Text style={styles.testimonialAuthor}>
                 — Rosa T., Propery Manager
               </Text>
             </View>
-            
           </View>
 
           {/* --- CTA SECTION --- */}
@@ -401,7 +398,7 @@ export default function LandingPage() {
                 Get Help Now
               </Text>
             </TouchableOpacity>
-            
+
             <View style={styles.footer}>
               <Text style={styles.footerText}>
                 © 2025 BlinqFix. All rights reserved.
@@ -419,7 +416,7 @@ export default function LandingPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollView: { padding: 20 },
+  scrollView: { padding: 20, marginTop: 20 },
   section: { marginBottom: 48, alignItems: "center" },
   heroSection: {
     minHeight: 600,
@@ -499,7 +496,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 48,
-    width: "100%",
+    width: "40%",
   },
   heroFeature: {
     flexDirection: "row",
@@ -508,7 +505,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 12,
   },
-  heroFeatureText: { color: "#fff", marginLeft: 8 },
+  heroFeatureText: { color: "#fff", marginLeft: 2 },
 
   // Services
   servicesGrid: {
