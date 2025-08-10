@@ -85,21 +85,21 @@ const steps = [
     icon: Phone,
     title: "Request Help",
     description:
-      "Describe your emergency through our app or call. Get instant pricing upfront.",
+      "Describe your emergency through our app. Get instant pricing upfront. Get an estimate instantly.",
     gradient: ["#3b82f6", "#22d3ee"],
   },
   {
     icon: MapPin,
     title: "Get Matched",
     description:
-      "Our system instantly connects you with the nearest vetted professional.",
+      "Pay and book the job in seconds. Our system instantly connects you with the nearest vetted service pro.",
     gradient: ["#a855f7", "#ec4899"],
   },
   {
     icon: Wrench,
     title: "Problem Solved",
     description:
-      "Professional arrives, fixes the issue, and you pay seamlessly through the app.",
+      "Service pro arrives within the hour, resolves the issue.",
     gradient: ["#22c55e", "#10b981"],
   },
 ];
@@ -189,7 +189,7 @@ export default function LandingPage() {
             <Text style={styles.heroTitle}>BlinqFix</Text>
             <Text style={styles.heroSubtitle}>
               The first on-demand emergency repair platform that connects
-              customers with vetted service professionals
+              customers with vetted service professionals in real time!
             </Text>
             <Text style={styles.heroDescription}>
               <Text style={{ fontWeight: "bold" }}>Instantly.</Text> With fixed
@@ -207,7 +207,7 @@ export default function LandingPage() {
               onPress={() => navigation.navigate("Login")}
             >
               <Text style={styles.secondaryButtonText}>
-                Become a Professional
+                Earn with Blinqfix
               </Text>
             </TouchableOpacity>
             <View style={styles.heroFeaturesContainer}>
@@ -229,7 +229,7 @@ export default function LandingPage() {
           {/* --- SERVICES SECTION --- */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Emergency Services Available 24/7
+              On-Demand & Emergency Services Available 24/7
             </Text>
             <Text style={styles.sectionSubtitle}>
               From plumbing disasters to electrical emergencies, our vetted
@@ -338,7 +338,44 @@ export default function LandingPage() {
               <Text style={styles.testimonialAuthor}>
                 — Sarah M., Homeowner
               </Text>
+              <View style={{ flexDirection: "row", marginBottom: 12 }}>
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    color="#facc15"
+                    fill="#facc15"
+                    width={16}
+                    height={16}
+                  />
+                ))}
+              </View>
+              <Text style={styles.testimonialText}>
+                “Blinqfix just sends me jobs. No drama. No
+                nonsense. Just jobs you can choose. Joining the network was the best decision I ever made.”
+              </Text>
+              <Text style={styles.testimonialAuthor}>
+                — Micheal S., Lic. Plumber
+              </Text>
+              <View style={{ flexDirection: "row", marginBottom: 12 }}>
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    color="#facc15"
+                    fill="#facc15"
+                    width={16}
+                    height={16}
+                  />
+                ))}
+              </View>
+              <Text style={styles.testimonialText}>
+                "I am a property manager. We manage over 1,000 properties. 
+                Blinqfix has been fast and reliable also they are 24/7."
+              </Text>
+              <Text style={styles.testimonialAuthor}>
+                — Rosa T., Propery Manager
+              </Text>
             </View>
+            
           </View>
 
           {/* --- CTA SECTION --- */}
@@ -364,15 +401,7 @@ export default function LandingPage() {
                 Get Help Now
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton}>
-              <Download
-                color="#fff"
-                width={20}
-                height={20}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.secondaryButtonText}>Download App</Text>
-            </TouchableOpacity>
+            
             <View style={styles.footer}>
               <Text style={styles.footerText}>
                 © 2025 BlinqFix. All rights reserved.
@@ -445,6 +474,8 @@ const styles = StyleSheet.create({
   },
   mainButton: {
     backgroundColor: "#22c55e",
+    borderWidth: 2,
+    borderColor: "#fff",
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -455,7 +486,8 @@ const styles = StyleSheet.create({
   mainButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   secondaryButton: {
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: "#fff",
+    backgroundColor: "#22c55e",
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -465,7 +497,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   heroFeaturesContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
     marginTop: 48,
     width: "100%",
   },
@@ -505,6 +537,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 4,
+    textAlign: "center",
   },
   serviceDescription: { fontSize: 14, color: "#e0e7ff", textAlign: "center" },
 
