@@ -21,7 +21,11 @@ export default function BackButton() {
         onPress={() => navigation.goBack()}
         style={[
           styles.backBtn,
-          { paddingHorizontal: padding, paddingVertical: padding },
+          {
+            paddingHorizontal: padding,
+            paddingVertical: padding,
+            fontSize: fontSize,
+          },
         ]}
       >
         <Text style={[styles.backBtnText, { fontSize: 38, color: "grey" }]}>

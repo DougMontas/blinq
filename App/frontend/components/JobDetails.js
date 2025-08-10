@@ -109,6 +109,9 @@ export default function JobDetails({ job, onAccept, isTeaser = false }) {
             marginTop: 4,
             fontSize: 22,
             textAlign: "center",
+            textShadowColor: "rgba(0,0,0,0.5)",
+            textShadowOffset: { width: 1, height: 2 },
+            textShadowRadius: 2,
           }}
         >
           Estimated Total: ${estimatedTotal.toFixed(2)}

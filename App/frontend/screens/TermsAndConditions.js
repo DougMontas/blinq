@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: "#fff",
-    marginVertical: 0,
+    marginVertical: -100,
   },
   header: {
     fontSize: 22,

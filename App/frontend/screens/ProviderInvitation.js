@@ -272,7 +272,10 @@ const styles = StyleSheet.create({
   coveredTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    textAlign: "center",
+    textAlign: "center", 
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 2,
   },
   coveredText: {
     fontSize: 14,

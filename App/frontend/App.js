@@ -43,6 +43,7 @@ import ResetPasswordLost from "./screens/ResetPasswordLost"
 import Home from "./screens/Home";
 import HomeCustomer from "./screens/HomeCustomer";
 import HomeServicePro from "./screens/HomeServicePro";
+import LandingPage from "./screens/LandingPage";
 
 export const navigationRef = createNavigationContainerRef();
 const AuthContext = createContext();
@@ -100,7 +101,7 @@ export default function App() {
             } else if (decodedRole === "serviceProvider") {
               setInitialRoute("ProviderJobStatus");
             } else {
-              setInitialRoute("Home");
+              setInitialRoute("LandingPage");
             }
           } else {
             if (decodedRole === "customer") {
@@ -108,15 +109,15 @@ export default function App() {
             } else if (decodedRole === "serviceProvider") {
               setInitialRoute("ServiceProviderDashboard");
             } else {
-              setInitialRoute("Home");
+              setInitialRoute("LandingPage");
             }
           }
         } catch {
           await AsyncStorage.removeItem("token");
-          setInitialRoute("Home");
+          setInitialRoute("LandingPage");
         }
       } else {
-        setInitialRoute("Home");
+        setInitialRoute("LandingPage");
       }
     })();
   }, []);
@@ -187,6 +188,7 @@ export default function App() {
               initialRouteName={initialRoute}
               screenOptions={{ headerShown: false, gestureEnabled: false }}
             >
+              <Stack.Screen name="LandingPage" component={LandingPage} />
               <Stack.Screen name="Loading" component={LoadingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Home" component={Home} />

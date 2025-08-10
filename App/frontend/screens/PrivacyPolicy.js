@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     backgroundColor: "#fff",
-    marginVertical: 0,
+    marginVertical: -80,
   },
   title: {
     fontSize: 24,
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
-    marginTop: 16,
+    marginTop: 6,
     marginBottom: 8,
   },
   paragraph: {

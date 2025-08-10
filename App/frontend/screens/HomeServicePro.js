@@ -83,21 +83,11 @@ export default function HomeServicePro() {
             <Text style={styles.secondaryButtonText}>Login</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate("ServiceProFaqScreen")}
-          >
-            <Text style={styles.link}>Service Pro FAQ</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("PrivacyPolicy")}
-          >
-            <Text style={styles.link}>Privacy Policy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("TermsAndConditions")}
-          >
-            <Text style={styles.link}>Terms & Conditions</Text>
-          </TouchableOpacity>
+          <View style={styles.linksRow}>
+          <Text style={styles.link} onPress={() => navigation.navigate("PrivacyPolicy")}>Privacy Policy</Text>
+          <Text style={styles.link} onPress={() => navigation.navigate("CustomerFAQScreen")}>FAQs</Text>
+          <Text style={styles.link} onPress={() => navigation.navigate("TermsAndConditions")}>Terms</Text>
+        </View>
         </Animatable.View>
       </ScrollView>
     </ScreenWrapper>
@@ -199,10 +189,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  linksRow: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    marginTop: 20,
+    marginRight:0,
+  },
   link: {
     color: "#1976d2",
-    marginTop: 8,
     textDecorationLine: "none",
-    fontWeight: "500",
+    fontSize: 14,
+    marginRight:50,
   },
 });
