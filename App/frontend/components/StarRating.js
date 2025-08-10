@@ -42,12 +42,12 @@ const styles = StyleSheet.create({
   },
   star: {
     fontSize: 20,
-    color: "#000", // or use gold: "#FFD700"
+    color: "#FFD700", // or use gold: "#FFD700"
     marginRight: 2,
   },
   text: {
     fontSize: 14,
-    color: "#555",
+    color: "#fff",
     marginLeft: 6,
   },
 });
