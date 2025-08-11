@@ -397,6 +397,23 @@ router.delete("/delete", auth, async (req, res) => {
     console.error("❌ Delete user error", err);
     res.status(500).json({ msg: "Server error" });
   }
+
+  router.patch("/users/profile", auth, async (req, res) => {
+    const updates = {};
+    const bool = (v) => v === true || v === "true" || v === 1 || v === "1";
+  
+    if (typeof req.body.optInSms !== "undefined") updates.optInSms = bool(req.body.optInSms);
+    if (typeof req.body.acceptedICA !== "undefined") updates.acceptedICA = bool(req.body.acceptedICA);
+    if (typeof req.body.independentContractorAgreement !== "undefined") {
+      updates.independentContractorAgreement = String(req.body.independentContractorAgreement || "");
+    }
+    if (req.body.email) updates.email = String(req.body.email).toLowerCase();
+    if (req.body.phoneNumber) updates.phoneNumber = String(req.body.phoneNumber);
+  
+  
+    const user = await Users.findByIdAndUpdate(req.user.id, updates, { new: true });
+    return res.json(user);
+  });
 });
 
 export default router;
