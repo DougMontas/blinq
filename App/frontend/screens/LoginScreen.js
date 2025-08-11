@@ -2820,6 +2820,4246 @@
 //   },
 // });
 
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /** ---------- helpers ---------- */
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary =
+//     typeof atob === "function"
+//       ? atob(base64)
+//       : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function shouldRetryLowercaseLogin(err) {
+//   const status = err?.response?.status;
+//   const msg =
+//     (err?.response?.data?.msg || err?.response?.data?.message || err?.message || "")
+//       .toString()
+//       .toLowerCase();
+
+//   // Common patterns where retrying with lowercased email helps
+//   if (status === 404) return true; // many backends return 404 for user-not-found
+//   if (msg.includes("user not found")) return true;
+//   if (msg.includes("invalid credentials")) return true; // some backends use this for both not-found/wrong-pass
+//   if (status === 400 && (msg.includes("email") || msg.includes("not found"))) return true;
+
+//   return false;
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     return tokenData?.data || null;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// /** Save push token only if user is already active so we don't hit schema validation */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     const isActive =
+//       me?.independentContractorAgreement === true ||
+//       me?.accountStatus === "active" ||
+//       me?.isActive === true;
+
+//     if (isProvider && !isActive) {
+//       // stash for later; we'll flush after they complete documents
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     // if successful, clear any pending copy
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch (e) {
+//     // never block login for push-token errors
+//     try {
+//       const expoPush = await AsyncStorage.getItem("pendingPushToken");
+//       if (!expoPush) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// /** Try to flush a previously stashed token (call this again later in dashboard/profile) */
+// export async function flushPendingPushTokenIfReady() {
+//   try {
+//     const pending = await AsyncStorage.getItem("pendingPushToken");
+//     if (!pending) return;
+//     const meRes = await api.get("/users/me");
+//     const me = meRes?.data?.user ?? meRes?.data ?? null;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     const isActive =
+//       me?.independentContractorAgreement === true ||
+//       me?.accountStatus === "active" ||
+//       me?.isActive === true;
+
+//     if (isProvider && !isActive) return;
+
+//     await api.post("/users/push-token", { token: pending });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     // swallow
+//   }
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /** ---------- side effects: permissions only ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         // Location
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         // Notifications
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           if (req.status !== "granted") {
+//             Alert.alert("Notifications", "Enable notifications for updates.", [
+//               { text: "Open Settings", onPress: () => Linking.openSettings() },
+//               { text: "Cancel", style: "cancel" },
+//             ]);
+//           }
+//         }
+//       } catch {
+//         // permission checks shouldn't block login
+//       }
+//     })();
+//   }, []);
+
+//   /** ---------- helpers ---------- */
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch {}
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const goTo = (routeName, params = {}) => {
+//     const action = { index: 0, routes: [{ name: routeName, params }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.navigate(routeName, params);
+//     }
+//   };
+
+//   /** ---------- handlers ---------- */
+//   // const onSubmit = async () => {
+//   //   try {
+//   //     setLoading(true);
+
+//   //     // clear stale tokens
+//   //     await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//   //     const creds = { email: email.trim().toLowerCase(), password };
+//   //     const { data } = await api.post("/auth/login", creds, {
+//   //       headers: { "Content-Type": "application/json" },
+//   //     });
+
+//   //     if (!data?.token) throw new Error("Token missing from response");
+
+//   //     // store tokens
+//   //     await AsyncStorage.setItem("token", data.token);
+//   //     if (data.refreshToken) {
+//   //       await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//   //     }
+
+//   //     // set auth header for subsequent calls
+//   //     api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//   //     // get user doc to decide whether we can safely save push token
+//   //     let me = null;
+//   //     try {
+//   //       const meRes = await api.get("/users/me");
+//   //       me = meRes?.data?.user ?? meRes?.data ?? null;
+//   //     } catch {
+//   //       // ignore
+//   //     }
+
+//   //     // save (or stash) push token without blocking login
+//   //     savePushTokenIfAllowed(me);
+
+//   //     // read role + stripe account from token (fallback to /me)
+//   //     const payload = parseJwt(data.token);
+//   //     const role = payload?.role || "customer";
+//   //     // Fallbacks if token doesn't include it
+//   //     const stripeAccountId =
+//   //       payload?.stripeAccountId ||
+//   //       me?.stripeAccountId ||
+//   //       me?.stripe?.accountId ||
+//   //       null;
+
+//   //     setRole(role);
+//   //     const target = roleToScreen(role);
+
+//   //     // Quick flags about provider/account status (used for UX nudges; never block)
+//   //     const isProvider = (role || "").toLowerCase() === "serviceprovider";
+//   //     const isActive =
+//   //       me?.independentContractorAgreement === true ||
+//   //       me?.accountStatus === "active" ||
+//   //       me?.isActive === true;
+//   //     const isIncomplete = isProvider && !isActive;
+
+//   //     // ====== PROVIDER BRANCH ======
+//   //     if (isProvider) {
+//   //       // 1) If NO stripe AND account incomplete -> single combined prompt
+//   //       if (!stripeAccountId && isIncomplete) {
+//   //         setLoading(false);
+//   //         Alert.alert(
+//   //           "Finish Setup",
+//   //           "You're signed in. To start receiving jobs and payouts, please complete your profile and connect Stripe.",
+//   //           [
+//   //             {
+//   //               text: "Update Profile",
+//   //               onPress: () =>
+//   //                 goTo("ProviderProfile", {
+//   //                   missingRequirements: me?.requirements || null,
+//   //                 }),
+//   //             },
+//   //             { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//   //           ]
+//   //         );
+//   //         return;
+//   //       }
+
+//   //       // 2) Stripe present → check onboarding (non-blocking)
+//   //       if (stripeAccountId) {
+//   //         try {
+//   //           const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//   //             stripeAccountId,
+//   //           });
+
+//   //           const {
+//   //             needsOnboarding,
+//   //             stripeOnboardingUrl,
+//   //             stripeDashboardUrl,
+//   //             requirements,
+//   //           } = checkRes?.data || {};
+
+//   //           if (needsOnboarding) {
+//   //             setLoading(false);
+//   //             Alert.alert(
+//   //               "Finish Stripe Onboarding",
+//   //               "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
+//   //               [
+//   //                 {
+//   //                   text: "Open Stripe",
+//   //                   onPress: async () => {
+//   //                     const url = stripeOnboardingUrl || stripeDashboardUrl;
+//   //                     await openUrlSafely(url);
+//   //                     goTo(target);
+//   //                   },
+//   //                 },
+//   //                 {
+//   //                   text: "Fix in App",
+//   //                   onPress: () =>
+//   //                     goTo("ProviderProfile", {
+//   //                       missingRequirements: requirements || null,
+//   //                     }),
+//   //                 },
+//   //                 { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//   //               ]
+//   //             );
+//   //             return;
+//   //           }
+//   //         } catch {
+//   //           // allow login anyway and nudge
+//   //           setLoading(false);
+//   //           Alert.alert(
+//   //             "Stripe Check Unavailable",
+//   //             "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
+//   //           );
+//   //           goTo(target);
+//   //           return;
+//   //         }
+//   //       } else {
+//   //         // 3) No Stripe ID → allow login and gently direct to profile to connect
+//   //         setLoading(false);
+//   //         Alert.alert(
+//   //           "Connect Payouts",
+//   //           "To receive payouts, connect your Stripe account from your profile.",
+//   //           [
+//   //             { text: "Go to Profile", onPress: () => goTo("ProviderProfile") },
+//   //             { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//   //           ]
+//   //         );
+//   //         return;
+//   //       }
+
+//   //       // 4) Stripe OK, but profile not complete → allow login with a nudge
+//   //       if (isIncomplete) {
+//   //         setLoading(false);
+//   //         Alert.alert(
+//   //           "Finish Account Setup",
+//   //           "You're signed in, but your account isn't fully active yet. You can update your profile now or do it later.",
+//   //           [
+//   //             {
+//   //               text: "Update Profile",
+//   //               onPress: () =>
+//   //                 goTo("ProviderProfile", {
+//   //                   missingRequirements: me?.requirements || null,
+//   //                 }),
+//   //             },
+//   //             { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//   //           ]
+//   //         );
+//   //         return;
+//   //       }
+//   //     }
+
+//   //     // ====== Everyone else (or providers fully set) ======
+//   //     setLoading(false);
+//   //     goTo(target);
+//   //   } catch (err) {
+//   //     setLoading(false);
+//   //     const msg =
+//   //       err?.response?.data?.msg ||
+//   //       err?.response?.data?.message ||
+//   //       err?.message ||
+//   //       "Login failed – check credentials.";
+//   //     Alert.alert("Error", msg);
+//   //   }
+//   // };
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+
+//       // clear stale tokens
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const tryLogin = async (emailToUse) => {
+//         const creds = { email: emailToUse, password };
+//         return api.post("/auth/login", creds, {
+//           headers: { "Content-Type": "application/json" },
+//         });
+//       };
+
+//       let loginRes = null;
+//       let firstError = null;
+
+//       // TRY 1: email exactly as typed
+//       try {
+//         loginRes = await tryLogin(email.trim());
+//       } catch (err1) {
+//         firstError = err1;
+//         // TRY 2: fallback to lowercased email if it makes sense
+//         if (shouldRetryLowercaseLogin(err1)) {
+//           try {
+//             loginRes = await tryLogin(email.trim().toLowerCase());
+//           } catch (err2) {
+//             throw err2; // show the real backend error after both attempts fail
+//           }
+//         } else {
+//           throw err1;
+//         }
+//       }
+
+//       const data = loginRes?.data;
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       // store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) {
+//         await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       }
+
+//       // set auth header for subsequent calls
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // get user doc to decide whether we can safely save push token
+//       let me = null;
+//       try {
+//         const meRes = await api.get("/users/me");
+//         me = meRes?.data?.user ?? meRes?.data ?? null;
+//       } catch {
+//         // ignore
+//       }
+
+//       // save (or stash) push token without blocking login
+//       savePushTokenIfAllowed(me);
+
+//       // read role + stripe account from token (fallback to /me)
+//       const payload = parseJwt(data.token);
+//       const role = (payload?.role || "customer");
+//       const stripeAccountId =
+//         payload?.stripeAccountId ||
+//         me?.stripeAccountId ||
+//         me?.stripe?.accountId ||
+//         null;
+
+//       // route target (don’t change your existing mapping)
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // ---- Provider non-blocking setup prompts (unchanged behavior, just robust) ----
+//       const isProvider = (role || "").toLowerCase() === "serviceprovider";
+//       const isActive =
+//         me?.independentContractorAgreement === true ||
+//         me?.accountStatus === "active" ||
+//         me?.isActive === true;
+//       const isIncomplete = isProvider && !isActive;
+
+//       if (isProvider) {
+//         if (!stripeAccountId && isIncomplete) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Finish Setup",
+//             "You're signed in. To start receiving jobs and payouts, please complete your profile and connect Stripe.",
+//             [
+//               {
+//                 text: "Update Profile",
+//                 onPress: () =>
+//                   goTo("ProviderProfile", {
+//                     missingRequirements: me?.requirements || null,
+//                   }),
+//               },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+
+//         if (stripeAccountId) {
+//           try {
+//             const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//               stripeAccountId,
+//             });
+
+//             const {
+//               needsOnboarding,
+//               stripeOnboardingUrl,
+//               stripeDashboardUrl,
+//               requirements,
+//             } = checkRes?.data || {};
+
+//             if (needsOnboarding) {
+//               setLoading(false);
+//               Alert.alert(
+//                 "Finish Stripe Onboarding",
+//                 "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
+//                 [
+//                   {
+//                     text: "Open Stripe",
+//                     onPress: async () => {
+//                       const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                       await openUrlSafely(url);
+//                       goTo(target);
+//                     },
+//                   },
+//                   {
+//                     text: "Fix in App",
+//                     onPress: () =>
+//                       goTo("ProviderProfile", {
+//                         missingRequirements: requirements || null,
+//                       }),
+//                   },
+//                   { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//                 ]
+//               );
+//               return;
+//             }
+//           } catch {
+//             setLoading(false);
+//             Alert.alert(
+//               "Stripe Check Unavailable",
+//               "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
+//             );
+//             goTo(target);
+//             return;
+//           }
+//         } else {
+//           setLoading(false);
+//           Alert.alert(
+//             "Connect Payouts",
+//             "To receive payouts, connect your Stripe account from your profile.",
+//             [
+//               { text: "Go to Profile", onPress: () => goTo("ProviderProfile") },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+
+//         if (isIncomplete) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Finish Account Setup",
+//             "You're signed in, but your account isn't fully active yet. You can update your profile now or do it later.",
+//             [
+//               {
+//                 text: "Update Profile",
+//                 onPress: () =>
+//                   goTo("ProviderProfile", {
+//                     missingRequirements: me?.requirements || null,
+//                   }),
+//               },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+//       }
+
+//       // All good — go to dashboard
+//       setLoading(false);
+//       goTo(target);
+//     } catch (err) {
+//       setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       // More helpful messages
+//       let msg = raw;
+//       if (status === 404 && raw.toLowerCase().includes("user")) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && raw.toLowerCase().includes("invalid")) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient
+//       colors={["#0f172a", "#1e3a8a", "#312e81"]}
+//       style={styles.container}
+//     >
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView
+//             contentContainerStyle={styles.scrollContent}
+//             keyboardShouldPersistTaps="handled"
+//           >
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{
+//                     width: LOGO_SIZE,
+//                     height: LOGO_SIZE,
+//                     marginInline: "auto",
+//                   }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>
+//                 Enter your credentials to access your account
+//               </Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                   autoComplete="email"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity
+//                   onPress={() => setShowPassword((p) => !p)}
+//                   style={styles.eyeIcon}
+//                 >
+//                   {showPassword ? (
+//                     <EyeOff color="#94a3b8" size={20} />
+//                   ) : (
+//                     <Eye color="#94a3b8" size={20} />
+//                   )}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity
+//               style={styles.loginButton}
+//               onPress={onSubmit}
+//               disabled={loading}
+//             >
+//               <LinearGradient
+//                 colors={["#22c55e", "#16a34a"]}
+//                 style={styles.loginButtonGradient}
+//               >
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity
+//                 onPress={() => navigation.navigate("Registration")}
+//               >
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: {
+//     color: "#22c55e",
+//     marginLeft: 8,
+//     fontSize: 12,
+//     fontWeight: "500",
+//   },
+// });
+
+// // screens/LoginScreen.js
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /* ---------- helpers ---------- */
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary =
+//     typeof atob === "function" ? atob(base64) : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function shouldRetryLowercaseLogin(err) {
+//   const status = err?.response?.status;
+//   const msg =
+//     (err?.response?.data?.msg || err?.response?.data?.message || err?.message || "")
+//       .toString()
+//       .toLowerCase();
+//   if (status === 404) return true;
+//   if (msg.includes("user not found")) return true;
+//   if (msg.includes("invalid credentials")) return true;
+//   if (status === 400 && (msg.includes("email") || msg.includes("not found"))) return true;
+//   return false;
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     return tokenData?.data || null;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// /** Save push token only if user is already active so we don't hit schema validation */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     const isActive =
+//       me?.independentContractorAgreement === true ||
+//       me?.accountStatus === "active" ||
+//       me?.isActive === true;
+
+//     if (isProvider && !isActive) {
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     try {
+//       const existing = await AsyncStorage.getItem("pendingPushToken");
+//       if (!existing) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// /** Try to flush a previously stashed token (call this again later in dashboard/profile) */
+// export async function flushPendingPushTokenIfReady() {
+//   try {
+//     const pending = await AsyncStorage.getItem("pendingPushToken");
+//     if (!pending) return;
+//     const meRes = await api.get("/users/me");
+//     const me = meRes?.data?.user ?? meRes?.data ?? null;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     const isActive =
+//       me?.independentContractorAgreement === true ||
+//       me?.accountStatus === "active" ||
+//       me?.isActive === true;
+
+//     if (isProvider && !isActive) return;
+
+//     await api.post("/users/push-token", { token: pending });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     // swallow
+//   }
+// }
+
+// /** Prefer backend flag; fallback to simple required-field/ICA heuristic */
+// function computeProfileComplete(me) {
+//   if (typeof me?.profileComplete === "boolean") return me.profileComplete;
+//   const required = ["firstName", "lastName", "phone", "serviceType", "serviceZipcode"];
+//   const basicsOk = required.every((k) => !!(me && me[k]));
+//   const icaOk = me?.independentContractorAgreement === true || me?.icaAccepted === true;
+//   return basicsOk && icaOk;
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /* ---------- side effects: permissions only ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         // Location
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         // Notifications
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           if (req.status !== "granted") {
+//             Alert.alert("Notifications", "Enable notifications for updates.", [
+//               { text: "Open Settings", onPress: () => Linking.openSettings() },
+//               { text: "Cancel", style: "cancel" },
+//             ]);
+//           }
+//         }
+//       } catch {
+//         // don't block login
+//       }
+//     })();
+//   }, []);
+
+//   /* ---------- helpers ---------- */
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch {}
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const goTo = (routeName, params = {}) => {
+//     const action = { index: 0, routes: [{ name: routeName, params }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.navigate(routeName, params);
+//     }
+//   };
+
+//   /* ---------- handlers ---------- */
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+
+//       // clear stale tokens
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const tryLogin = async (emailToUse) => {
+//         const creds = { email: emailToUse, password };
+//         return api.post("/auth/login", creds, {
+//           headers: { "Content-Type": "application/json" },
+//         });
+//       };
+
+//       let loginRes = null;
+
+//       // Try as typed
+//       try {
+//         loginRes = await tryLogin(email.trim());
+//       } catch (err1) {
+//         // If backend likely does case-sensitive lookup, retry lowercase
+//         if (shouldRetryLowercaseLogin(err1)) {
+//           loginRes = await tryLogin(email.trim().toLowerCase());
+//         } else {
+//           throw err1;
+//         }
+//       }
+
+//       const data = loginRes?.data;
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       // store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
+
+//       // set auth header for subsequent calls
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // fetch /me (for profile completeness & safe push-token save)
+//       let me = null;
+//       try {
+//         const meRes = await api.get("/users/me");
+//         me = meRes?.data?.user ?? meRes?.data ?? null;
+//       } catch {
+//         // ignore; still allow login
+//       }
+
+//       // save (or stash) push token without blocking login
+//       savePushTokenIfAllowed(me);
+
+//       // figure out role and stripe account id
+//       const payload = parseJwt(data.token);
+//       const role = payload?.role || "customer";
+//       const stripeAccountId =
+//         payload?.stripeAccountId || me?.stripeAccountId || me?.stripe?.accountId || null;
+
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // ---------- Provider: check Stripe & profile (non-blocking) ----------
+//       if ((role || "").toLowerCase() === "serviceprovider") {
+//         const profileComplete = computeProfileComplete(me || {});
+//         let stripeNeedsOnboarding = false;
+//         let stripeOnboardingUrl = null;
+//         let stripeDashboardUrl = null;
+//         let requirements = null;
+
+//         if (stripeAccountId) {
+//           try {
+//             const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//               stripeAccountId,
+//             });
+//             const r = checkRes?.data || {};
+//             stripeNeedsOnboarding = !!r.needsOnboarding;
+//             stripeOnboardingUrl = r.stripeOnboardingUrl || null;
+//             stripeDashboardUrl = r.stripeDashboardUrl || null;
+//             requirements = r.requirements || null;
+//           } catch {
+//             // If check fails, we'll still let them in and just offer profile update
+//           }
+//         } else {
+//           // No account yet => needs onboarding
+//           stripeNeedsOnboarding = true;
+//         }
+
+//         if (stripeNeedsOnboarding || !profileComplete) {
+//           setLoading(false);
+
+//           const parts = [];
+//           if (stripeNeedsOnboarding) parts.push("Stripe payouts");
+//           if (!profileComplete) parts.push("your profile");
+//           const msg =
+//             parts.length === 2
+//               ? "Stripe payouts and your profile need attention."
+//               : `${parts[0]} needs attention.`;
+
+//           const buttons = [];
+
+//           if (stripeNeedsOnboarding) {
+//             if (stripeOnboardingUrl || stripeDashboardUrl) {
+//               buttons.push({
+//                 text: "Open Stripe",
+//                 onPress: async () => {
+//                   const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                   await openUrlSafely(url);
+//                   goTo(target);
+//                 },
+//               });
+//             } else {
+//               // No link available → send to profile to connect payouts
+//               buttons.push({
+//                 text: "Connect Payouts",
+//                 onPress: () => goTo("ProviderProfile"),
+//               });
+//             }
+//           }
+
+//           if (!profileComplete) {
+//             buttons.push({
+//               text: "Update Profile",
+//               onPress: () =>
+//                 goTo("ProviderProfile", {
+//                   missingRequirements: requirements || me?.requirements || null,
+//                 }),
+//             });
+//           }
+
+//           buttons.push({ text: "Later", style: "cancel", onPress: () => goTo(target) });
+
+//           Alert.alert("Finish Setup", msg + " You can do it now or later.", buttons);
+//           return; // wait for user choice
+//         }
+//       }
+
+//       // All good — go to dashboard
+//       setLoading(false);
+//       goTo(target);
+//     } catch (err) {
+//       setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       let msg = raw;
+//       if (status === 404 && raw.toLowerCase().includes("user")) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && raw.toLowerCase().includes("invalid")) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   /* ---------- UI ---------- */
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                   autoComplete="email"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 40 },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: { color: "#60a5fa", fontSize: 16, fontWeight: "bold", marginLeft: 6 },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// });
+
+// // screens/LoginScreen.js
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import {
+//   Mail,
+//   Lock,
+//   Eye,
+//   EyeOff,
+//   ArrowRight,
+//   Shield,
+// } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /* ---------- helpers ---------- */
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary =
+//     typeof atob === "function"
+//       ? atob(base64)
+//       : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function shouldRetryLowercaseLogin(err) {
+//   const status = err?.response?.status;
+//   const msg = (
+//     err?.response?.data?.msg ||
+//     err?.response?.data?.message ||
+//     err?.message ||
+//     ""
+//   )
+//     .toString()
+//     .toLowerCase();
+//   if (status === 404) return true;
+//   if (msg.includes("user not found")) return true;
+//   if (msg.includes("invalid credentials")) return true;
+//   if (status === 400 && (msg.includes("email") || msg.includes("not found")))
+//     return true;
+//   return false;
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider")
+//     return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// // ----- field helpers & active/profile checks (NO hard dep on independentContractorAgreement) -----
+// const getPhone = (me) =>
+//   me?.phone ?? me?.phoneNumber ?? me?.contactPhone ?? null;
+// const getZip = (me) =>
+//   me?.serviceZipcode ?? me?.serviceZipCode ?? me?.zip ?? me?.zipcode ?? null;
+
+// // Treat account as active if accepted or already flagged active — do NOT require ICA field
+// function isAccountActive(me) {
+//   return (
+//     me?.acceptedICA === true || // new
+//     me?.icaAccepted === true || // alias
+//     me?.accountStatus === "active" ||
+//     me?.isActive === true
+//   );
+// }
+
+// // Prefer backend’s profileComplete; otherwise require basics + acceptance (acceptedICA/icaAccepted)
+// function computeProfileComplete(me) {
+//   if (typeof me?.profileComplete === "boolean") return me.profileComplete;
+//   const required = [
+//     me?.firstName,
+//     me?.lastName,
+//     getPhone(me),
+//     me?.serviceType,
+//     getZip(me),
+//   ];
+//   const basicsOk = required.every(Boolean);
+//   const acceptedOk =
+//     me?.acceptedICA === true || me?.icaAccepted === true || isAccountActive(me);
+//   return basicsOk && acceptedOk;
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } =
+//       await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     return tokenData?.data || null;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// /** Save push token only if user is active (no ICA:true requirement anymore) */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider && !isAccountActive(me)) {
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     try {
+//       const existing = await AsyncStorage.getItem("pendingPushToken");
+//       if (!existing) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// /** Try to flush a previously stashed token (call later in dashboard/profile) */
+// export async function flushPendingPushTokenIfReady() {
+//   try {
+//     const pending = await AsyncStorage.getItem("pendingPushToken");
+//     if (!pending) return;
+//     const meRes = await api.get("/users/me");
+//     const me = meRes?.data?.user ?? meRes?.data ?? null;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider && !isAccountActive(me)) return;
+
+//     await api.post("/users/push-token", { token: pending });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     // swallow
+//   }
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /* ---------- side effects: permissions only ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         // Location
+//         const { status: locStatus } =
+//           await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         // Notifications
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           if (req.status !== "granted") {
+//             Alert.alert("Notifications", "Enable notifications for updates.", [
+//               { text: "Open Settings", onPress: () => Linking.openSettings() },
+//               { text: "Cancel", style: "cancel" },
+//             ]);
+//           }
+//         }
+//       } catch {
+//         // don't block login
+//       }
+//     })();
+//   }, []);
+
+//   /* ---------- helpers ---------- */
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch {}
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const goTo = (routeName, params = {}) => {
+//     const action = { index: 0, routes: [{ name: routeName, params }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.navigate(routeName, params);
+//     }
+//   };
+
+//   /* ---------- handlers ---------- */
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+
+//       // clear stale tokens
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const tryLogin = async (emailToUse) => {
+//         const creds = { email: emailToUse, password };
+//         return api.post("/auth/login", creds, {
+//           headers: { "Content-Type": "application/json" },
+//         });
+//       };
+
+//       let loginRes = null;
+
+//       // Try as typed
+//       try {
+//         loginRes = await tryLogin(email.trim());
+//       } catch (err1) {
+//         // fallback to lowercase if backend does case-sensitive lookup
+//         if (shouldRetryLowercaseLogin(err1)) {
+//           loginRes = await tryLogin(email.trim().toLowerCase());
+//         } else {
+//           throw err1;
+//         }
+//       }
+
+//       const data = loginRes?.data;
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       // store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken)
+//         await AsyncStorage.setItem("refreshToken", data.refreshToken);
+
+//       // set auth header for subsequent calls
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // fetch /me (for profile completeness & safe push-token save)
+//       let me = null;
+//       try {
+//         const meRes = await api.get("/users/me");
+//         me = meRes?.data?.user ?? meRes?.data ?? null;
+//       } catch {
+//         // ignore; still allow login
+//       }
+
+//       // save (or stash) push token without blocking login
+//       savePushTokenIfAllowed(me);
+
+//       // figure out role and stripe account id
+//       const payload = parseJwt(data.token);
+//       const role = payload?.role || "customer";
+//       const stripeAccountId =
+//         payload?.stripeAccountId ||
+//         me?.stripeAccountId ||
+//         me?.stripe?.accountId ||
+//         null;
+
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       const isProvider = (role || "").toLowerCase() === "serviceprovider";
+
+//       // treat these as signals the profile is ready enough
+//       const profileComplete =
+//         asBool(me?.acceptedICA) ||
+//         asBool(me?.icaAccepted) ||
+//         me?.accountStatus === "active" ||
+//         me?.isActive === true;
+
+//       // use this instead of your previous `isActive` / independentContractorAgreement check
+//       const isIncomplete = isProvider && !profileComplete;
+
+//       // ---------- Provider: check Stripe & profile (non-blocking) ----------
+//       if ((role || "").toLowerCase() === "serviceprovider") {
+//         const profileComplete = computeProfileComplete(me || {});
+//         let stripeNeedsOnboarding = false;
+//         let stripeOnboardingUrl = null;
+//         let stripeDashboardUrl = null;
+//         let requirements = null;
+
+//         if (stripeAccountId) {
+//           try {
+//             const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//               stripeAccountId,
+//             });
+//             const r = checkRes?.data || {};
+//             stripeNeedsOnboarding = !!r.needsOnboarding;
+//             stripeOnboardingUrl = r.stripeOnboardingUrl || null;
+//             stripeDashboardUrl = r.stripeDashboardUrl || null;
+//             requirements = r.requirements || null;
+//           } catch {
+//             // allow login; we'll still offer profile update
+//           }
+//         } else {
+//           // No account yet => needs onboarding
+//           stripeNeedsOnboarding = true;
+//         }
+
+//         if (stripeNeedsOnboarding || !profileComplete) {
+//           setLoading(false);
+
+//           const parts = [];
+//           if (stripeNeedsOnboarding) parts.push("Stripe payouts");
+//           if (!profileComplete) parts.push("your profile");
+//           const msg =
+//             parts.length === 2
+//               ? "Stripe payouts and your profile need attention."
+//               : `${parts[0]} needs attention.`;
+
+//           const buttons = [];
+
+//           if (stripeNeedsOnboarding) {
+//             if (stripeOnboardingUrl || stripeDashboardUrl) {
+//               buttons.push({
+//                 text: "Open Stripe",
+//                 onPress: async () => {
+//                   const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                   await openUrlSafely(url);
+//                   goTo(target);
+//                 },
+//               });
+//             } else {
+//               buttons.push({
+//                 text: "Connect Payouts",
+//                 onPress: () => goTo("ProviderProfile"),
+//               });
+//             }
+//           }
+
+//           if (!profileComplete) {
+//             buttons.push({
+//               text: "Update Profile",
+//               onPress: () =>
+//                 goTo("ProviderProfile", {
+//                   missingRequirements: requirements || me?.requirements || null,
+//                 }),
+//             });
+//           }
+
+//           buttons.push({
+//             text: "Later",
+//             style: "cancel",
+//             onPress: () => goTo(target),
+//           });
+
+//           Alert.alert(
+//             "Finish Setup",
+//             msg + " You can do it now or later.",
+//             buttons
+//           );
+//           return;
+//         }
+//       }
+
+//       // All good — go to dashboard
+//       setLoading(false);
+//       goTo(target);
+//     } catch (err) {
+//       setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       let msg = raw;
+//       if (status === 404 && raw.toLowerCase().includes("user")) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && raw.toLowerCase().includes("invalid")) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   /* ---------- UI ---------- */
+//   return (
+//     <LinearGradient
+//       colors={["#0f172a", "#1e3a8a", "#312e81"]}
+//       style={styles.container}
+//     >
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView
+//             contentContainerStyle={styles.scrollContent}
+//             keyboardShouldPersistTaps="handled"
+//           >
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{
+//                     width: LOGO_SIZE,
+//                     height: LOGO_SIZE,
+//                     marginInline: "auto",
+//                   }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>
+//                 Enter your credentials to access your account
+//               </Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                   autoComplete="email"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity
+//                   onPress={() => setShowPassword((p) => !p)}
+//                   style={styles.eyeIcon}
+//                 >
+//                   {showPassword ? (
+//                     <EyeOff color="#94a3b8" size={20} />
+//                   ) : (
+//                     <Eye color="#94a3b8" size={20} />
+//                   )}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() =>
+//                   navigation.navigate("RequestPasswordResetScreen")
+//                 }
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity
+//               style={styles.loginButton}
+//               onPress={onSubmit}
+//               disabled={loading}
+//             >
+//               <LinearGradient
+//                 colors={["#22c55e", "#16a34a"]}
+//                 style={styles.loginButtonGradient}
+//               >
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity
+//                 onPress={() => navigation.navigate("Registration")}
+//               >
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: {
+//     color: "#22c55e",
+//     marginLeft: 8,
+//     fontSize: 12,
+//     fontWeight: "500",
+//   },
+// });
+
+// // screens/LoginScreen.js
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /** ---------- helpers ---------- */
+// const asBool = (v) => {
+//   if (typeof v === "boolean") return v;
+//   if (typeof v === "string") return v.toLowerCase() === "true";
+//   return false;
+// };
+
+// const isProfileComplete = (me) =>
+//   asBool(me?.acceptedICA) ||
+//   asBool(me?.icaAccepted) ||
+//   me?.accountStatus === "active" ||
+//   me?.isActive === true;
+
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary =
+//     typeof atob === "function"
+//       ? atob(base64)
+//       : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     return tokenData?.data || null;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// /** Save push token only if the account is already “ready” */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider && !isProfileComplete(me)) {
+//       // stash for later; we'll flush after they complete documents
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     try {
+//       const expoPush = await AsyncStorage.getItem("pendingPushToken");
+//       if (!expoPush) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /** ---------- one-time: permissions ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         // Location
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         // Notifications
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           if (req.status !== "granted") {
+//             Alert.alert("Notifications", "Enable notifications for updates.", [
+//               { text: "Open Settings", onPress: () => Linking.openSettings() },
+//               { text: "Cancel", style: "cancel" },
+//             ]);
+//           }
+//         }
+//       } catch {
+//         // permission checks shouldn't block login
+//       }
+//     })();
+//   }, []);
+
+//   /** ---------- helpers ---------- */
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch {}
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const goTo = (routeName, params = {}) => {
+//     const action = { index: 0, routes: [{ name: routeName, params }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.navigate(routeName, params);
+//     }
+//   };
+
+//   /** ---------- LOGIN ---------- */
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+
+//       // Clear stale tokens
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const normalizedEmail = email.trim().toLowerCase();
+
+//       // Send both email and username to be safe (backend can accept either)
+//       const creds = { email: normalizedEmail, username: normalizedEmail, password };
+
+//       // Login
+//       const { data } = await api.post("/auth/login", creds, {
+//         headers: { "Content-Type": "application/json" },
+//       });
+
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       // Store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) {
+//         await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       }
+
+//       // Set auth header for subsequent calls
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // Load /me (do not assume payload has everything)
+//       let me = null;
+//       try {
+//         const meRes = await api.get("/users/me");
+//         me = meRes?.data?.user ?? meRes?.data ?? null;
+//       } catch {
+//         // continue anyway
+//       }
+
+//       // Save (or stash) push token without blocking login
+//       savePushTokenIfAllowed(me);
+
+//       // Role + Stripe account
+//       const payload = parseJwt(data.token) || {};
+//       const role = payload?.role || me?.role || "customer";
+//       const stripeAccountId =
+//         payload?.stripeAccountId ||
+//         me?.stripeAccountId ||
+//         me?.stripe?.accountId ||
+//         null;
+
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // Provider prompts (non-blocking)
+//       const isProvider = (role || "").toLowerCase() === "serviceprovider";
+//       const profileOk = isProfileComplete(me);
+
+//       if (isProvider) {
+//         // 1) No Stripe yet
+//         if (!stripeAccountId) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Connect Payouts",
+//             "To receive payouts, connect your Stripe account from your profile.",
+//             [
+//               { text: "Go to Profile", onPress: () => goTo("ProviderProfile") },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+
+//         // 2) Stripe exists → check onboarding
+//         try {
+//           const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//             stripeAccountId,
+//           });
+
+//           const {
+//             needsOnboarding,
+//             stripeOnboardingUrl,
+//             stripeDashboardUrl,
+//             requirements,
+//           } = checkRes?.data || {};
+
+//           if (needsOnboarding) {
+//             setLoading(false);
+//             Alert.alert(
+//               "Finish Stripe Onboarding",
+//               "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
+//               [
+//                 {
+//                   text: "Open Stripe",
+//                   onPress: async () => {
+//                     const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                     await openUrlSafely(url);
+//                     goTo(target);
+//                   },
+//                 },
+//                 {
+//                   text: "Fix in App",
+//                   onPress: () =>
+//                     goTo("ProviderProfile", {
+//                       missingRequirements: requirements || null,
+//                     }),
+//                 },
+//                 { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//               ]
+//             );
+//             return;
+//           }
+//         } catch {
+//           // continue with login; user can finish from profile later
+//           setLoading(false);
+//           Alert.alert(
+//             "Stripe Check Unavailable",
+//             "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
+//           );
+//           goTo(target);
+//           return;
+//         }
+
+//         // 3) Stripe OK but profile not fully marked active → nudge (non-blocking)
+//         if (!profileOk) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Finish Account Setup",
+//             "You're signed in, but your account isn't fully active yet. You can update your profile now or do it later.",
+//             [
+//               {
+//                 text: "Update Profile",
+//                 onPress: () =>
+//                   goTo("ProviderProfile", {
+//                     missingRequirements: me?.requirements || null,
+//                   }),
+//               },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+//       }
+
+//       // All good — go to dashboard
+//       setLoading(false);
+//       goTo(target);
+//     } catch (err) {
+//       setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       let msg = raw;
+//       if (status === 404 && raw.toLowerCase().includes("user")) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && raw.toLowerCase().includes("invalid")) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                   autoComplete="email"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// });
+
+// // screens/LoginScreen.js
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /** ---------- helpers ---------- */
+// const asBool = (v) => {
+//   if (typeof v === "boolean") return v;
+//   if (typeof v === "string") return v.toLowerCase() === "true";
+//   return false;
+// };
+
+// const isProfileComplete = (me) =>
+//   // NOTE: we intentionally removed independentContractorAgreement:null checks
+//   asBool(me?.acceptedICA) ||
+//   asBool(me?.icaAccepted) ||
+//   me?.accountStatus === "active" ||
+//   me?.isActive === true;
+
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary =
+//     typeof atob === "function"
+//       ? atob(base64)
+//       : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     return tokenData?.data || null;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// /** Save push token only if the account is already “ready” */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider && !isProfileComplete(me)) {
+//       // stash for later; we'll flush after they complete documents
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     try {
+//       const expoPush = await AsyncStorage.getItem("pendingPushToken");
+//       if (!expoPush) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [username, setUsername] = useState(""); // <-- username only
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /** ---------- one-time: permissions ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         // Location
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         // Notifications
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           if (req.status !== "granted") {
+//             Alert.alert("Notifications", "Enable notifications for updates.", [
+//               { text: "Open Settings", onPress: () => Linking.openSettings() },
+//               { text: "Cancel", style: "cancel" },
+//             ]);
+//           }
+//         }
+//       } catch {
+//         // permission checks shouldn't block login
+//       }
+//     })();
+//   }, []);
+
+//   /** ---------- helpers ---------- */
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch {}
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const goTo = (routeName, params = {}) => {
+//     const action = { index: 0, routes: [{ name: routeName, params }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.navigate(routeName, params);
+//     }
+//   };
+
+//   /** ---------- LOGIN (username only) ---------- */
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+
+//       // Clear stale tokens
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const raw = username.trim();
+//       if (!raw || !password) {
+//         setLoading(false);
+//         Alert.alert("Missing info", "Please enter your username and password.");
+//         return;
+//       }
+
+//       // Try EXACT username first, then lowercase fallback
+//       const attempts = [raw];
+//       if (raw.toLowerCase() !== raw) attempts.push(raw.toLowerCase());
+
+//       let data = null;
+//       let lastErr = null;
+
+//       for (const uname of attempts) {
+//         try {
+//           const res = await api.post(
+//             "/auth/login",
+//             { username: uname, password },
+//             { headers: { "Content-Type": "application/json" } }
+//           );
+//           data = res?.data;
+//           if (data?.token) break;
+//         } catch (e) {
+//           lastErr = e;
+//         }
+//       }
+
+//       if (!data?.token) {
+//         throw lastErr || new Error("Invalid username or password");
+//       }
+
+//       // Store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) {
+//         await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       }
+
+//       // Set auth header for subsequent calls
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // Load /me (do not assume payload has everything)
+//       let me = null;
+//       try {
+//         const meRes = await api.get("/users/me");
+//         me = meRes?.data?.user ?? meRes?.data ?? null;
+//       } catch {
+//         // continue anyway
+//       }
+
+//       // Save (or stash) push token without blocking login
+//       savePushTokenIfAllowed(me);
+
+//       // Role + Stripe account
+//       const payload = parseJwt(data.token) || {};
+//       const role = payload?.role || me?.role || "customer";
+//       const stripeAccountId =
+//         payload?.stripeAccountId ||
+//         me?.stripeAccountId ||
+//         me?.stripe?.accountId ||
+//         null;
+
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // Provider prompts (non-blocking)
+//       const isProvider = (role || "").toLowerCase() === "serviceprovider";
+//       const profileOk = isProfileComplete(me);
+
+//       if (isProvider) {
+//         // 1) No Stripe yet
+//         if (!stripeAccountId) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Connect Payouts",
+//             "To receive payouts, connect your Stripe account from your profile.",
+//             [
+//               { text: "Go to Profile", onPress: () => goTo("ProviderProfile") },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+
+//         // 2) Stripe exists → check onboarding
+//         try {
+//           const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//             stripeAccountId,
+//           });
+
+//           const {
+//             needsOnboarding,
+//             stripeOnboardingUrl,
+//             stripeDashboardUrl,
+//             requirements,
+//           } = checkRes?.data || {};
+
+//           if (needsOnboarding) {
+//             setLoading(false);
+//             Alert.alert(
+//               "Finish Stripe Onboarding",
+//               "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
+//               [
+//                 {
+//                   text: "Open Stripe",
+//                   onPress: async () => {
+//                     const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                     await openUrlSafely(url);
+//                     goTo(target);
+//                   },
+//                 },
+//                 {
+//                   text: "Fix in App",
+//                   onPress: () =>
+//                     goTo("ProviderProfile", {
+//                       missingRequirements: requirements || null,
+//                     }),
+//                 },
+//                 { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//               ]
+//             );
+//             return;
+//           }
+//         } catch {
+//           // continue with login; user can finish from profile later
+//           setLoading(false);
+//           Alert.alert(
+//             "Stripe Check Unavailable",
+//             "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
+//           );
+//           goTo(target);
+//           return;
+//         }
+
+//         // 3) Stripe OK but profile not fully marked active → nudge (non-blocking)
+//         if (!profileOk) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Finish Account Setup",
+//             "You're signed in, but your account isn't fully active yet. You can update your profile now or do it later.",
+//             [
+//               {
+//                 text: "Update Profile",
+//                 onPress: () =>
+//                   goTo("ProviderProfile", {
+//                     missingRequirements: me?.requirements || null,
+//                   }),
+//               },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+//       }
+
+//       // All good — go to dashboard
+//       setLoading(false);
+//       goTo(target);
+//     } catch (err) {
+//       setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       let msg = raw;
+//       const lower = (raw || "").toLowerCase();
+//       if (status === 404 && (lower.includes("user") || lower.includes("username"))) {
+//         msg = "We couldn’t find an account with that username.";
+//       }
+//       if (status === 401 && (lower.includes("invalid") || lower.includes("password"))) {
+//         msg = "Invalid username or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 {/* Re-using Mail icon just as a leading icon; it's a username field */}
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="default"         // username, not email keyboard
+//                   autoCapitalize="none"
+//                   autoCorrect={false}
+//                   autoComplete="username"        // tell OS it's a username
+//                   value={username}
+//                   onChangeText={setUsername}
+//                   returnKeyType="next"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// // });
+
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /** ---------- helpers ---------- */
+// const asBool = (v) => {
+//   if (typeof v === "boolean") return v;
+//   if (typeof v === "string") return v.toLowerCase() === "true";
+//   return false;
+// };
+
+// // Profile considered complete WITHOUT checking independentContractorAgreement:null
+// const isProfileComplete = (me) =>
+//   asBool(me?.acceptedICA) ||
+//   asBool(me?.icaAccepted) ||
+//   me?.accountStatus === "active" ||
+//   me?.isActive === true;
+
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary =
+//     typeof atob === "function"
+//       ? atob(base64)
+//       : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// // If the first login attempt fails in a way that suggests case mismatch or not-found,
+// // retry with a lower-cased email.
+// function shouldRetryLowercaseLogin(err) {
+//   const status = err?.response?.status;
+//   const msg =
+//     (err?.response?.data?.msg || err?.response?.data?.message || err?.message || "")
+//       .toString()
+//       .toLowerCase();
+
+//   if (status === 404) return true;
+//   if (msg.includes("user not found")) return true;
+//   if (msg.includes("invalid credentials")) return true;
+//   if (status === 400 && (msg.includes("email") || msg.includes("not found"))) return true;
+
+//   return false;
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     return tokenData?.data || null;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// /** Save push token only if the account is already “ready” */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider && !isProfileComplete(me)) {
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//   } catch {
+//     try {
+//       const expoPush = await AsyncStorage.getItem("pendingPushToken");
+//       if (!expoPush) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [email, setEmail] = useState("");    // <-- email only
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /** ---------- one-time: permissions ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         // Location
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         // Notifications
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           if (req.status !== "granted") {
+//             Alert.alert("Notifications", "Enable notifications for updates.", [
+//               { text: "Open Settings", onPress: () => Linking.openSettings() },
+//               { text: "Cancel", style: "cancel" },
+//             ]);
+//           }
+//         }
+//       } catch {
+//         // permission checks shouldn't block login
+//       }
+//     })();
+//   }, []);
+
+//   /** ---------- helpers ---------- */
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch {}
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const goTo = (routeName, params = {}) => {
+//     const action = { index: 0, routes: [{ name: routeName, params }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.navigate(routeName, params);
+//     }
+//   };
+
+//   /** ---------- LOGIN (email only) ---------- */
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+
+//       // Clear stale tokens
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const typed = email.trim();
+//       if (!typed || !password) {
+//         setLoading(false);
+//         Alert.alert("Missing info", "Please enter your email and password.");
+//         return;
+//       }
+
+//       const tryLogin = async (emailToUse) =>
+//         api.post(
+//           "/auth/login",
+//           { email: emailToUse, password }, // <-- ONLY email + password
+//           { headers: { "Content-Type": "application/json" } }
+//         );
+
+//       let loginRes = null;
+
+//       // TRY 1: email exactly as typed
+//       try {
+//         loginRes = await tryLogin(typed);
+//       } catch (err1) {
+//         // TRY 2: fallback to lowercased email if backend hints not-found/invalid
+//         if (shouldRetryLowercaseLogin(err1)) {
+//           loginRes = await tryLogin(typed.toLowerCase());
+//         } else {
+//           throw err1;
+//         }
+//       }
+
+//       const data = loginRes?.data;
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       // Store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) {
+//         await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       }
+
+//       // Set auth header for subsequent calls
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // Load /me (do not assume payload has everything)
+//       let me = null;
+//       try {
+//         const meRes = await api.get("/users/me");
+//         me = meRes?.data?.user ?? meRes?.data ?? null;
+//       } catch {
+//         // continue anyway
+//       }
+
+//       // Save (or stash) push token without blocking login
+//       savePushTokenIfAllowed(me);
+
+//       // Role + Stripe account
+//       const payload = parseJwt(data.token) || {};
+//       const role = payload?.role || me?.role || "customer";
+//       const stripeAccountId =
+//         payload?.stripeAccountId ||
+//         me?.stripeAccountId ||
+//         me?.stripe?.accountId ||
+//         null;
+
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // Provider prompts (non-blocking)
+//       const isProvider = (role || "").toLowerCase() === "serviceprovider";
+//       const profileOk = isProfileComplete(me);
+
+//       if (isProvider) {
+//         // 1) No Stripe yet
+//         if (!stripeAccountId) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Connect Payouts",
+//             "To receive payouts, connect your Stripe account from your profile.",
+//             [
+//               { text: "Go to Profile", onPress: () => goTo("ProviderProfile") },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+
+//         // 2) Stripe exists → check onboarding
+//         try {
+//           const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//             stripeAccountId,
+//           });
+
+//           const {
+//             needsOnboarding,
+//             stripeOnboardingUrl,
+//             stripeDashboardUrl,
+//             requirements,
+//           } = checkRes?.data || {};
+
+//           if (needsOnboarding) {
+//             setLoading(false);
+//             Alert.alert(
+//               "Finish Stripe Onboarding",
+//               "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
+//               [
+//                 {
+//                   text: "Open Stripe",
+//                   onPress: async () => {
+//                     const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                     await openUrlSafely(url);
+//                     goTo(target);
+//                   },
+//                 },
+//                 {
+//                   text: "Fix in App",
+//                   onPress: () =>
+//                     goTo("ProviderProfile", {
+//                       missingRequirements: requirements || null,
+//                     }),
+//                 },
+//                 { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//               ]
+//             );
+//             return;
+//           }
+//         } catch {
+//           // continue with login; user can finish from profile later
+//           setLoading(false);
+//           Alert.alert(
+//             "Stripe Check Unavailable",
+//             "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
+//           );
+//           goTo(target);
+//           return;
+//         }
+
+//         // 3) Stripe OK but profile not fully marked active → nudge (non-blocking)
+//         if (!profileOk) {
+//           setLoading(false);
+//           Alert.alert(
+//             "Finish Account Setup",
+//             "You're signed in, but your account isn't fully active yet. You can update your profile now or do it later.",
+//             [
+//               {
+//                 text: "Update Profile",
+//                 onPress: () =>
+//                   goTo("ProviderProfile", {
+//                     missingRequirements: me?.requirements || null,
+//                   }),
+//               },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+//       }
+
+//       // All good — go to dashboard
+//       setLoading(false);
+//       goTo(target);
+//     } catch (err) {
+//       setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       let msg = raw;
+//       const lower = (raw || "").toLowerCase();
+//       if (status === 404 && (lower.includes("user") || lower.includes("email"))) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && (lower.includes("invalid") || lower.includes("password"))) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   autoCorrect={false}
+//                   autoComplete="email"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// });
+
+
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { Buffer } from "buffer";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /** ---------- helpers ---------- */
+// const asBool = (v) => {
+//   if (typeof v === "boolean") return v;
+//   if (typeof v === "string") return v.toLowerCase() === "true";
+//   return false;
+// };
+
+// // Profile considered complete WITHOUT checking independentContractorAgreement:null
+// const isProfileComplete = (me) =>
+//   asBool(me?.acceptedICA) ||
+//   asBool(me?.icaAccepted) ||
+//   me?.accountStatus === "active" ||
+//   me?.isActive === true;
+
+// function parseJwt(token) {
+//   if (!token) return null;
+//   const base64Url = token.split(".")[1];
+//   if (!base64Url) return null;
+//   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//   const binary =
+//     typeof atob === "function"
+//       ? atob(base64)
+//       : Buffer.from(base64, "base64").toString("binary");
+//   const jsonPayload = decodeURIComponent(
+//     binary
+//       .split("")
+//       .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//       .join("")
+//   );
+//   return JSON.parse(jsonPayload);
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// function shouldRetryLowercaseLogin(err) {
+//   const status = err?.response?.status;
+//   const msg =
+//     (err?.response?.data?.msg || err?.response?.data?.message || err?.message || "")
+//       .toString()
+//       .toLowerCase();
+
+//   if (status === 404) return true;
+//   if (msg.includes("user not found")) return true;
+//   if (msg.includes("invalid credentials")) return true;
+//   if (status === 400 && (msg.includes("email") || msg.includes("not found"))) return true;
+//   return false;
+// }
+
+// // Minimal push registration (safe to fail quietly if not configured)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync();
+//     console.log("📮 Expo push token acquired?", !!tokenData?.data);
+//     return tokenData?.data || null;
+//   } catch (e) {
+//     console.log("❌ registerForPushNotificationsAsync failed:", e?.message);
+//     return null;
+//   }
+// }
+
+// /** Save push token only if the account is already “ready” */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider && !isProfileComplete(me)) {
+//       console.log("🟡 Stashing push token until profile complete.");
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//     console.log("✅ Push token sent to backend and stored.");
+//   } catch (e) {
+//     console.log("⚠️ Failed to send push token, will stash:", e?.response?.data || e?.message);
+//     try {
+//       const already = await AsyncStorage.getItem("pendingPushToken");
+//       if (!already) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const [email, setEmail] = useState(""); // email only
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /** ---------- one-time: permissions ---------- */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         console.log("📍 Location permission:", locStatus);
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           console.log("📍 Location permission requested ->", status);
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         console.log("🔔 Notification permission:", notifPerm?.status);
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           console.log("🔔 Notification permission requested ->", req?.status);
+//         }
+//       } catch (e) {
+//         console.log("⚠️ Permission setup error:", e?.message);
+//       }
+//     })();
+//   }, []);
+
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch (e) {
+//       console.log("❌ openUrlSafely error:", e?.message, url);
+//     }
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const goTo = (routeName, params = {}) => {
+//     console.log("🧭 Navigating to", routeName, "params:", params);
+//     const action = { index: 0, routes: [{ name: routeName, params }] };
+//     if (navigationRef?.isReady?.()) {
+//       navigationRef.reset(action);
+//     } else if (navigation && typeof navigation.reset === "function") {
+//       navigation.reset(action);
+//     } else {
+//       navigation.navigate(routeName, params);
+//     }
+//   };
+
+//   /** ---------- LOGIN (email only) ---------- */
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+//       console.log("🔑 Login pressed.");
+
+//       // Clear stale tokens
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const typed = email.trim();
+//       if (!typed || !password) {
+//         setLoading(false);
+//         Alert.alert("Missing info", "Please enter your email and password.");
+//         return;
+//       }
+
+//       const tryLogin = async (emailToUse, label) => {
+//         // Log safely (no password)
+//         console.log("➡️ POST /auth/login", {
+//           email: emailToUse,
+//           attempt: label,
+//           passwordLength: String(password).length,
+//         });
+//         // IMPORTANT: send the REAL password here
+//         return api.post(
+//           "/auth/login",
+//           { email: emailToUse, password }, // ✅ fixed: real password
+//           { headers: { "Content-Type": "application/json" } }
+//         );
+//       };
+
+//       let loginRes = null;
+
+//       // TRY 1: email exactly as typed
+//       try {
+//         loginRes = await tryLogin(typed, "typed");
+//       } catch (err1) {
+//         const status = err1?.response?.status;
+//         console.log("❌ Login attempt #1 failed:", {
+//           status,
+//           data: err1?.response?.data,
+//           message: err1?.message,
+//         });
+
+//         if (shouldRetryLowercaseLogin(err1)) {
+//           const lower = typed.toLowerCase();
+//           console.log("↪️ Retrying with lowercased email:", lower);
+//           try {
+//             loginRes = await tryLogin(lower, "lowercased");
+//           } catch (err2) {
+//             console.log("❌ Login attempt #2 failed:", {
+//               status: err2?.response?.status,
+//               data: err2?.response?.data,
+//               message: err2?.message,
+//             });
+//             throw err2;
+//           }
+//         } else {
+//           throw err1;
+//         }
+//       }
+
+//       const data = loginRes?.data;
+//       console.log("✅ Login response keys:", Object.keys(data || {}));
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       // Store tokens
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) {
+//         await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       }
+//       console.log("🔒 Tokens stored. token.len:", data.token?.length, "refresh?", !!data.refreshToken);
+
+//       // Set auth header for subsequent calls
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // Load /me
+//       let me = null;
+//       try {
+//         const meRes = await api.get("/users/me");
+//         me = meRes?.data?.user ?? meRes?.data ?? null;
+//         console.log("👤 /users/me loaded:", {
+//           id: me?._id,
+//           role: me?.role,
+//           email: me?.email,
+//           acceptedICA: me?.acceptedICA,
+//           icaAccepted: me?.icaAccepted,
+//           accountStatus: me?.accountStatus,
+//           isActive: me?.isActive,
+//           stripeAccountId: me?.stripeAccountId || me?.stripe?.accountId || null,
+//         });
+//       } catch (e) {
+//         console.log("⚠️ /users/me failed:", e?.response?.data || e?.message);
+//       }
+
+//       // Save (or stash) push token without blocking login
+//       await savePushTokenIfAllowed(me);
+
+//       // Role + Stripe account
+//       const payload = parseJwt(data.token) || {};
+//       const role = payload?.role || me?.role || "customer";
+//       const stripeAccountId =
+//         payload?.stripeAccountId ||
+//         me?.stripeAccountId ||
+//         me?.stripe?.accountId ||
+//         null;
+
+//       console.log("🎭 Derived auth:", {
+//         role,
+//         stripeAccountId,
+//         jwtKeys: Object.keys(payload || {}),
+//       });
+
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // Provider prompts (non-blocking)
+//       const isProvider = (role || "").toLowerCase() === "serviceprovider";
+//       const profileOk = isProfileComplete(me);
+//       console.log("🧩 Profile completeness:", {
+//         isProvider,
+//         profileOk,
+//         acceptedICA: me?.acceptedICA,
+//         icaAccepted: me?.icaAccepted,
+//         accountStatus: me?.accountStatus,
+//         isActive: me?.isActive,
+//       });
+
+//       if (isProvider) {
+//         if (!stripeAccountId) {
+//           setLoading(false);
+//           console.log("💳 No Stripe account on file.");
+//           Alert.alert(
+//             "Connect Payouts",
+//             "To receive payouts, connect your Stripe account from your profile.",
+//             [
+//               { text: "Go to Profile", onPress: () => goTo("ProviderProfile") },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+
+//         // Check onboarding
+//         try {
+//           console.log("🔎 Checking Stripe onboarding…");
+//           const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//             stripeAccountId,
+//           });
+//           const {
+//             needsOnboarding,
+//             stripeOnboardingUrl,
+//             stripeDashboardUrl,
+//             requirements,
+//           } = checkRes?.data || {};
+//           console.log("🔎 Stripe onboarding result:", {
+//             needsOnboarding,
+//             hasOnboardingUrl: !!stripeOnboardingUrl,
+//             hasDashboardUrl: !!stripeDashboardUrl,
+//             requirements,
+//           });
+
+//           if (needsOnboarding) {
+//             setLoading(false);
+//             Alert.alert(
+//               "Finish Stripe Onboarding",
+//               "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
+//               [
+//                 {
+//                   text: "Open Stripe",
+//                   onPress: async () => {
+//                     const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                     await openUrlSafely(url);
+//                     goTo(target);
+//                   },
+//                 },
+//                 {
+//                   text: "Fix in App",
+//                   onPress: () =>
+//                     goTo("ProviderProfile", {
+//                       missingRequirements: requirements || null,
+//                     }),
+//                 },
+//                 { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//               ]
+//             );
+//             return;
+//           }
+//         } catch (e) {
+//           console.log("⚠️ Stripe check failed:", e?.response?.data || e?.message);
+//           setLoading(false);
+//           Alert.alert(
+//             "Stripe Check Unavailable",
+//             "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
+//           );
+//           goTo(target);
+//           return;
+//         }
+
+//         if (!profileOk) {
+//           setLoading(false);
+//           console.log("🟠 Stripe OK, but profile not fully active.");
+//           Alert.alert(
+//             "Finish Account Setup",
+//             "You're signed in, but your account isn't fully active yet. You can update your profile now or do it later.",
+//             [
+//               {
+//                 text: "Update Profile",
+//                 onPress: () =>
+//                   goTo("ProviderProfile", {
+//                     missingRequirements: me?.requirements || null,
+//                   }),
+//               },
+//               { text: "Later", style: "cancel", onPress: () => goTo(target) },
+//             ]
+//           );
+//           return;
+//         }
+//       }
+
+//       // All good — go to dashboard
+//       setLoading(false);
+//       console.log("✅ Login complete →", target);
+//       goTo(target);
+//     } catch (err) {
+//       setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       console.log("💥 Login failure:", {
+//         status,
+//         data: err?.response?.data,
+//         message: err?.message,
+//       });
+
+//       let msg = raw;
+//       const lower = (raw || "").toLowerCase();
+//       if (status === 404 && (lower.includes("user") || lower.includes("email"))) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && (lower.includes("invalid") || lower.includes("password"))) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             {/* Header */}
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             {/* Form */}
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   autoCorrect={false}
+//                   autoComplete="email"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Login Button */}
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             {/* Footer / Sign Up Link */}
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             {/* Trust Indicator */}
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// });
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -2850,6 +7090,124 @@ import api from "../api/client";
 import { useAuth, navigationRef } from "../context/AuthProvider";
 
 /** ---------- helpers ---------- */
+const asBool = (v) => {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v === 1;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes" || s === "y";
+  }
+  return false;
+};
+const has = (v) =>
+  v !== undefined && v !== null && !(typeof v === "string" && v.trim() === "");
+const hasDoc = (d) => {
+  if (!d) return false;
+  if (typeof d === "string") return d.trim().length > 0;
+  if (typeof d === "object") {
+    // urls or stored file objects
+    if (typeof d.url === "string" && d.url.trim()) return true;
+    if (typeof d.location === "string" && d.location.trim()) return true;
+    if (typeof d.uri === "string" && d.uri.trim()) return true;
+    if (typeof d.path === "string" && d.path.trim()) return true;
+  }
+  return false;
+};
+
+const pickEmail = (me) =>
+  me?.email ||
+  me?.username || // some backends store email here
+  me?.contact?.email ||
+  me?.primaryEmail ||
+  (Array.isArray(me?.emails) ? me.emails[0] : "") ||
+  me?.profile?.email ||
+  me?.account?.email ||
+  "";
+
+const pickPhone = (me) =>
+  me?.phoneNumber ||
+  me?.phone_number ||
+  me?.phone ||
+  me?.mobile ||
+  me?.cell ||
+  me?.contact?.phoneNumber ||
+  me?.contact?.phone ||
+  "";
+
+const pickZip = (me) => {
+  const first = (v) =>
+    Array.isArray(v) ? String(v[0] ?? "").trim() : String(v ?? "").trim();
+  return first(me?.serviceZipcode) || first(me?.zipcode);
+};
+
+const pickIcaViewed = (me) =>
+  asBool(me?.icaViewed) ||
+  asBool(me?.independentContractorAgreement?.viewed) ||
+  asBool(me?.independentContractorAgreement?.seen);
+
+const pickICA = (me) =>
+  asBool(me?.acceptedICA) ||
+  asBool(me?.icaAccepted) ||
+  asBool(me?.independentContractorAgreement?.accepted) ||
+  asBool(me?.independentContractorAgreement?.signed) ||
+  asBool(me?.independentContractorAgreement?.completed);
+
+const pickSmsOptIn = (me) =>
+  asBool(me?.acceptSMS) ||
+  asBool(me?.acceptsSms) ||
+  asBool(me?.smsOptIn) ||
+  asBool(me?.smsConsent) ||
+  asBool(me?.smsAgreed);
+
+// Strict provider readiness per your rules
+function computeProviderReadiness(
+  me,
+  stripeInfo = { accountId: null, needsOnboarding: null }
+) {
+  const email = pickEmail(me);
+  const phone = pickPhone(me);
+  const zipcode = pickZip(me);
+
+  const requiredFieldsOk =
+    has(email) &&
+    has(phone) &&
+    has(me?.serviceType) &&
+    has(me?.businessName) &&
+    has(me?.address) &&
+    has(zipcode);
+
+  // documents = w9 + businessLicense + proofOfInsurance + ICA viewed + ICA accepted
+  const icaViewed = pickIcaViewed(me);
+  const icaAccepted = pickICA(me);
+  const requiredDocsOk =
+    hasDoc(me?.w9) &&
+    hasDoc(me?.businessLicense) &&
+    hasDoc(me?.proofOfInsurance) &&
+    (typeof icaViewed === "boolean" ? icaViewed : true) && // if backend sends it, require true; otherwise don't block
+    icaAccepted;
+
+  const smsOk = pickSmsOptIn(me);
+
+  const stripeComplete =
+    !!stripeInfo?.accountId && stripeInfo?.needsOnboarding === false;
+
+  const profileOk = requiredFieldsOk && requiredDocsOk;
+  const overallOk = stripeComplete && profileOk && smsOk;
+
+  return {
+    overallOk,
+    stripeComplete,
+    profileOk,
+    smsOk,
+    missing: {
+      stripe: !stripeComplete,
+      fields: !requiredFieldsOk,
+      docs: !requiredDocsOk,
+      sms: !smsOk,
+    },
+  };
+}
+
 function parseJwt(token) {
   if (!token) return null;
   const base64Url = token.split(".")[1];
@@ -2875,6 +7233,20 @@ function roleToScreen(role) {
   return "CustomerDashboard";
 }
 
+function shouldRetryLowercaseLogin(err) {
+  const status = err?.response?.status;
+  const msg =
+    (err?.response?.data?.msg || err?.response?.data?.message || err?.message || "")
+      .toString()
+      .toLowerCase();
+
+  if (status === 404) return true;
+  if (msg.includes("user not found")) return true;
+  if (msg.includes("invalid credentials")) return true;
+  if (status === 400 && (msg.includes("email") || msg.includes("not found"))) return true;
+  return false;
+}
+
 // Minimal push registration (safe to fail quietly if not configured)
 async function registerForPushNotificationsAsync() {
   try {
@@ -2887,38 +7259,35 @@ async function registerForPushNotificationsAsync() {
     if (finalStatus !== "granted") return null;
 
     const tokenData = await Notifications.getExpoPushTokenAsync();
+    console.log("📮 Expo push token acquired?", !!tokenData?.data);
     return tokenData?.data || null;
-  } catch {
+  } catch (e) {
+    console.log("❌ registerForPushNotificationsAsync failed:", e?.message);
     return null;
   }
 }
 
-/** Save push token only if user is already active so we don't hit schema validation */
+/** Save push token only if the account is already “ready” */
 async function savePushTokenIfAllowed(me) {
   try {
     const expoPush = await registerForPushNotificationsAsync();
     if (!expoPush) return;
 
     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
-    const isActive =
-      me?.independentContractorAgreement === true ||
-      me?.accountStatus === "active" ||
-      me?.isActive === true;
-
-    if (isProvider && !isActive) {
-      // stash for later; we'll flush after they complete documents
+    // We'll stash until fully ready (Stripe + docs + SMS), but we don't block login.
+    if (isProvider) {
       await AsyncStorage.setItem("pendingPushToken", expoPush);
       return;
     }
 
     await api.post("/users/push-token", { token: expoPush });
-    // if successful, clear any pending copy
     await AsyncStorage.removeItem("pendingPushToken");
+    console.log("✅ Push token sent to backend and stored.");
   } catch (e) {
-    // never block login for push-token errors
+    console.log("⚠️ Failed to send push token, will stash:", e?.response?.data || e?.message);
     try {
-      const expoPush = await AsyncStorage.getItem("pendingPushToken");
-      if (!expoPush) {
+      const already = await AsyncStorage.getItem("pendingPushToken");
+      if (!already) {
         const maybe = await registerForPushNotificationsAsync();
         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
       }
@@ -2926,48 +7295,26 @@ async function savePushTokenIfAllowed(me) {
   }
 }
 
-/** Try to flush a previously stashed token (call this again later in dashboard/profile) */
-export async function flushPendingPushTokenIfReady() {
-  try {
-    const pending = await AsyncStorage.getItem("pendingPushToken");
-    if (!pending) return;
-    const meRes = await api.get("/users/me");
-    const me = meRes?.data?.user ?? meRes?.data ?? null;
-
-    const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
-    const isActive =
-      me?.independentContractorAgreement === true ||
-      me?.accountStatus === "active" ||
-      me?.isActive === true;
-
-    if (isProvider && !isActive) return;
-
-    await api.post("/users/push-token", { token: pending });
-    await AsyncStorage.removeItem("pendingPushToken");
-  } catch {
-    // swallow
-  }
-}
-
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { setRole } = useAuth();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(""); // email only
   const [password, setPassword] = useState("");
-  theShowPassword = useState(false); const [showPassword, setShowPassword] = theShowPassword;
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { width } = Dimensions.get("window");
   const LOGO_SIZE = width * 0.55;
 
-  /** ---------- side effects: permissions only ---------- */
+  /** ---------- one-time: permissions ---------- */
   useEffect(() => {
     (async () => {
       try {
-        // Location
         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+        console.log("📍 Location permission:", locStatus);
         if (locStatus !== "granted") {
           const { status } = await Location.requestForegroundPermissionsAsync();
+          console.log("📍 Location permission requested ->", status);
           if (status !== "granted") {
             Alert.alert("Location Required", "Enable location in settings.", [
               {
@@ -2986,36 +7333,33 @@ export default function LoginScreen() {
           }
         }
 
-        // Notifications
         const notifPerm = await Notifications.getPermissionsAsync();
+        console.log("🔔 Notification permission:", notifPerm?.status);
         if (notifPerm.status !== "granted") {
           const req = await Notifications.requestPermissionsAsync();
-          if (req.status !== "granted") {
-            Alert.alert("Notifications", "Enable notifications for updates.", [
-              { text: "Open Settings", onPress: () => Linking.openSettings() },
-              { text: "Cancel", style: "cancel" },
-            ]);
-          }
+          console.log("🔔 Notification permission requested ->", req?.status);
         }
-      } catch {
-        // permission checks shouldn't block login
+      } catch (e) {
+        console.log("⚠️ Permission setup error:", e?.message);
       }
     })();
   }, []);
 
-  /** ---------- helpers ---------- */
   const openUrlSafely = async (url) => {
     try {
       if (url && (await Linking.canOpenURL(url))) {
         await Linking.openURL(url);
         return true;
       }
-    } catch {}
+    } catch (e) {
+      console.log("❌ openUrlSafely error:", e?.message, url);
+    }
     Alert.alert("Error", "Could not open onboarding link.");
     return false;
   };
 
   const goTo = (routeName, params = {}) => {
+    console.log("🧭 Navigating to", routeName, "params:", params);
     const action = { index: 0, routes: [{ name: routeName, params }] };
     if (navigationRef?.isReady?.()) {
       navigationRef.reset(action);
@@ -3026,138 +7370,135 @@ export default function LoginScreen() {
     }
   };
 
-  /** ---------- handlers ---------- */
+  /** ---------- LOGIN (email only) ---------- */
   const onSubmit = async () => {
     try {
       setLoading(true);
+      console.log("🔑 Login pressed.");
 
-      // clear stale tokens
+      // Clear stale tokens
       await AsyncStorage.multiRemove(["token", "refreshToken"]);
 
-      const creds = { email: email.trim().toLowerCase(), password };
-      const { data } = await api.post("/auth/login", creds, {
-        headers: { "Content-Type": "application/json" },
-      });
+      const typed = email.trim();
+      if (!typed || !password) {
+        setLoading(false);
+        Alert.alert("Missing info", "Please enter your email and password.");
+        return;
+      }
 
+      const tryLogin = async (emailToUse, label) => {
+        console.log("➡️ POST /auth/login", {
+          email: emailToUse,
+          attempt: label,
+          passwordLength: String(password).length,
+        });
+        return api.post(
+          "/auth/login",
+          { email: emailToUse, password },
+          { headers: { "Content-Type": "application/json" } }
+        );
+      };
+
+      let loginRes = null;
+
+      // TRY 1: email exactly as typed
+      try {
+        loginRes = await tryLogin(typed, "typed");
+      } catch (err1) {
+        const status = err1?.response?.status;
+        console.log("❌ Login attempt #1 failed:", {
+          status,
+          data: err1?.response?.data,
+          message: err1?.message,
+        });
+
+        if (shouldRetryLowercaseLogin(err1)) {
+          const lower = typed.toLowerCase();
+          console.log("↪️ Retrying with lowercased email:", lower);
+          try {
+            loginRes = await tryLogin(lower, "lowercased");
+          } catch (err2) {
+            console.log("❌ Login attempt #2 failed:", {
+              status: err2?.response?.status,
+              data: err2?.response?.data,
+              message: err2?.message,
+            });
+            throw err2;
+          }
+        } else {
+          throw err1;
+        }
+      }
+
+      const data = loginRes?.data;
+      console.log("✅ Login response keys:", Object.keys(data || {}));
       if (!data?.token) throw new Error("Token missing from response");
 
-      // store tokens
+      // Store tokens
       await AsyncStorage.setItem("token", data.token);
       if (data.refreshToken) {
         await AsyncStorage.setItem("refreshToken", data.refreshToken);
       }
+      console.log("🔒 Tokens stored. token.len:", data.token?.length, "refresh?", !!data.refreshToken);
 
-      // set auth header for subsequent calls
+      // Set auth header for subsequent calls
       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
 
-      // get user doc to decide whether we can safely save push token
+      // Load /me
       let me = null;
       try {
         const meRes = await api.get("/users/me");
         me = meRes?.data?.user ?? meRes?.data ?? null;
-      } catch {
-        // ignore
+        console.log("👤 /users/me loaded:", {
+          id: me?._id,
+          role: me?.role,
+          email: me?.email,
+          username: me?.username,
+          phoneNumber: me?.phoneNumber,
+          acceptedICA: me?.acceptedICA,
+          icaAccepted: me?.icaAccepted,
+          sms: pickSmsOptIn(me),
+          accountStatus: me?.accountStatus,
+          isActive: me?.isActive,
+          stripeAccountId: me?.stripeAccountId || me?.stripe?.accountId || null,
+          docs: {
+            w9: !!me?.w9,
+            businessLicense: !!me?.businessLicense,
+            proofOfInsurance: !!me?.proofOfInsurance,
+          },
+        });
+      } catch (e) {
+        console.log("⚠️ /users/me failed:", e?.response?.data || e?.message);
       }
 
-      // save (or stash) push token without blocking login
-      savePushTokenIfAllowed(me);
+      // Save (or stash) push token without blocking login
+      await savePushTokenIfAllowed(me);
 
-      // read role + stripe account from token (fallback to /me)
-      const payload = parseJwt(data.token);
-      const role = payload?.role || "customer";
-      // Fallbacks if token doesn't include it
+      // Role + Stripe account
+      const payload = parseJwt(data.token) || {};
+      const role = payload?.role || me?.role || "customer";
       const stripeAccountId =
         payload?.stripeAccountId ||
         me?.stripeAccountId ||
         me?.stripe?.accountId ||
         null;
 
+      console.log("🎭 Derived auth:", {
+        role,
+        stripeAccountId,
+        jwtKeys: Object.keys(payload || {}),
+      });
+
       setRole(role);
       const target = roleToScreen(role);
 
-      // Quick flags about provider/account status (used for UX nudges; never block)
+      // Provider prompts per new rules
       const isProvider = (role || "").toLowerCase() === "serviceprovider";
-      const isActive =
-        me?.independentContractorAgreement === true ||
-        me?.accountStatus === "active" ||
-        me?.isActive === true;
-      const isIncomplete = isProvider && !isActive;
 
-      // ====== PROVIDER BRANCH ======
       if (isProvider) {
-        // 1) If NO stripe AND account incomplete -> single combined prompt
-        if (!stripeAccountId && isIncomplete) {
+        if (!stripeAccountId) {
           setLoading(false);
-          Alert.alert(
-            "Finish Setup",
-            "You're signed in. To start receiving jobs and payouts, please complete your profile and connect Stripe.",
-            [
-              {
-                text: "Update Profile",
-                onPress: () =>
-                  goTo("ProviderProfile", {
-                    missingRequirements: me?.requirements || null,
-                  }),
-              },
-              { text: "Later", style: "cancel", onPress: () => goTo(target) },
-            ]
-          );
-          return;
-        }
-
-        // 2) Stripe present → check onboarding (non-blocking)
-        if (stripeAccountId) {
-          try {
-            const checkRes = await api.post("/routes/stripe/check-onboarding", {
-              stripeAccountId,
-            });
-
-            const {
-              needsOnboarding,
-              stripeOnboardingUrl,
-              stripeDashboardUrl,
-              requirements,
-            } = checkRes?.data || {};
-
-            if (needsOnboarding) {
-              setLoading(false);
-              Alert.alert(
-                "Finish Stripe Onboarding",
-                "To receive payouts, please finish Stripe onboarding. You can open Stripe now, or fix missing documents in your profile.",
-                [
-                  {
-                    text: "Open Stripe",
-                    onPress: async () => {
-                      const url = stripeOnboardingUrl || stripeDashboardUrl;
-                      await openUrlSafely(url);
-                      goTo(target);
-                    },
-                  },
-                  {
-                    text: "Fix in App",
-                    onPress: () =>
-                      goTo("ProviderProfile", {
-                        missingRequirements: requirements || null,
-                      }),
-                  },
-                  { text: "Later", style: "cancel", onPress: () => goTo(target) },
-                ]
-              );
-              return;
-            }
-          } catch {
-            // allow login anyway and nudge
-            setLoading(false);
-            Alert.alert(
-              "Stripe Check Unavailable",
-              "We couldn't check onboarding right now. You can proceed and finish setup from your profile."
-            );
-            goTo(target);
-            return;
-          }
-        } else {
-          // 3) No Stripe ID → allow login and gently direct to profile to connect
-          setLoading(false);
+          console.log("💳 No Stripe account on file.");
           Alert.alert(
             "Connect Payouts",
             "To receive payouts, connect your Stripe account from your profile.",
@@ -3169,72 +7510,128 @@ export default function LoginScreen() {
           return;
         }
 
-        // 4) Stripe OK, but profile not complete → allow login with a nudge
-        if (isIncomplete) {
+        // Check onboarding
+        let needsOnboarding = null;
+        let stripeOnboardingUrl = null;
+        let stripeDashboardUrl = null;
+        let requirements = null;
+
+        try {
+          console.log("🔎 Checking Stripe onboarding…");
+          const checkRes = await api.post("/routes/stripe/check-onboarding", {
+            stripeAccountId,
+          });
+          needsOnboarding = checkRes?.data?.needsOnboarding ?? null;
+          stripeOnboardingUrl = checkRes?.data?.stripeOnboardingUrl ?? null;
+          stripeDashboardUrl = checkRes?.data?.stripeDashboardUrl ?? null;
+          requirements = checkRes?.data?.requirements ?? null;
+          console.log("🔎 Stripe onboarding result:", {
+            needsOnboarding,
+            hasOnboardingUrl: !!stripeOnboardingUrl,
+            hasDashboardUrl: !!stripeDashboardUrl,
+          });
+        } catch (e) {
+          console.log("⚠️ Stripe check failed:", e?.response?.data || e?.message);
+          // We'll still compute readiness with unknown onboarding; user can finish in profile
+        }
+
+        const readiness = computeProviderReadiness(me, {
+          accountId: stripeAccountId,
+          needsOnboarding,
+        });
+
+        console.log("🧩 Provider readiness:", readiness);
+
+        // If ANY of the required parts are missing, nudge with specific items
+        if (!readiness.overallOk) {
           setLoading(false);
+          const missingParts = [];
+          if (readiness.missing.stripe) missingParts.push("Stripe onboarding");
+          if (readiness.missing.fields) missingParts.push("profile fields");
+          if (readiness.missing.docs) missingParts.push("documents (incl. ICA)");
+          if (readiness.missing.sms) missingParts.push("SMS consent");
+
           Alert.alert(
             "Finish Account Setup",
-            "You're signed in, but your account isn't fully active yet. You can update your profile now or do it later.",
+            `You're signed in, but your account isn't fully active. Missing: ${missingParts.join(
+              ", "
+            )}.`,
             [
+              needsOnboarding
+                ? {
+                    text: "Open Stripe",
+                    onPress: async () => {
+                      const url = stripeOnboardingUrl || stripeDashboardUrl;
+                      if (url) await openUrlSafely(url);
+                      goTo(target);
+                    },
+                  }
+                : undefined,
               {
-                text: "Update Profile",
+                text: "Fix in App",
                 onPress: () =>
                   goTo("ProviderProfile", {
-                    missingRequirements: me?.requirements || null,
+                    missingRequirements: requirements || null,
                   }),
               },
               { text: "Later", style: "cancel", onPress: () => goTo(target) },
-            ]
+            ].filter(Boolean)
           );
           return;
         }
       }
 
-      // ====== Everyone else (or providers fully set) ======
+      // All good — go to dashboard
       setLoading(false);
+      console.log("✅ Login complete →", target);
       goTo(target);
     } catch (err) {
       setLoading(false);
-      const msg =
+      const status = err?.response?.status;
+      const raw =
         err?.response?.data?.msg ||
+        err?.response?.data?.error ||
         err?.response?.data?.message ||
         err?.message ||
         "Login failed – check credentials.";
+
+      console.log("💥 Login failure:", {
+        status,
+        data: err?.response?.data,
+        message: err?.message,
+      });
+
+      let msg = raw;
+      const lower = (raw || "").toLowerCase();
+      if (status === 404 && (lower.includes("user") || lower.includes("email"))) {
+        msg = "We couldn’t find an account with that email.";
+      }
+      if (status === 401 && (lower.includes("invalid") || lower.includes("password"))) {
+        msg = "Invalid email or password.";
+      }
       Alert.alert("Error", msg);
     }
   };
 
   return (
-    <LinearGradient
-      colors={["#0f172a", "#1e3a8a", "#312e81"]}
-      style={styles.container}
-    >
+    <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             {/* Header */}
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
+              <View className="logoContainer">
                 <Image
                   source={require("../assets/blinqfix_logo-new.jpeg")}
-                  style={{
-                    width: LOGO_SIZE,
-                    height: LOGO_SIZE,
-                    marginInline: "auto",
-                  }}
+                  style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
                   resizeMode="contain"
                 />
               </View>
               <Text style={styles.title}>Login</Text>
-              <Text style={styles.subtitle}>
-                Enter your credentials to access your account
-              </Text>
+              <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
             </View>
 
             {/* Form */}
@@ -3247,10 +7644,11 @@ export default function LoginScreen() {
                   placeholderTextColor="#94a3b8"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
                   value={email}
                   onChangeText={setEmail}
                   returnKeyType="next"
-                  autoComplete="email"
                 />
               </View>
 
@@ -3265,15 +7663,8 @@ export default function LoginScreen() {
                   onChangeText={setPassword}
                   autoComplete="password"
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword((p) => !p)}
-                  style={styles.eyeIcon}
-                >
-                  {showPassword ? (
-                    <EyeOff color="#94a3b8" size={20} />
-                  ) : (
-                    <Eye color="#94a3b8" size={20} />
-                  )}
+                <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+                  {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
                 </TouchableOpacity>
               </View>
 
@@ -3286,15 +7677,8 @@ export default function LoginScreen() {
             </View>
 
             {/* Login Button */}
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={onSubmit}
-              disabled={loading}
-            >
-              <LinearGradient
-                colors={["#22c55e", "#16a34a"]}
-                style={styles.loginButtonGradient}
-              >
+            <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+              <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
@@ -3309,9 +7693,7 @@ export default function LoginScreen() {
             {/* Footer / Sign Up Link */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account?</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("Registration")}
-              >
+              <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
                 <Text style={styles.footerLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
@@ -3337,7 +7719,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   header: { alignItems: "center", marginBottom: 40 },
-  logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
   formContainer: { gap: 16 },
@@ -3396,10 +7777,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
   },
-  trustText: {
-    color: "#22c55e",
-    marginLeft: 8,
-    fontSize: 12,
-    fontWeight: "500",
-  },
+  trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
 });
