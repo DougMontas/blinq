@@ -464,20 +464,61 @@ const toBool = (v) =>
   v === "y";
 
 // NOTE: not used by /me; kept for reference
-function slimUser(user) {
-  if (!user || typeof user !== "object") {
-    console.warn("⚠️ slimUser received invalid input:", user);
-    return {};
-  }
-  const {
-    password,
-    w9,
-    businessLicense,
-    proofOfInsurance,
-    independentContractorAgreement,
-    ...rest
-  } = user;
-  return rest;
+// function slimUser(user) {
+//   if (!user || typeof user !== "object") {
+//     console.warn("⚠️ slimUser received invalid input:", user);
+//     return {};
+//   }
+//   const {
+//     password,
+//     w9,
+//     businessLicense,
+//     proofOfInsurance,
+//     independentContractorAgreement,
+//     ...rest
+//   } = user;
+//   return rest;
+// }
+
+// put this helper near the top
+function toSlimUser(u) {
+  if (!u) return {};
+  return {
+    _id: u._id,
+    name: u.name,
+    role: u.role,
+    trade: u.trade,
+    serviceType: u.serviceType,
+    portfolio: u.portfolio || [],
+    serviceZipcode: u.serviceZipcode || [],
+    billingTier: u.billingTier,
+    zipcode: u.zipcode || [],
+    address: u.address || "",
+    aboutMe: u.aboutMe || "",
+    yearsExperience: u.yearsExperience ?? null,
+    businessName: u.businessName || "",
+    isActive: !!u.isActive,
+
+    // ✅ the fields you were missing on the client:
+    email: u.email || "",
+    phoneNumber: u.phoneNumber || "",
+    optInSms: !!u.optInSms,
+    acceptedICA: !!u.acceptedICA,
+    // “viewed” isn’t stored; infer it if a doc exists or it’s accepted
+    icaViewed: !!u.acceptedICA || !!u.independentContractorAgreement,
+
+    // stripe id if you need it client-side
+    stripeAccountId: u.stripeAccountId || "",
+
+    // DO NOT send blobs here
+    hasDocs: {
+      w9: !!u.w9,
+      businessLicense: !!u.businessLicense,
+      proofOfInsurance: !!u.proofOfInsurance,
+      independentContractorAgreement: !!u.independentContractorAgreement,
+    },
+    hasProfilePicture: !!u.profilePicture, // boolean only
+  };
 }
 
 /**
@@ -486,56 +527,97 @@ function slimUser(user) {
  */
 router.get("/me", auth, async (req, res) => {
   try {
-    console.time("🔍 MongoDB user fetch");
-
-    const fields = [
-      // identity & contact
-      "name",
-      "email",
-      "phoneNumber",
-      "role",
-
-      // business/profile
-      "businessName",
-      "address",
-      "zipcode",
-      "serviceZipcode",
-      "aboutMe",
-      "yearsExperience",
-      "serviceType",
-      "serviceCost",
-      "profilePicture",
-
-      // docs & flags
-      "w9",
-      "businessLicense",
-      "proofOfInsurance",
-      "independentContractorAgreement",
-      "acceptedICA",
-      "optInSms",
-      "isActive",
-
-      // billing
-      "billingTier",
-      "stripeAccountId",
-
-      // (in case you later store it)
-      "icaViewed",
-    ].join(" ");
-
-    // Use .select(fields) to avoid accidental projection issues
-    const user = await Users.findById(req.user.id).select(fields).lean();
-    console.timeEnd("🔍 MongoDB user fetch");
+    const user = await Users.findById(req.user.id)
+      .select([
+        "name",
+        "role",
+        "trade",
+        "serviceType",
+        "portfolio",
+        "serviceZipcode",
+        "billingTier",
+        "zipcode",
+        "address",
+        "aboutMe",
+        "yearsExperience",
+        "businessName",
+        "isActive",
+        // ✅ include the fields your app couldn’t see
+        "email",
+        "phoneNumber",
+        "optInSms",
+        "acceptedICA",
+        "stripeAccountId",
+        // we’ll compute booleans from these but won’t send the raw values back
+        "w9",
+        "businessLicense",
+        "proofOfInsurance",
+        "independentContractorAgreement",
+        "profilePicture",
+      ].join(" "))
+      .lean();
 
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    // Return the plain object (client handles both {user} and raw)
-    return res.json(user);
+    res.json(toSlimUser(user)); // ✅ slim
   } catch (err) {
     console.error("GET /me error:", err);
-    return res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: "Server error" });
   }
 });
+
+// router.get("/me", auth, async (req, res) => {
+//   try {
+//     console.time("🔍 MongoDB user fetch");
+
+//     const fields = [
+//       // identity & contact
+//       "name",
+//       "email",
+//       "phoneNumber",
+//       "role",
+
+//       // business/profile
+//       "businessName",
+//       "address",
+//       "zipcode",
+//       "serviceZipcode",
+//       "aboutMe",
+//       "yearsExperience",
+//       "serviceType",
+//       "serviceCost",
+//       "profilePicture",
+
+//       // docs & flags
+//       "w9",
+//       "businessLicense",
+//       "proofOfInsurance",
+//       "independentContractorAgreement",
+//       "acceptedICA",
+//       "optInSms",
+//       "isActive",
+
+//       // billing
+//       "billingTier",
+//       "stripeAccountId",
+
+//       // (in case you later store it)
+//       "icaViewed",
+//     ].join(" ");
+
+//     // Use .select(fields) to avoid accidental projection issues
+//     const user = await Users.findById(req.user.id).select(fields).lean();
+//     console.timeEnd("🔍 MongoDB user fetch");
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     // Return the plain object (client handles both {user} and raw)
+//     return res.json(user);
+//   } catch (err) {
+//     console.error("GET /me error:", err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
 
 /**
  * GET /api/users/active-providers
