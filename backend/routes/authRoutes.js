@@ -256,63 +256,191 @@ router.post("/register", async (req, res) => {
   }
 });
 
+// router.post("/login", async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     // 1. Look up user with password
+//     const user = await Users.findOne({ email }).select("+password");
+//     if (!user || !user.password) {
+//       return res.status(401).json({ msg: "Invalid credentials" });
+//     }
+
+//     if (user.isDeleted)
+//       return res
+//         .status(403)
+//         .json({ msg: "Account has been deleted or does not exist" });
+
+//     // 2. Compare password
+//     const match = await bcrypt.compare(password, user.password);
+//     if (!match) {
+//       return res.status(401).json({ msg: "Invalid credentials" });
+//     }
+
+//     // 3. Generate short-lived access token
+//     // const token = jwt.sign(
+//     //   { id: user._id, role: user.role },
+//     //   process.env.JWT_SECRET,
+//     //   { expiresIn: "1h" }
+//     // );
+
+//     const token = jwt.sign(
+//       {
+//         id: user._id,
+//         role: user.role,
+//         stripeAccountId: user.stripeAccountId, // ✅ add this
+//       },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "1h" }
+//     );
+
+//     // 4. Generate long-lived refresh token
+//     const refreshToken = jwt.sign(
+//       { id: user._id },
+//       process.env.REFRESH_SECRET,
+//       { expiresIn: "7d" }
+//     );
+
+//     // 5. Save refresh token to DB
+//     user.refreshToken = refreshToken;
+//     // await user.save();
+//     await user.save({ validateBeforeSave: false });
+
+//     // 6. Send both tokens back to client
+//     res.json({ token, refreshToken });
+//   } catch (err) {
+//     console.error("Login error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// POST /api/auth/login
 router.post("/login", async (req, res) => {
+  const rid =
+    (crypto.randomUUID && crypto.randomUUID()) ||
+    Math.random().toString(36).slice(2, 10);
+
+  const startedAt = Date.now();
+  const ua = req.get("user-agent");
+  const ip = req.ip || req.headers["x-forwarded-for"] || req.connection?.remoteAddress;
+
   try {
-    const { email, password } = req.body;
+    const rawEmail = String(req.body?.email || "");
+    const password = String(req.body?.password || "");
+    const email = rawEmail.trim().toLowerCase();
 
-    // 1. Look up user with password
+    console.log("🔐 [LOGIN:start]", {
+      rid,
+      ip,
+      ua,
+      emailLen: email.length,
+      hasPassword: password.length > 0,
+    });
+
+    if (!email || !password) {
+      console.warn("🔐 [LOGIN:bad-request]", { rid, emailMissing: !email, passwordMissing: !password });
+      return res.status(400).json({ msg: "Email and password are required" });
+    }
+
+    console.time(`⏱ [${rid}] findUser`);
+    // Include +password to compare hash; everything else comes normally
     const user = await Users.findOne({ email }).select("+password");
+    console.timeEnd(`⏱ [${rid}] findUser`);
+
     if (!user || !user.password) {
+      console.warn("🔐 [LOGIN:not-found-or-no-pass]", {
+        rid,
+        found: !!user,
+        hasPassword: !!user?.password,
+      });
       return res.status(401).json({ msg: "Invalid credentials" });
     }
 
-    if (user.isDeleted)
-      return res
-        .status(403)
-        .json({ msg: "Account has been deleted or does not exist" });
-
-    // 2. Compare password
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(401).json({ msg: "Invalid credentials" });
-    }
-
-    // 3. Generate short-lived access token
-    // const token = jwt.sign(
-    //   { id: user._id, role: user.role },
-    //   process.env.JWT_SECRET,
-    //   { expiresIn: "1h" }
-    // );
-
-    const token = jwt.sign(
-      {
-        id: user._id,
+    if (user.isDeleted) {
+      console.warn("🔐 [LOGIN:deleted]", {
+        rid,
+        id: String(user._id),
         role: user.role,
-        stripeAccountId: user.stripeAccountId, // ✅ add this
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+      });
+      return res.status(403).json({ msg: "Account has been deleted or does not exist" });
+    }
 
-    // 4. Generate long-lived refresh token
-    const refreshToken = jwt.sign(
-      { id: user._id },
-      process.env.REFRESH_SECRET,
-      { expiresIn: "7d" }
-    );
+    console.time(`⏱ [${rid}] bcryptCompare`);
+    const match = await bcrypt.compare(password, user.password);
+    console.timeEnd(`⏱ [${rid}] bcryptCompare`);
 
-    // 5. Save refresh token to DB
+    if (!match) {
+      console.warn("🔐 [LOGIN:bad-password]", { rid, id: String(user._id), role: user.role });
+      return res.status(401).json({ msg: "Invalid credentials" });
+    }
+
+    // Helpful diagnostics for service providers (the ones crashing)
+    if ((user.role || "").toLowerCase() === "serviceprovider") {
+      console.log("🧩 [LOGIN:provider-diagnostics]", {
+        rid,
+        id: String(user._id),
+        role: user.role,
+        stripeAccountId: !!user.stripeAccountId,
+        optInSms: !!user.optInSms,
+        acceptedICA: !!user.acceptedICA,
+        hasDocs: {
+          w9: !!user.w9,
+          businessLicense: !!user.businessLicense,
+          proofOfInsurance: !!user.proofOfInsurance,
+          icaString: !!user.independentContractorAgreement,
+        },
+        contact: {
+          email: !!user.email,
+          phoneNumber: !!user.phoneNumber,
+        },
+        profilePicture: !!user.profilePicture,
+        zipcodeShape: Array.isArray(user.zipcode) ? "array" : typeof user.zipcode,
+        zipcodeFirst: Array.isArray(user.zipcode) ? user.zipcode?.[0] : user.zipcode,
+        addressPresent: !!user.address,
+        serviceTypePresent: !!user.serviceType,
+        yearsExperience: user.yearsExperience ?? null,
+      });
+    }
+
+    // Access token (short-lived)
+    const tokenPayload = {
+      id: user._id,
+      role: user.role,
+      stripeAccountId: user.stripeAccountId || null,
+    };
+
+    console.time(`⏱ [${rid}] jwtAccess`);
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "1h" });
+    console.timeEnd(`⏱ [${rid}] jwtAccess`);
+
+    // Refresh token (long-lived)
+    console.time(`⏱ [${rid}] jwtRefresh`);
+    const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_SECRET, { expiresIn: "7d" });
+    console.timeEnd(`⏱ [${rid}] jwtRefresh`);
+
     user.refreshToken = refreshToken;
-    // await user.save();
-    await user.save({ validateBeforeSave: false });
 
-    // 6. Send both tokens back to client
-    res.json({ token, refreshToken });
+    console.time(`⏱ [${rid}] saveUser`);
+    await user.save({ validateBeforeSave: false });
+    console.timeEnd(`⏱ [${rid}] saveUser`);
+
+    res.setHeader("X-Request-Id", rid);
+    console.log("✅ [LOGIN:success]", {
+      rid,
+      id: String(user._id),
+      role: user.role,
+      hasStripe: !!user.stripeAccountId,
+      totalMs: Date.now() - startedAt,
+    });
+
+    return res.json({ token, refreshToken });
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ msg: "Server error" });
+    console.error("💥 [LOGIN:error]", { rid, msg: err?.message, stack: err?.stack });
+    res.setHeader("X-Request-Id", rid);
+    return res.status(500).json({ msg: "Server error", rid });
   }
 });
+
 
 router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
