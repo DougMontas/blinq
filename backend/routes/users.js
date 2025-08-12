@@ -1629,7 +1629,7 @@ const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 //   return rest;
 // }
 
-// Slim shape returned by /me (safe booleans for docs, include picture string for rendering)
+// ✅ Reverted to include full profilePicture string for rendering
 function toSlimUser(u) {
   if (!u) return {};
   return {
@@ -1648,28 +1648,29 @@ function toSlimUser(u) {
     businessName: u.businessName || "",
     isActive: !!u.isActive,
 
-    // contact / flags
+    // contact + flags
     email: u.email || "",
     phoneNumber: u.phoneNumber || "",
     optInSms: !!u.optInSms,
     acceptedICA: !!u.acceptedICA,
-    // infer "viewed" if ICA string exists or accepted
     icaViewed: !!u.acceptedICA || !!u.independentContractorAgreement,
 
-    // stripe
+    // billing
     stripeAccountId: u.stripeAccountId || "",
 
-    // ✅ render from this string; keep boolean for readiness checks
-    profilePicture: typeof u.profilePicture === "string" ? u.profilePicture : null,
-    hasProfilePicture: !!u.profilePicture,
-
-    // ✅ docs as booleans only (avoid blobs in /me)
+    // documents (booleans only; no blobs here)
     hasDocs: {
       w9: !!u.w9,
       businessLicense: !!u.businessLicense,
       proofOfInsurance: !!u.proofOfInsurance,
       independentContractorAgreement: !!u.independentContractorAgreement,
     },
+
+    // 🔙 include the actual data URL again so Image can render like before
+    profilePicture: u.profilePicture || "",
+
+    // keep boolean for readiness checks (don’t use it to render)
+    hasProfilePicture: !!u.profilePicture,
   };
 }
 
@@ -1680,33 +1681,35 @@ function toSlimUser(u) {
 router.get("/me", auth, async (req, res) => {
   try {
     const user = await Users.findById(req.user.id)
-      .select([
-        "name",
-        "role",
-        "trade",
-        "serviceType",
-        "portfolio",
-        "serviceZipcode",
-        "billingTier",
-        "zipcode",
-        "address",
-        "aboutMe",
-        "yearsExperience",
-        "businessName",
-        "isActive",
-        // contact & flags
-        "email",
-        "phoneNumber",
-        "optInSms",
-        "acceptedICA",
-        "stripeAccountId",
-        // source of booleans & picture string
-        "w9",
-        "businessLicense",
-        "proofOfInsurance",
-        "independentContractorAgreement",
-        "profilePicture",
-      ].join(" "))
+      .select(
+        [
+          "name",
+          "role",
+          "trade",
+          "serviceType",
+          "portfolio",
+          "serviceZipcode",
+          "billingTier",
+          "zipcode",
+          "address",
+          "aboutMe",
+          "yearsExperience",
+          "businessName",
+          "isActive",
+          "email",
+          "phoneNumber",
+          "optInSms",
+          "acceptedICA",
+          "stripeAccountId",
+          // we compute booleans from these but won’t send the raw doc blobs back (except picture)
+          "w9",
+          "businessLicense",
+          "proofOfInsurance",
+          "independentContractorAgreement",
+          // ✅ picture is allowed back to the client again
+          "profilePicture",
+        ].join(" ")
+      )
       .lean();
 
     if (!user) return res.status(404).json({ msg: "User not found" });
@@ -1893,7 +1896,7 @@ router.put(
       const user = await Users.findById(req.user.id);
       if (!user) return res.status(404).json({ msg: "User not found" });
 
-      // text fields (coerce booleans / arrays / numbers)
+      // text fields (coerce booleans)
       for (const [key, value] of Object.entries(req.body)) {
         if (value === undefined || value === "") continue;
 
@@ -1940,14 +1943,16 @@ router.put(
 
       await user.save({ validateBeforeSave: false });
 
-      // Return slim user (no base64 docs) to avoid heavy payloads
+      // Return slim (with profilePicture string included again)
       const fresh = await Users.findById(req.user.id)
-        .select([
-          "name","role","trade","serviceType","portfolio","serviceZipcode","billingTier",
-          "zipcode","address","aboutMe","yearsExperience","businessName","isActive",
-          "email","phoneNumber","optInSms","acceptedICA","stripeAccountId",
-          "w9","businessLicense","proofOfInsurance","independentContractorAgreement","profilePicture",
-        ].join(" "))
+        .select(
+          [
+            "name","role","trade","serviceType","portfolio","serviceZipcode","billingTier",
+            "zipcode","address","aboutMe","yearsExperience","businessName","isActive",
+            "email","phoneNumber","optInSms","acceptedICA","stripeAccountId",
+            "w9","businessLicense","proofOfInsurance","independentContractorAgreement","profilePicture",
+          ].join(" ")
+        )
         .lean();
 
       return res.json({ msg: "Profile updated", user: toSlimUser(fresh) });
@@ -1984,14 +1989,15 @@ async function patchProfileHandler(req, res) {
 
     await Users.findByIdAndUpdate(req.user.id, updates, { new: false });
 
-    // Return slim user
     const fresh = await Users.findById(req.user.id)
-      .select([
-        "name","role","trade","serviceType","portfolio","serviceZipcode","billingTier",
-        "zipcode","address","aboutMe","yearsExperience","businessName","isActive",
-        "email","phoneNumber","optInSms","acceptedICA","stripeAccountId",
-        "w9","businessLicense","proofOfInsurance","independentContractorAgreement","profilePicture",
-      ].join(" "))
+      .select(
+        [
+          "name","role","trade","serviceType","portfolio","serviceZipcode","billingTier",
+          "zipcode","address","aboutMe","yearsExperience","businessName","isActive",
+          "email","phoneNumber","optInSms","acceptedICA","stripeAccountId",
+          "w9","businessLicense","proofOfInsurance","independentContractorAgreement","profilePicture",
+        ].join(" ")
+      )
       .lean();
 
     return res.json({ user: toSlimUser(fresh) });
