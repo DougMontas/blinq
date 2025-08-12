@@ -5,6 +5,8 @@ import {
   View,
   ScrollView,
   SafeAreaView,
+  Dimensions,
+  Image,
   TouchableOpacity,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -169,6 +171,8 @@ const stats = [
 
 export default function LandingPage() {
   const navigation = useNavigation();
+  const { width } = Dimensions.get("window");
+  const LOGO_SIZE = width * 0.55;
 
   return (
     <LinearGradient
@@ -186,6 +190,13 @@ export default function LandingPage() {
               </Text>
             </View>
             <Text style={styles.heroTitle}>BlinqFix</Text>
+            <View>
+                <Image
+                  source={require("../assets/blinqfix_logo-new.jpeg")}
+                  style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+                  resizeMode="contain"
+                />
+              </View>
             <Text style={styles.heroSubtitle}>
               The first on-demand emergency repair platform that connects
               customers with vetted service professionals in real time!
@@ -416,7 +427,7 @@ export default function LandingPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollView: { padding: 20, marginTop: 20 },
+  scrollView: { padding: 20, marginTop: 40 },
   section: { marginBottom: 48, alignItems: "center" },
   heroSection: {
     minHeight: 600,
@@ -453,7 +464,7 @@ const styles = StyleSheet.create({
     fontSize: 60,
     fontWeight: "900",
     color: "#fff",
-    marginBottom: 16,
+    marginBottom: -36,
     textAlign: "center",
   },
   heroSubtitle: {
@@ -493,10 +504,11 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   heroFeaturesContainer: {
-    flexDirection: "row",
+    flexDirection: "column",
     justifyContent: "center",
     marginTop: 48,
     width: "40%",
+    
   },
   heroFeature: {
     flexDirection: "row",
@@ -504,6 +516,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.05)",
     padding: 8,
     borderRadius: 12,
+    marginBottom: 20,
   },
   heroFeatureText: { color: "#fff", marginLeft: 2 },
 

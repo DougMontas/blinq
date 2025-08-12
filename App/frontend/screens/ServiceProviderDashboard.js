@@ -2160,7 +2160,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
   cardTitle: { fontSize: 18, fontWeight: "bold", color: "#fff" },
-  mapContainer: { height: 150, borderRadius: 12, overflow: "hidden" },
+  mapContainer: { height: 550, borderRadius: 12, overflow: "hidden" },
   map: { ...StyleSheet.absoluteFillObject },
 
   section: { marginTop: 40, marginBottom: 40 },

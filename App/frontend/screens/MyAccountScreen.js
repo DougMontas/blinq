@@ -509,7 +509,7 @@ export default function MyAccountScreen() {
                     <Crown color={currentTier === "hybrid" ? "#facc15" : "#94a3b8"} size={24} />
                     <View style={styles.planInfo}>
                       <Text style={styles.planTitle}>Priority Subscription</Text>
-                      <Text style={styles.planSubtitle}>Priority job access & lower fees</Text>
+                      <Text style={styles.planSubtitle}>Priority job access</Text>
                     </View>
                     {currentTier === "hybrid" && (
                       <CheckCircle color="#facc15" size={20} />

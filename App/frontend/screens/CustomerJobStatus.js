@@ -1241,7 +1241,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)'
   },
   mapContainer: {
-    height: 200,
+    height: 550,
     borderRadius: 12,
     overflow: 'hidden'
   },
@@ -1333,14 +1333,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   },
   trustSection: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-around',
     paddingVertical: 16
   },
   trustItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6
+    gap: 6,
+    marginLeft: 140,
+    marginBottom: 20,
   },
   trustText: {
     color: '#e0e7ff',

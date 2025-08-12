@@ -740,14 +740,16 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   securitySection: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-around',
     marginBottom: 32,
-    paddingVertical: 16
+    paddingVertical: 16,
+    marginLeft: 100,
   },
   securityItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
     gap: 6
   },
   securityText: {

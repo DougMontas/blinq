@@ -409,7 +409,7 @@ export default function HandymanCategoryScreen() {
           </View>
 
           {/* Active Job Alert */}
-          {activeJob && (
+          {/* {activeJob && (
             <TouchableOpacity 
               onPress={() => navigation.navigate('CustomerJobStatus', { jobId: activeJob._id })}
               style={styles.activeJobCard}
@@ -430,7 +430,7 @@ export default function HandymanCategoryScreen() {
                 <ChevronRight color="#60a5fa" size={24} />
               </LinearGradient>
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* Service Categories */}
           <Text style={styles.sectionTitle}>Select Your Handyman Task</Text>
@@ -489,6 +489,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
+    marginTop: 40,
   },
   centered: {
     flex: 1,
