@@ -10485,7 +10485,7 @@
 // });
 
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10509,13 +10509,20 @@ import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as IntentLauncher from "expo-intent-launcher";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants"; // ✅ for projectId on real devices
-import { decode as atob } from "base-64"; // ✅ tiny polyfill for JWT decode
+import Constants from "expo-constants";
+import { decode as atob } from "base-64";
 
 import api from "../api/client";
 import { useAuth, navigationRef } from "../context/AuthProvider";
 
-/** ---------- helpers ---------- */
+/* ---------- polyfills & guards ---------- */
+// Ensure atob exists for any lib that expects it (Hermes-safe)
+if (typeof globalThis.atob !== "function") {
+  // eslint-disable-next-line no-global-assign
+  globalThis.atob = atob;
+}
+
+/* ---------- helpers ---------- */
 const asBool = (v) => {
   if (typeof v === "boolean") return v;
   if (typeof v === "number") return v === 1;
@@ -10537,7 +10544,6 @@ const hasProfilePic = (me) =>
     ? !!me.hasProfilePicture
     : hasStr(me?.profilePicture);
 
-// ✅ robust, no-Buffer JWT parser (Hermes-safe)
 function parseJwt(token) {
   try {
     if (!token) return null;
@@ -10576,7 +10582,7 @@ function shouldRetryLowercaseLogin(err) {
   return false;
 }
 
-// Minimal push registration (safe; EAS-compatible)
+// Push registration (safe; EAS-compatible)
 async function registerForPushNotificationsAsync() {
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -10587,7 +10593,6 @@ async function registerForPushNotificationsAsync() {
     }
     if (finalStatus !== "granted") return null;
 
-    // ✅ pass projectId on real builds
     const projectId =
       Constants?.expoConfig?.extra?.eas?.projectId ??
       Constants?.easConfig?.projectId ??
@@ -10633,16 +10638,14 @@ async function savePushTokenIfAllowed(me) {
 }
 
 /**
- * Always fetch canonical /users/me and cache a **slim** copy (no blobs).
- * Still returns the full `me` to the caller so the UI can render images immediately.
+ * Fetch /users/me and cache a **slim** copy (no blobs) to AsyncStorage.
+ * Returns the full object to caller for immediate use.
  */
 async function fetchCanonicalMe() {
   const meRes = await api.get("/users/me");
   const me = meRes?.data?.user ?? meRes?.data ?? null;
 
-  // Diagnostics: see if server is accidentally sending inline images
-  const ppLen =
-    typeof me?.profilePicture === "string" ? me.profilePicture.length : 0;
+  const ppLen = typeof me?.profilePicture === "string" ? me.profilePicture.length : 0;
   console.log("👤 /users/me received", {
     id: me?._id,
     role: me?.role,
@@ -10652,21 +10655,16 @@ async function fetchCanonicalMe() {
     profilePictureBytes: ppLen || 0,
   });
 
-  // ⚠️ Do not put giant base64 strings into AsyncStorage (can crash on device)
+  // Slim copy for cache
   const slim = me ? { ...me } : {};
-  // If server ever includes inline picture/docs, drop them from the cache copy
   const maybeDrop = (k) => {
     if (typeof slim[k] === "string" && slim[k].startsWith("data:")) {
       delete slim[k];
     }
   };
-  maybeDrop("profilePicture");
-  maybeDrop("w9");
-  maybeDrop("businessLicense");
-  maybeDrop("proofOfInsurance");
-  maybeDrop("independentContractorAgreement");
-
-  // Preserve the readiness booleans even if we dropped blobs
+  ["profilePicture", "w9", "businessLicense", "proofOfInsurance", "independentContractorAgreement"].forEach(
+    maybeDrop
+  );
   if (typeof me?.profilePicture === "string") slim.hasProfilePicture = true;
 
   try {
@@ -10723,6 +10721,9 @@ export default function LoginScreen() {
   const navigation = useNavigation();
   const { setRole } = useAuth();
 
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -10730,15 +10731,13 @@ export default function LoginScreen() {
   const { width } = Dimensions.get("window");
   const LOGO_SIZE = width * 0.55;
 
-  /** ---------- one-time: permissions ---------- */
+  /** one-time permissions (non-blocking) */
   useEffect(() => {
     (async () => {
       try {
         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
-        console.log("📍 Location permission:", locStatus);
         if (locStatus !== "granted") {
           const { status } = await Location.requestForegroundPermissionsAsync();
-          console.log("📍 Location permission requested ->", status);
           if (status !== "granted") {
             Alert.alert("Location Required", "Enable location in settings.", [
               {
@@ -10756,12 +10755,9 @@ export default function LoginScreen() {
             ]);
           }
         }
-
         const notifPerm = await Notifications.getPermissionsAsync();
-        console.log("🔔 Notification permission:", notifPerm?.status);
         if (notifPerm.status !== "granted") {
-          const req = await Notifications.requestPermissionsAsync();
-          console.log("🔔 Notification permission requested ->", req?.status);
+          await Notifications.requestPermissionsAsync();
         }
       } catch (e) {
         console.log("⚠️ Permission setup error:", e?.message);
@@ -10782,9 +10778,8 @@ export default function LoginScreen() {
     return false;
   };
 
-  const goTo = (routeName, params = {}) => {
+  const safeReset = (routeName, params = {}) => {
     try {
-      console.log("🧭 Navigating to", routeName);
       const action = { index: 0, routes: [{ name: routeName, params }] };
       if (navigationRef?.isReady?.()) {
         navigationRef.reset(action);
@@ -10798,11 +10793,95 @@ export default function LoginScreen() {
     }
   };
 
-  /** ---------- LOGIN (email only) ---------- */
+  /** run provider checks in background AFTER navigation */
+  const runProviderGate = async ({ me, stripeAccountId, target }) => {
+    try {
+      // Stripe onboarding status
+      let needsOnboarding = null;
+      let stripeOnboardingUrl = null;
+      let stripeDashboardUrl = null;
+      let requirements = null;
+
+      if (!stripeAccountId) {
+        Alert.alert(
+          "Connect Payouts",
+          "To receive payouts, connect your Stripe account from your profile.",
+          [
+            { text: "Go to Profile", onPress: () => safeReset("ProviderProfile") },
+            { text: "Later", style: "cancel" },
+          ]
+        );
+        return;
+      }
+
+      const checkRes = await api.post("/routes/stripe/check-onboarding", {
+        stripeAccountId,
+      });
+      needsOnboarding = checkRes?.data?.needsOnboarding ?? null;
+      stripeOnboardingUrl = checkRes?.data?.stripeOnboardingUrl ?? null;
+      stripeDashboardUrl = checkRes?.data?.stripeDashboardUrl ?? null;
+      requirements = checkRes?.data?.requirements ?? null;
+
+      // Evaluate readiness
+      let readiness = evaluateProviderReadiness(me || {}, {
+        accountId: stripeAccountId,
+        needsOnboarding,
+      });
+
+      if (!readiness.ok) {
+        // Re-fetch once from source of truth
+        try {
+          const fresh = await fetchCanonicalMe();
+          me = fresh;
+          readiness = evaluateProviderReadiness(me || {}, {
+            accountId: stripeAccountId,
+            needsOnboarding,
+          });
+        } catch (e) {
+          console.log("⚠️ Re-fetch /users/me failed:", e?.response?.data || e?.message);
+        }
+      }
+
+      console.log("🧩 Provider readiness ok?", readiness.ok);
+
+      if (!readiness.ok) {
+        const bullets = readiness.missing.map((m) => `• ${m}`).join("\n");
+        Alert.alert(
+          "Finish Account Setup",
+          `You're signed in, but your profile isn't complete yet.\n\nMissing:\n${bullets}`,
+          [
+            needsOnboarding === true
+              ? {
+                  text: "Open Stripe",
+                  onPress: async () => {
+                    const url = stripeOnboardingUrl || stripeDashboardUrl;
+                    if (url) await openUrlSafely(url);
+                    safeReset(target);
+                  },
+                }
+              : undefined,
+            {
+              text: "Fix in App",
+              onPress: () =>
+                safeReset("ProviderProfile", {
+                  // do NOT pass the full `me` to avoid large nav payloads
+                  missingItems: readiness.missing,
+                  missingRequirements: requirements || null,
+                }),
+            },
+            { text: "Later", style: "cancel" },
+          ].filter(Boolean)
+        );
+      }
+    } catch (providerGateError) {
+      console.log("⚠️ Provider gating failed (non-fatal):", providerGateError?.message);
+    }
+  };
+
+  /** ---------- LOGIN ---------- */
   const onSubmit = async () => {
     try {
       setLoading(true);
-      console.log("🔑 Login pressed.");
       await AsyncStorage.multiRemove(["token", "refreshToken"]);
 
       const typed = email.trim();
@@ -10822,7 +10901,6 @@ export default function LoginScreen() {
       };
 
       let loginRes = null;
-
       try {
         loginRes = await tryLogin(typed, "typed");
       } catch (err1) {
@@ -10830,26 +10908,20 @@ export default function LoginScreen() {
         console.log("❌ Login attempt #1 failed:", { status, message: err1?.message });
         if (shouldRetryLowercaseLogin(err1)) {
           const lower = typed.toLowerCase();
-          console.log("↪️ Retrying with lowercased email:", lower);
           loginRes = await tryLogin(lower, "lowercased");
         } else {
           throw err1;
         }
       }
 
-      const data = (loginRes && loginRes.data && typeof loginRes.data === "object")
-        ? loginRes.data
-        : {};
-      console.log("✅ Login response: has token?", !!data.token);
+      const data = loginRes?.data || {};
       if (!data?.token) throw new Error("Token missing from response");
 
       await AsyncStorage.setItem("token", data.token);
-      if (data.refreshToken) {
-        await AsyncStorage.setItem("refreshToken", data.refreshToken);
-      }
+      if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
 
-      // Canonical me (for readiness + hydration)
+      // Fetch canonical me (returns full; caches slim)
       let me = null;
       try {
         me = await fetchCanonicalMe();
@@ -10857,7 +10929,8 @@ export default function LoginScreen() {
         console.log("⚠️ Initial /users/me failed:", e?.response?.data || e?.message);
       }
 
-      await savePushTokenIfAllowed(me);
+      // Push token (non-blocking)
+      savePushTokenIfAllowed(me).catch(() => {});
 
       const payload = parseJwt(data.token) || {};
       const role = payload?.role || me?.role || "customer";
@@ -10867,105 +10940,21 @@ export default function LoginScreen() {
         me?.stripe?.accountId ||
         null;
 
-      console.log("🎭 Derived auth:", { role, hasStripeAccountId: !!stripeAccountId });
-
       setRole(role);
       const target = roleToScreen(role);
-      const isProvider = (role || "").toLowerCase() === "serviceprovider";
 
-      if (isProvider) {
-        try {
-          let needsOnboarding = null;
-          let stripeOnboardingUrl = null;
-          let stripeDashboardUrl = null;
-          let requirements = null;
+      // 🚀 Navigate immediately to avoid heavy work on login view
+      if (mountedRef.current) setLoading(false);
+      safeReset(target);
 
-          if (!stripeAccountId) {
-            setLoading(false);
-            Alert.alert(
-              "Connect Payouts",
-              "To receive payouts, connect your Stripe account from your profile.",
-              [
-                { text: "Go to Profile", onPress: () => goTo("ProviderProfile") },
-                { text: "Later", style: "cancel", onPress: () => goTo(target) },
-              ]
-            );
-            return;
-          }
-
-          console.log("🔎 Checking Stripe onboarding…");
-          const checkRes = await api.post("/routes/stripe/check-onboarding", {
-            stripeAccountId,
-          });
-          needsOnboarding = checkRes?.data?.needsOnboarding ?? null;
-          stripeOnboardingUrl = checkRes?.data?.stripeOnboardingUrl ?? null;
-          stripeDashboardUrl = checkRes?.data?.stripeDashboardUrl ?? null;
-          requirements = checkRes?.data?.requirements ?? null;
-
-          // First pass
-          let readiness = evaluateProviderReadiness(me || {}, {
-            accountId: stripeAccountId,
-            needsOnboarding,
-          });
-
-          // Re-fetch once if anything missing to avoid false negatives
-          if (!readiness.ok) {
-            try {
-              const fresh = await fetchCanonicalMe();
-              me = fresh;
-              readiness = evaluateProviderReadiness(me || {}, {
-                accountId: stripeAccountId,
-                needsOnboarding,
-              });
-            } catch (e) {
-              console.log("⚠️ Re-fetch /users/me failed:", e?.response?.data || e?.message);
-            }
-          }
-
-          console.log("🧩 Provider readiness ok?", readiness.ok);
-
-          if (!readiness.ok) {
-            setLoading(false);
-            const bullets = readiness.missing.map((m) => `• ${m}`).join("\n");
-            Alert.alert(
-              "Finish Account Setup",
-              `You're signed in, but your profile isn't complete yet.\n\nMissing:\n${bullets}`,
-              [
-                needsOnboarding === true
-                  ? {
-                      text: "Open Stripe",
-                      onPress: async () => {
-                        const url = stripeOnboardingUrl || stripeDashboardUrl;
-                        if (url) await openUrlSafely(url);
-                        goTo(target);
-                      },
-                    }
-                  : undefined,
-                {
-                  text: "Fix in App",
-                  onPress: () =>
-                    goTo("ProviderProfile", {
-                      missingItems: readiness.missing,
-                      missingRequirements: requirements || null,
-                      canonicalMe: me || null,
-                    }),
-                },
-                { text: "Later", style: "cancel", onPress: () => goTo(target) },
-              ].filter(Boolean)
-            );
-            return;
-          }
-        } catch (providerGateError) {
-          // ✅ NEVER crash—just log and continue to dashboard
-          console.log("⚠️ Provider gating failed (non-fatal):", providerGateError?.message);
-        }
+      // 🔧 Provider gate runs asynchronously in the background
+      if ((role || "").toLowerCase() === "serviceprovider") {
+        setTimeout(() => {
+          runProviderGate({ me, stripeAccountId, target }).catch(() => {});
+        }, 0);
       }
-
-      setLoading(false);
-      console.log("✅ Login complete →", target);
-      goTo(target);
     } catch (err) {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
       const status = err?.response?.status;
       const raw =
         err?.response?.data?.msg ||
@@ -10997,7 +10986,7 @@ export default function LoginScreen() {
         >
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
+              <View className="logoContainer">
                 <Image
                   source={require("../assets/blinqfix_logo-new.jpeg")}
                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
@@ -11089,7 +11078,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   header: { alignItems: "center", marginBottom: 40 },
-  logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
   formContainer: { gap: 16 },
