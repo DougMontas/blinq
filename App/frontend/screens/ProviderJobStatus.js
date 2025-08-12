@@ -867,7 +867,8 @@ const styles = StyleSheet.create({
   center: { 
     flex: 1, 
     justifyContent: "center", 
-    alignItems: "center" 
+    alignItems: "center",
+    
   },
   errorText: {
     color: '#fff',
@@ -876,7 +877,8 @@ const styles = StyleSheet.create({
   },
   container: { 
     paddingHorizontal: 20, 
-    paddingBottom: 40 
+    paddingBottom: 40,
+    marginTop:40, 
   },
   header: {
     flexDirection: 'row',
@@ -925,7 +927,8 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)'
+    borderColor: 'rgba(255,255,255,0.1)',
+   
   },
   cardHeader: {
     flexDirection: 'row',

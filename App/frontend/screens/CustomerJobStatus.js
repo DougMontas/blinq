@@ -574,9 +574,9 @@ const getStatusConfig = (status) => {
   switch (status) {
     case 'pending':
     case 'invited':
-      return { color: '#facc15', icon: Clock, text: 'Finding Professional' };
+      return { color: '#facc15', icon: Clock, text: 'Finding Service Pro' };
     case 'accepted':
-      return { color: '#60a5fa', icon: MapPin, text: 'Professional En Route' };
+      return { color: '#60a5fa', icon: MapPin, text: 'Professional In Route' };
     case 'completed':
       return { color: '#22c55e', icon: CheckCircle, text: 'Job Completed' };
     default:
@@ -877,10 +877,10 @@ export default function CustomerJobStatus() {
               >
                 <View style={styles.alertHeader}>
                   <CheckCircle color="#22c55e" size={24} />
-                  <Text style={styles.alertTitle}>Professional Located!</Text>
+                  <Text style={styles.alertTitle}>Service Pro Located!</Text>
                 </View>
                 <Text style={styles.alertText}>
-                  Your BlinqFix professional is en route. Please make necessary preparations. 
+                  Your BlinqFix professional is in route. Please make necessary preparations. 
                   This screen will update automatically when the job is completed.
                 </Text>
               </LinearGradient>
@@ -890,7 +890,7 @@ export default function CustomerJobStatus() {
           {/* Provider Info Card */}
           {providerInfo && (
             <View style={styles.providerCard}>
-              <Text style={styles.cardTitle}>Your Service Professional</Text>
+              <Text style={styles.cardTitle}>Your Service Pro</Text>
               <View style={styles.providerInfo}>
                 {providerInfo.profilePictureUrl ? (
                   <Image
