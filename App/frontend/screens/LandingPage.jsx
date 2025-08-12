@@ -191,12 +191,16 @@ export default function LandingPage() {
             </View>
             <Text style={styles.heroTitle}>BlinqFix</Text>
             <View>
-                <Image
-                  source={require("../assets/blinqfix_logo-new.jpeg")}
-                  style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
-                  resizeMode="contain"
-                />
-              </View>
+              <Image
+                source={require("../assets/blinqfix_logo-new.jpeg")}
+                style={{
+                  width: LOGO_SIZE,
+                  height: LOGO_SIZE,
+                  marginInline: "auto",
+                }}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.heroSubtitle}>
               The first on-demand emergency repair platform that connects
               customers with vetted service professionals in real time!
@@ -508,17 +512,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 48,
     width: "40%",
-    
   },
   heroFeature: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.05)",
-    padding: 8,
+    padding: 20,
     borderRadius: 12,
     marginBottom: 20,
   },
-  heroFeatureText: { color: "#fff", marginLeft: 2 },
+  heroFeatureText: { color: "#fff", marginLeft: 2, marginLeft: 8 },
 
   // Services
   servicesGrid: {
