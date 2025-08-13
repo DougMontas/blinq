@@ -458,8 +458,7 @@ router.post(
 );
 
 // Completion photo
-router.post(
-  "/:jobId/upload/completion",
+router.post("/:jobId/upload/completion",
   auth,
   upload.single("image"),
   async (req, res) => {
