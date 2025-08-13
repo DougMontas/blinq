@@ -1010,7 +1010,659 @@
 // export default router;
 
 
-// backend/routes/users.js
+// // backend/routes/users.js
+// import express from "express";
+// import mongoose from "mongoose";
+// import crypto from "crypto";
+// import NodeGeocoder from "node-geocoder";
+// import multer from "multer";
+
+// import { auth } from "../middlewares/auth.js";
+// import Users from "../models/Users.js";
+// import Job from "../models/Job.js";
+
+// const router = express.Router();
+
+// // Geocoder + multer setup (geocoder kept for future use)
+// const geocoder = NodeGeocoder({ provider: "openstreetmap" });
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+// });
+
+// // --- helpers ---------------------------------------------------------
+// const algorithm = "aes-256-cbc";
+// const encryptionKey = process.env.ENCRYPTION_KEY;
+// const encryptionIV = process.env.ENCRYPTION_IV;
+
+// function encrypt(text) {
+//   if (!encryptionKey || !encryptionIV) return text;
+//   const key = Buffer.from(encryptionKey, "hex");
+//   const iv = Buffer.from(encryptionIV, "hex");
+//   const cipher = crypto.createCipheriv(algorithm, key, iv);
+//   let encrypted = cipher.update(text, "utf8", "hex");
+//   return encrypted + cipher.final("hex");
+// }
+
+// const asBool = (v) =>
+//   v === true || v === 1 || v === "1" || String(v).toLowerCase() === "true";
+// const hasStr = (v) => typeof v === "string" && v.trim().length > 0;
+
+// // Compute readiness server-side (same rules as app)
+// function evaluateProviderReadiness(me, has) {
+//   const missing = [];
+
+//   // Stripe
+//   if (!has?.stripeAccountId) missing.push("Stripe onboarding");
+
+//   if (!hasStr(me?.aboutMe)) missing.push("About Me");
+//   const yearsOk =
+//     Number.isFinite(me?.yearsExperience) ||
+//     (hasStr(me?.yearsExperience) && !isNaN(Number(me?.yearsExperience)));
+//   if (!yearsOk) missing.push("Years of Experience");
+
+//   if (!hasStr(me?.serviceType)) missing.push("Primary Service");
+//   if (!hasStr(me?.businessName)) missing.push("Business Name");
+//   if (!hasStr(me?.address)) missing.push("Business Address");
+
+//   const zipFirst = Array.isArray(me?.zipcode) ? me.zipcode[0] : me?.zipcode;
+//   if (!hasStr(zipFirst)) missing.push("Zip Code");
+
+//   if (!has?.profilePicture) missing.push("Profile Picture");
+//   if (!hasStr(me?.email)) missing.push("Email");
+//   if (!hasStr(me?.phoneNumber)) missing.push("Phone Number");
+
+//   if (!asBool(me?.optInSms)) missing.push("SMS Consent");
+
+//   if (!has?.docs?.w9) missing.push("W-9");
+//   if (!has?.docs?.businessLicense) missing.push("Business License");
+//   if (!has?.docs?.proofOfInsurance) missing.push("Proof of Insurance");
+
+//   const icaViewed =
+//     asBool(me?.acceptedICA) || has?.docs?.independentContractorAgreement;
+//   if (!icaViewed) missing.push("ICA Viewed");
+//   if (!asBool(me?.acceptedICA)) missing.push("ICA Agreed");
+
+//   return { ok: missing.length === 0, missing };
+// }
+
+// // Return a SLIM user (no base64 blobs)
+// function toSlimUser(u, overrides = {}) {
+//   if (!u) return {};
+//   const docs = overrides.docs || {};
+//   const hasProfilePicture =
+//     typeof overrides.hasProfilePicture === "boolean"
+//       ? overrides.hasProfilePicture
+//       : false;
+
+//   // inferred: icaViewed is true if accepted OR ICA doc exists
+//   const icaViewed = !!u.acceptedICA || !!docs.independentContractorAgreement;
+
+//   return {
+//     _id: u._id,
+//     name: u.name || "",
+//     email: u.email || "",
+//     phoneNumber: u.phoneNumber || "",
+//     role: u.role || "",
+//     trade: u.trade || "",
+//     serviceType: u.serviceType || "",
+//     portfolio: Array.isArray(u.portfolio) ? u.portfolio : [],
+//     zipcode: Array.isArray(u.zipcode) ? u.zipcode : u.zipcode ? [u.zipcode] : [],
+//     serviceZipcode: Array.isArray(u.serviceZipcode) ? u.serviceZipcode : [],
+//     address: u.address || "",
+//     aboutMe: u.aboutMe || "",
+//     yearsExperience:
+//       Number.isFinite(u.yearsExperience) ? u.yearsExperience : u.yearsExperience ?? null,
+//     businessName: u.businessName || "",
+//     billingTier: u.billingTier ?? null,
+//     isActive: !!u.isActive,
+//     optInSms: !!u.optInSms,
+//     acceptedICA: !!u.acceptedICA,
+//     icaViewed,
+//     stripeAccountId: u.stripeAccountId || "",
+//     hasProfilePicture: !!hasProfilePicture,
+//     hasDocs: {
+//       w9: !!docs.w9,
+//       businessLicense: !!docs.businessLicense,
+//       proofOfInsurance: !!docs.proofOfInsurance,
+//       independentContractorAgreement: !!docs.independentContractorAgreement,
+//     },
+//   };
+// }
+
+// // Existence checks WITHOUT pulling blob data (single aggregation query)
+// async function getDocExistence(uid) {
+//   try {
+//     const [row] = await Users.aggregate([
+//       { $match: { _id: new mongoose.Types.ObjectId(uid) } },
+//       {
+//         $project: {
+//           _id: 0,
+//           profilePicture: {
+//             $gt: [{ $strLenCP: { $ifNull: ["$profilePicture", ""] } }, 0],
+//           },
+//           docs: {
+//             w9: { $gt: [{ $strLenCP: { $ifNull: ["$w9", ""] } }, 0] },
+//             businessLicense: {
+//               $gt: [{ $strLenCP: { $ifNull: ["$businessLicense", ""] } }, 0],
+//             },
+//             proofOfInsurance: {
+//               $gt: [{ $strLenCP: { $ifNull: ["$proofOfInsurance", ""] } }, 0],
+//             },
+//             independentContractorAgreement: {
+//               $gt: [
+//                 { $strLenCP: { $ifNull: ["$independentContractorAgreement", ""] } },
+//                 0,
+//               ],
+//             },
+//           },
+//         },
+//       },
+//     ]);
+//     return (
+//       row || {
+//         profilePicture: false,
+//         docs: {
+//           w9: false,
+//           businessLicense: false,
+//           proofOfInsurance: false,
+//           independentContractorAgreement: false,
+//         },
+//       }
+//     );
+//   } catch (e) {
+//     console.error("⚠️ getDocExistence error:", e?.message);
+//     return {
+//       profilePicture: false,
+//       docs: {
+//         w9: false,
+//         businessLicense: false,
+//         proofOfInsurance: false,
+//         independentContractorAgreement: false,
+//       },
+//     };
+//   }
+// }
+
+// // --- routes ----------------------------------------------------------
+
+// /**
+//  * GET /api/users/me
+//  * - Defaults to SLIM (no blobs). To request FULL, send:
+//  *   X-Users-Me-Mode: full  AND  X-Allow-Full-Me: 1
+//  */
+// router.get("/me", auth, async (req, res) => {
+//   const rid = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+
+//   let mode = String(
+//     req.get("X-Users-Me-Mode") || req.query.mode || "slim"
+//   ).toLowerCase();
+//   if (mode === "full" && req.get("X-Allow-Full-Me") !== "1") {
+//     mode = "slim";
+//   }
+
+//   try {
+//     console.log(
+//       `👤 [${rid}] /me start`,
+//       JSON.stringify({ uid: req.user.id, role: req.user.role, mode })
+//     );
+
+//     // Never select blobs for SLIM mode
+//     const baseFields = [
+//       "name",
+//       "email",
+//       "phoneNumber",
+//       "role",
+//       "trade",
+//       "serviceType",
+//       "portfolio",
+//       "zipcode",
+//       "serviceZipcode",
+//       "address",
+//       "aboutMe",
+//       "yearsExperience",
+//       "businessName",
+//       "billingTier",
+//       "isActive",
+//       "optInSms",
+//       "acceptedICA",
+//       "stripeAccountId",
+//     ];
+
+//     const fullPlusBlobs = baseFields.concat([
+//       "profilePicture",
+//       "w9",
+//       "businessLicense",
+//       "proofOfInsurance",
+//       "independentContractorAgreement",
+//     ]);
+
+//     const fieldsToUse = mode === "slim" ? baseFields : fullPlusBlobs;
+
+//     const user = await Users.findById(req.user.id)
+//       .select(fieldsToUse.join(" "))
+//       .lean();
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     res.set("Cache-Control", "no-store");
+
+//     if (mode === "slim") {
+//       // compute existence booleans WITHOUT fetching blobs
+//       const exist = await getDocExistence(req.user.id);
+//       const payload = toSlimUser(user, {
+//         hasProfilePicture: exist.profilePicture,
+//         docs: exist.docs,
+//       });
+
+//       console.log(`📤 [${rid}] /me SLIM keys=`, Object.keys(payload));
+//       return res.json(payload);
+//     }
+
+//     // Legacy FULL mode (use sparingly)
+//     const sizes = {
+//       profilePicture: hasStr(user.profilePicture)
+//         ? `${(user.profilePicture.length / 1024).toFixed(2)} KB`
+//         : "0 B",
+//       w9: hasStr(user.w9) ? `${(user.w9.length / 1024).toFixed(2)} KB` : "0 B",
+//       businessLicense: hasStr(user.businessLicense)
+//         ? `${(user.businessLicense.length / 1024).toFixed(2)} KB`
+//         : "0 B",
+//       proofOfInsurance: hasStr(user.proofOfInsurance)
+//         ? `${(user.proofOfInsurance.length / 1024).toFixed(2)} KB`
+//         : "0 B",
+//       independentContractorAgreement: hasStr(user.independentContractorAgreement)
+//         ? `${(user.independentContractorAgreement.length / 1024).toFixed(2)} KB`
+//         : "0 B",
+//     };
+//     console.log(`📦 [${rid}] /me FULL keys=`, Object.keys(user), "sizes=", sizes);
+//     return res.json(user);
+//   } catch (err) {
+//     console.error(`❌ [${rid}] /me error:`, err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// /**
+//  * GET /api/users/me/readiness
+//  * Tiny, boolean-only payload to gate providers on login/dashboard.
+//  */
+// router.get("/me/readiness", auth, async (req, res) => {
+//   const rid = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+//   try {
+//     const user = await Users.findById(req.user.id)
+//       .select(
+//         [
+//           "email",
+//           "phoneNumber",
+//           "role",
+//           "serviceType",
+//           "aboutMe",
+//           "yearsExperience",
+//           "businessName",
+//           "address",
+//           "zipcode",
+//           "optInSms",
+//           "acceptedICA",
+//           "stripeAccountId",
+//         ].join(" ")
+//       )
+//       .lean();
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     const exist = await getDocExistence(req.user.id);
+//     const has = {
+//       docs: exist.docs,
+//       profilePicture: exist.profilePicture,
+//       stripeAccountId: !!user.stripeAccountId,
+//     };
+
+//     const readiness = evaluateProviderReadiness(user, {
+//       docs: has.docs,
+//       profilePicture: has.profilePicture,
+//       stripeAccountId: has.stripeAccountId,
+//     });
+
+//     const response = {
+//       role: user.role,
+//       profileComplete: readiness.ok,
+//       stripeComplete: has.stripeAccountId,
+//       providerReady: readiness.ok && has.stripeAccountId,
+//       missing: readiness.missing,
+//     };
+
+//     console.log(`🧩 [/me/readiness ${rid}]`, response);
+//     return res.json(response);
+//   } catch (err) {
+//     console.error(`❌ [/me/readiness ${rid}] error:`, err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// // Active providers
+// router.get("/active-providers", async (req, res) => {
+//   try {
+//     const activeProviders = await Users.find({
+//       role: "serviceProvider",
+//       isOnline: true,
+//       location: { $exists: true },
+//     }).select("name serviceType location");
+//     res.json(
+//       activeProviders.map((pro) => ({
+//         id: pro._id,
+//         name: pro.name,
+//         category: pro.serviceType,
+//         coords: {
+//           latitude: pro.location?.coordinates?.[1],
+//           longitude: pro.location?.coordinates?.[0],
+//         },
+//       }))
+//     );
+//   } catch (err) {
+//     console.error("Failed to fetch active providers:", err);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+// // Billing info
+// router.get("/billing-info", auth, async (req, res) => {
+//   try {
+//     const user = await Users.findById(req.user.id)
+//       .select("billingTier isActive")
+//       .lean();
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+//     res.json(user);
+//   } catch (err) {
+//     console.error("Billing info fetch failed:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// // Public user by id (note: returns profilePicture inline)
+// router.get("/:id([0-9a-fA-F]{24})", auth, async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const userId = id === "me" ? req.user.id : id;
+
+//     const user = await Users.findById(userId).select(
+//       "name email role aboutMe businessName profilePicture averageRating"
+//     );
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     res.json(user);
+//   } catch (err) {
+//     console.error("GET /users/:id error", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// // User documents (explicit fetch only)
+// router.get("/me/documents", auth, async (req, res) => {
+//   try {
+//     const user = await Users.findById(
+//       req.user.id,
+//       "w9 businessLicense proofOfInsurance independentContractorAgreement"
+//     ).lean();
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     res.json({
+//       w9: user.w9 || null,
+//       businessLicense: user.businessLicense || null,
+//       proofOfInsurance: user.proofOfInsurance || null,
+//       independentContractorAgreement: user.independentContractorAgreement || null,
+//     });
+//   } catch (err) {
+//     console.error("GET /me/documents error:", err);
+//     res.status(500).json({ msg: "Server error fetching documents" });
+//   }
+// });
+
+// // Provider stats
+// router.get("/me/stats", auth, async (req, res) => {
+//   if (req.user.role !== "serviceProvider")
+//     return res.status(403).json({ msg: "Only service providers have stats" });
+
+//   const year = parseInt(req.query.year) || new Date().getFullYear();
+//   const providerId = new mongoose.Types.ObjectId(req.user.id);
+
+//   try {
+//     const stats = await Job.aggregate([
+//       {
+//         $match: {
+//           acceptedProvider: providerId,
+//           status: "completed",
+//           $expr: { $eq: [{ $year: "$createdAt" }, year] },
+//         },
+//       },
+//       {
+//         $group: {
+//           _id: null,
+//           completedJobsCount: { $sum: 1 },
+//           totalAmountPaid: { $sum: "$totalAmountPaid" },
+//         },
+//       },
+//     ]);
+
+//     if (!stats.length) {
+//       return res.json({ completedJobsCount: 0, totalAmountPaid: 0 });
+//     }
+//     const { completedJobsCount, totalAmountPaid } = stats[0];
+//     res.json({ completedJobsCount, totalAmountPaid });
+//   } catch (err) {
+//     console.error("Error fetching provider stats:", err);
+//     res.status(500).json({ msg: "Server error fetching stats" });
+//   }
+// });
+
+// // Active providers (minimal)
+// router.get("/providers/active", async (req, res) => {
+//   try {
+//     const providers = await Users.find(
+//       { role: "serviceProvider", isActive: true },
+//       "name serviceType location.coordinates"
+//     ).lean();
+
+//     const data = providers.map((p) => {
+//       const [lng, lat] = p.location?.coordinates || [];
+//       return {
+//         id: p._id,
+//         name: p.name,
+//         serviceType: p.serviceType,
+//         position: lat != null && lng != null ? [lat, lng] : null,
+//       };
+//     });
+
+//     res.json(data);
+//   } catch (err) {
+//     console.error("GET /providers/active error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// /**
+//  * Multipart profile update — responds with SLIM user (no blobs)
+//  */
+// router.put(
+//   "/profile",
+//   auth,
+//   upload.fields([
+//     { name: "w9", maxCount: 1 },
+//     { name: "businessLicense", maxCount: 1 },
+//     { name: "proofOfInsurance", maxCount: 1 },
+//     { name: "independentContractorAgreement", maxCount: 1 },
+//     { name: "profilePicture", maxCount: 1 },
+//   ]),
+//   async (req, res) => {
+//     try {
+//       const user = await Users.findById(req.user.id);
+//       if (!user) return res.status(404).json({ msg: "User not found" });
+
+//       // text fields (coerce a few booleans)
+//       for (const [key, value] of Object.entries(req.body)) {
+//         if (value === undefined || value === "") continue;
+//         if (key === "acceptedICA") user.acceptedICA = asBool(value);
+//         else if (key === "optInSms") user.optInSms = asBool(value);
+//         else if (key === "email") user.email = String(value).toLowerCase();
+//         else user[key] = value;
+//       }
+
+//       // files
+//       const f = req.files || {};
+//       if (f.profilePicture?.[0]) {
+//         const { buffer, mimetype } = f.profilePicture[0];
+//         user.profilePicture = `data:${mimetype};base64,${buffer.toString("base64")}`;
+//       }
+//       if (f.w9?.[0]) user.w9 = f.w9[0].buffer.toString("base64");
+//       if (f.businessLicense?.[0])
+//         user.businessLicense = f.businessLicense[0].buffer.toString("base64");
+//       if (f.proofOfInsurance?.[0])
+//         user.proofOfInsurance = f.proofOfInsurance[0].buffer.toString("base64");
+//       if (f.independentContractorAgreement?.[0])
+//         user.independentContractorAgreement =
+//           f.independentContractorAgreement[0].buffer.toString("base64");
+
+//       await user.save({ validateBeforeSave: false });
+
+//       // respond SLIM to avoid crashing client
+//       const payload = toSlimUser(user.toObject(), {
+//         hasProfilePicture: !!user.profilePicture,
+//         docs: {
+//           w9: !!user.w9,
+//           businessLicense: !!user.businessLicense,
+//           proofOfInsurance: !!user.proofOfInsurance,
+//           independentContractorAgreement: !!user.independentContractorAgreement,
+//         },
+//       });
+
+//       console.log("✅ PUT /profile -> SLIM response");
+//       return res.json({ msg: "Profile updated", user: payload });
+//     } catch (err) {
+//       console.error("PUT /profile error:", err);
+//       if (err instanceof multer.MulterError) {
+//         return res.status(400).json({ msg: `MulterError: ${err.message}` });
+//       }
+//       return res.status(500).json({ msg: "Server error updating profile" });
+//     }
+//   }
+// );
+
+// // JSON-only profile patch — also returns SLIM
+// router.patch("/profile", auth, async (req, res) => {
+//   try {
+//     const b = req.body || {};
+//     const updates = {};
+//     if (typeof b.optInSms !== "undefined") updates.optInSms = asBool(b.optInSms);
+//     if (typeof b.acceptedICA !== "undefined") updates.acceptedICA = asBool(b.acceptedICA);
+//     if (typeof b.independentContractorAgreement !== "undefined")
+//       updates.independentContractorAgreement = String(b.independentContractorAgreement || "");
+//     if (b.email) updates.email = String(b.email).toLowerCase();
+//     if (b.phoneNumber) updates.phoneNumber = String(b.phoneNumber);
+
+//     const user = await Users.findByIdAndUpdate(req.user.id, updates, {
+//       new: true,
+//       lean: true,
+//     });
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     const exist = await getDocExistence(req.user.id);
+//     const payload = toSlimUser(user, {
+//       hasProfilePicture: exist.profilePicture,
+//       docs: exist.docs,
+//     });
+//     return res.json({ user: payload });
+//   } catch (err) {
+//     console.error("PATCH /profile error:", err);
+//     return res.status(500).json({ msg: "Server error updating profile" });
+//   }
+// });
+
+// // Location (safe save)
+// router.put("/location", auth, async (req, res) => {
+//   try {
+//     const loc = req.body.location;
+//     if (!Array.isArray(loc) || loc.length !== 2)
+//       return res.status(400).json({ msg: "Location must be [lat, lng]" });
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     user.location = {
+//       type: "Point",
+//       coordinates: [Number(loc[1]), Number(loc[0])],
+//     };
+//     await user.save({ validateBeforeSave: false });
+
+//     res.json({ msg: "Location updated", location: user.location });
+//   } catch (err) {
+//     console.error("PUT /location error:", err);
+//     res.status(500).json({ msg: "Server error updating location" });
+//   }
+// });
+
+// // Push token
+// router.post("/push-token", auth, async (req, res) => {
+//   try {
+//     const { token } = req.body;
+//     if (!token || typeof token !== "string") {
+//       return res.status(400).json({ msg: "Invalid or missing push token." });
+//     }
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found." });
+
+//     user.expoPushToken = token;
+//     await user.save();
+
+//     res.status(200).json({ msg: "Push token saved." });
+//   } catch (err) {
+//     console.error("❌ Error saving push token:", err);
+//     res.status(500).json({ msg: "Failed to save push token." });
+//   }
+// });
+
+// // Save session
+// router.post("/save-session", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     if (!jobId) return res.status(400).json({ msg: "Missing jobId." });
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found." });
+
+//     user.lastActiveJobId = jobId;
+//     await user.save();
+
+//     res.status(200).json({ msg: "Session saved." });
+//   } catch (err) {
+//     console.error("Error saving session:", err);
+//     res.status(500).json({ msg: "Server error saving session." });
+//   }
+// });
+
+// // Soft delete
+// router.delete("/delete", auth, async (req, res) => {
+//   try {
+//     const userId = req.user._id || req.user.id;
+//     const { reason } = req.body;
+//     const updatedUser = await Users.findByIdAndUpdate(
+//       userId,
+//       { isDeleted: true, isActive: false, deleteReason: reason || "", deletedAt: new Date() },
+//       { new: true }
+//     );
+//     if (!updatedUser) return res.status(404).json({ msg: "User not found" });
+
+//     res.json({ msg: "Account successfully marked as deleted" });
+//   } catch (err) {
+//     console.error("❌ Delete user error", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// export default router;
+
+
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
@@ -1340,6 +1992,31 @@ router.get("/me/readiness", auth, async (req, res) => {
   }
 });
 
+/**
+ * NEW: GET /api/users/me/stripe-status
+ * Ultra-light check used at login to decide whether to show onboarding prompt.
+ * Returns: { role, stripeAccountId, stripeComplete, provider }
+ */
+router.get("/me/stripe-status", auth, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id)
+      .select("role stripeAccountId")
+      .lean();
+
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    const role = String(user.role || "");
+    const roleLc = role.toLowerCase();
+    const provider = roleLc === "serviceprovider" || roleLc === "provider";
+    const stripeComplete = !!user.stripeAccountId;
+
+    return res.json({ role, stripeAccountId: user.stripeAccountId || "", stripeComplete, provider });
+  } catch (err) {
+    console.error("GET /me/stripe-status error:", err);
+    return res.status(500).json({ msg: "Server error" });
+  }
+});
+
 // Active providers
 router.get("/active-providers", async (req, res) => {
   try {
@@ -1347,7 +2024,10 @@ router.get("/active-providers", async (req, res) => {
       role: "serviceProvider",
       isOnline: true,
       location: { $exists: true },
-    }).select("name serviceType location");
+    })
+      .select("name serviceType location")
+      .lean();
+
     res.json(
       activeProviders.map((pro) => ({
         id: pro._id,
@@ -1661,7 +2341,6 @@ router.delete("/delete", auth, async (req, res) => {
 });
 
 export default router;
-
 
 
 // // backend/routes/users.js
