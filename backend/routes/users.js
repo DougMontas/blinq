@@ -2137,6 +2137,30 @@ router.get("/me/stats", auth, async (req, res) => {
 });
 
 // Active providers (minimal)
+// router.get("/providers/active", async (req, res) => {
+//   try {
+//     const providers = await Users.find(
+//       { role: "serviceProvider", isActive: true },
+//       "name serviceType location.coordinates"
+//     ).lean();
+
+//     const data = providers.map((p) => {
+//       const [lng, lat] = p.location?.coordinates || [];
+//       return {
+//         id: p._id,
+//         name: p.name,
+//         serviceType: p.serviceType,
+//         position: lat != null && lng != null ? [lat, lng] : null,
+//       };
+//     });
+
+//     res.json(data);
+//   } catch (err) {
+//     console.error("GET /providers/active error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
 router.get("/providers/active", async (req, res) => {
   try {
     const providers = await Users.find(
@@ -2145,12 +2169,18 @@ router.get("/providers/active", async (req, res) => {
     ).lean();
 
     const data = providers.map((p) => {
-      const [lng, lat] = p.location?.coordinates || [];
+      const [lng, lat] = (p.location?.coordinates || []).map(Number);
+      const valid = Number.isFinite(lat) && Number.isFinite(lng);
+      const coords = valid ? { latitude: lat, longitude: lng } : null;
       return {
         id: p._id,
         name: p.name,
         serviceType: p.serviceType,
-        position: lat != null && lng != null ? [lat, lng] : null,
+        // Back-compat shapes ↓↓↓
+        coords,                        // { latitude, longitude }
+        position: valid ? [lat, lng] : null, // [lat, lng]
+        lat: valid ? lat : null,
+        lng: valid ? lng : null,
       };
     });
 
