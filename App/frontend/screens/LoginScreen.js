@@ -11140,7 +11140,513 @@
 // });
 
 
-// app/screens/LoginScreen.js
+// // app/screens/LoginScreen.js
+// import React, { useEffect, useState, useRef } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import Constants from "expo-constants";
+// import { decode as atob } from "base-64";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /* ---------- polyfills ---------- */
+// // Ensure atob exists for Hermes (iOS real devices often need this)
+// if (typeof globalThis.atob !== "function") {
+//   // eslint-disable-next-line no-global-assign
+//   globalThis.atob = atob;
+// }
+
+// /* ---------- tiny helpers ---------- */
+// const TAG = "LOGIN2";
+
+// function parseJwt(token) {
+//   try {
+//     if (!token) return null;
+//     const base64Url = token.split(".")[1];
+//     if (!base64Url) return null;
+//     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//     const binary = atob(base64);
+//     const jsonPayload = decodeURIComponent(
+//       Array.prototype.map
+//         .call(binary, (c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//         .join("")
+//     );
+//     return JSON.parse(jsonPayload);
+//   } catch {
+//     return null;
+//   }
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// function shouldRetryLowercaseLogin(err) {
+//   const status = err?.response?.status;
+//   const msg =
+//     (err?.response?.data?.msg || err?.response?.data?.message || err?.message || "")
+//       .toString()
+//       .toLowerCase();
+//   if (status === 404) return true;
+//   if (msg.includes("user not found")) return true;
+//   if (msg.includes("invalid credentials")) return true;
+//   if (status === 400 && (msg.includes("email") || msg.includes("not found"))) return true;
+//   return false;
+// }
+
+// /* ---------- push notifications ---------- */
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const projectId =
+//       Constants?.expoConfig?.extra?.eas?.projectId ??
+//       Constants?.easConfig?.projectId ??
+//       null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync(
+//       projectId ? { projectId } : undefined
+//     );
+//     const token = tokenData?.data || null;
+//     console.log("📮 [PUSH] acquired?", !!token, { projectId });
+//     return token;
+//   } catch (e) {
+//     console.log("❌ [PUSH] failed:", e?.message);
+//     return null;
+//   }
+// }
+
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider) {
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       console.log("🗃️ [PUSH] stashed for provider");
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//     console.log("✅ [PUSH] sent to backend");
+//   } catch (e) {
+//     console.log("⚠️ [PUSH] send failed, stashing:", e?.response?.data || e?.message);
+//     try {
+//       const already = await AsyncStorage.getItem("pendingPushToken");
+//       if (!already) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// /* ---------- slim fetchers (no blobs) ---------- */
+// function stripBlobsForCache(obj) {
+//   try {
+//     if (!obj || typeof obj !== "object") return obj;
+//     const clone = { ...obj };
+//     const maybeDrop = (k) => {
+//       const v = clone[k];
+//       if (typeof v === "string" && (v.startsWith("data:") || v.length > 20000)) {
+//         delete clone[k];
+//       }
+//     };
+//     ["profilePicture", "w9", "businessLicense", "proofOfInsurance", "independentContractorAgreement"].forEach(
+//       maybeDrop
+//     );
+//     if (typeof obj?.profilePicture === "string") clone.hasProfilePicture = true;
+//     return clone;
+//   } catch {
+//     return obj;
+//   }
+// }
+
+// async function fetchMeSlim() {
+//   console.log(`➡️  [${TAG}] GET /users/me`);
+//   const res = await api.get("/users/me");
+//   const me = res?.data?.user ?? res?.data ?? {};
+//   const slim = stripBlobsForCache(me);
+//   await AsyncStorage.setItem("meSlim", JSON.stringify(slim));
+//   console.log(`⬅️  [${TAG}] /users/me ok`, {
+//     id: slim?._id,
+//     role: slim?.role,
+//     hasProfilePicture: !!slim?.hasProfilePicture,
+//   });
+//   return slim;
+// }
+
+// async function fetchReadiness() {
+//   console.log(`➡️  [${TAG}] GET /users/me/readiness`);
+//   const { data } = await api.get("/users/me/readiness"); // { profileComplete, stripeComplete }
+//   const readiness = {
+//     profileComplete: !!data?.profileComplete,
+//     stripeComplete: !!data?.stripeComplete,
+//   };
+//   await AsyncStorage.setItem("readiness", JSON.stringify(readiness));
+//   console.log(`⬅️  [${TAG}] readiness`, readiness);
+//   return readiness;
+// }
+
+// /* ---------- component ---------- */
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const mountedRef = useRef(true);
+//   useEffect(() => () => { mountedRef.current = false; }, []);
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /* one-time permissions (non-blocking) */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         console.log(`📍 [${TAG}] location perm:`, locStatus);
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           console.log(`📍 [${TAG}] location request ->`, status);
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         console.log(`🔔 [${TAG}] notif perm:`, notifPerm?.status);
+//         if (notifPerm.status !== "granted") {
+//           const req = await Notifications.requestPermissionsAsync();
+//           console.log(`🔔 [${TAG}] notif request ->`, req?.status);
+//         }
+//       } catch (e) {
+//         console.log(`⚠️ [${TAG}] perm setup error:`, e?.message);
+//       }
+//     })();
+//   }, []);
+
+//   const safeReset = (routeName, params = {}) => {
+//     try {
+//       const action = { index: 0, routes: [{ name: routeName, params }] };
+//       if (navigationRef?.isReady?.()) {
+//         navigationRef.reset(action);
+//       } else if (navigation && typeof navigation.reset === "function") {
+//         navigation.reset(action);
+//       } else {
+//         navigation.navigate(routeName, params);
+//       }
+//       console.log(`🧭 [${TAG}] reset → ${routeName}`);
+//     } catch (e) {
+//       console.log(`⚠️ [${TAG}] navigation error:`, e?.message);
+//     }
+//   };
+
+//   /* ---------- LOGIN ---------- */
+//   const onSubmit = async () => {
+//     const rid = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+//     try {
+//       setLoading(true);
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const typed = email.trim();
+//       if (!typed || !password) {
+//         setLoading(false);
+//         Alert.alert("Missing info", "Please enter your email and password.");
+//         return;
+//       }
+
+//       const tryLogin = async (emailToUse, label) => {
+//         console.log(`➡️  [${TAG}:${rid}] POST /auth/login`, { email: emailToUse, attempt: label });
+//         return api.post(
+//           "/auth/login",
+//           { email: emailToUse, password },
+//           { headers: { "Content-Type": "application/json" } }
+//         );
+//       };
+
+//       let loginRes = null;
+//       try {
+//         loginRes = await tryLogin(typed, "typed");
+//       } catch (err1) {
+//         const status = err1?.response?.status;
+//         console.log(`❌ [${TAG}:${rid}] login #1 failed`, { status, msg: err1?.message });
+//         if (shouldRetryLowercaseLogin(err1)) {
+//           const lower = typed.toLowerCase();
+//           console.log(`↪️ [${TAG}:${rid}] retry lowercased`, lower);
+//           loginRes = await tryLogin(lower, "lowercased");
+//         } else {
+//           throw err1;
+//         }
+//       }
+
+//       const data = loginRes?.data || {};
+//       const token = data?.token;
+//       if (!token) throw new Error("Token missing from response");
+//       await AsyncStorage.setItem("token", token);
+//       if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       api.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+//       const payload = parseJwt(token) || {};
+//       console.log(`🔑 [${TAG}:${rid}] jwt payload keys`, Object.keys(payload || {}));
+
+//       // Fetch small things only (no blobs)
+//       let meSlim = {};
+//       let readiness = { profileComplete: false, stripeComplete: false };
+//       try {
+//         [meSlim, readiness] = await Promise.all([fetchMeSlim(), fetchReadiness()]);
+//       } catch (e) {
+//         console.log(`⚠️ [${TAG}:${rid}] post-login hydrate failed:`, e?.message);
+//       }
+
+//       const role = meSlim?.role || payload?.role || "customer";
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // Navigate immediately (no gating here)
+//       if (mountedRef.current) setLoading(false);
+//       safeReset(target);
+
+//       // Fire-and-forget push token save
+//       savePushTokenIfAllowed(meSlim).catch(() => {});
+
+//       // Optional: Log readiness so we can see why prompts may appear later
+//       console.log(`🧩 [${TAG}:${rid}] readiness`, readiness);
+//     } catch (err) {
+//       if (mountedRef.current) setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+//       console.log(`💥 [${TAG}:${rid}] login failure`, { status, raw });
+
+//       let msg = raw;
+//       const lower = (raw || "").toLowerCase();
+//       if (status === 404 && (lower.includes("user") || lower.includes("email"))) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && (lower.includes("invalid") || lower.includes("password"))) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             <View style={styles.header}>
+//               <View style={styles.logoContainer}>
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, alignSelf: "center" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   autoCorrect={false}
+//                   autoComplete="email"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// /* ---------- styles ---------- */
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// });
+
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -11169,6 +11675,7 @@ import Constants from "expo-constants";
 import { decode as atob } from "base-64";
 
 import api from "../api/client";
+// NOTE: matches your final working pattern
 import { useAuth, navigationRef } from "../context/AuthProvider";
 
 /* ---------- polyfills ---------- */
@@ -11247,6 +11754,20 @@ async function registerForPushNotificationsAsync() {
   }
 }
 
+async function flushPendingPushToken() {
+  // FIX: Make sure any previously stashed token (esp. from provider devices) gets delivered post-login
+  try {
+    const pending = await AsyncStorage.getItem("pendingPushToken");
+    if (pending) {
+      await api.post("/users/push-token", { token: pending });
+      await AsyncStorage.removeItem("pendingPushToken");
+      console.log("✅ [PUSH] flushed pending token");
+    }
+  } catch (e) {
+    console.log("⚠️ [PUSH] flush failed:", e?.response?.data || e?.message);
+  }
+}
+
 async function savePushTokenIfAllowed(me) {
   try {
     const expoPush = await registerForPushNotificationsAsync();
@@ -11254,6 +11775,7 @@ async function savePushTokenIfAllowed(me) {
 
     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
     if (isProvider) {
+      // FIX: Stash for reliability; we'll also try flushing immediately after login
       await AsyncStorage.setItem("pendingPushToken", expoPush);
       console.log("🗃️ [PUSH] stashed for provider");
       return;
@@ -11285,9 +11807,14 @@ function stripBlobsForCache(obj) {
         delete clone[k];
       }
     };
-    ["profilePicture", "w9", "businessLicense", "proofOfInsurance", "independentContractorAgreement"].forEach(
-      maybeDrop
-    );
+    // FIX: keep AsyncStorage payloads small to prevent iOS crashes on larger provider docs
+    [
+      "profilePicture",
+      "w9",
+      "businessLicense",
+      "proofOfInsurance",
+      "independentContractorAgreement",
+    ].forEach(maybeDrop);
     if (typeof obj?.profilePicture === "string") clone.hasProfilePicture = true;
     return clone;
   } catch {
@@ -11300,7 +11827,9 @@ async function fetchMeSlim() {
   const res = await api.get("/users/me");
   const me = res?.data?.user ?? res?.data ?? {};
   const slim = stripBlobsForCache(me);
+  // FIX: persist for later screens that assume user is in storage/context
   await AsyncStorage.setItem("meSlim", JSON.stringify(slim));
+  await AsyncStorage.setItem("me", JSON.stringify(slim)); // legacy key just in case other screens read this
   console.log(`⬅️  [${TAG}] /users/me ok`, {
     id: slim?._id,
     role: slim?.role,
@@ -11324,10 +11853,13 @@ async function fetchReadiness() {
 /* ---------- component ---------- */
 export default function LoginScreen() {
   const navigation = useNavigation();
-  const { setRole } = useAuth();
+  const auth = useAuth();
+  const { setRole } = auth || {};
 
   const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -11431,6 +11963,8 @@ export default function LoginScreen() {
       const data = loginRes?.data || {};
       const token = data?.token;
       if (!token) throw new Error("Token missing from response");
+
+      // Persist tokens first
       await AsyncStorage.setItem("token", token);
       if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -11448,15 +11982,31 @@ export default function LoginScreen() {
       }
 
       const role = meSlim?.role || payload?.role || "customer";
-      setRole(role);
+
+      // FIX: update auth context comprehensively so provider screens don't crash
+      try {
+        if (typeof setRole === "function") setRole(role);
+        if (auth?.setUser) auth.setUser(meSlim);
+        if (auth?.setTokens) auth.setTokens({ accessToken: token, refreshToken: data?.refreshToken || null });
+        if (auth?.setIsLoggedIn) auth.setIsLoggedIn(true);
+      } catch (e) {
+        console.log("⚠️ [LOGIN] auth context update failed:", e?.message);
+      }
+
+      // Choose target route
       const target = roleToScreen(role);
 
-      // Navigate immediately (no gating here)
+      // Stop spinner before navigating
       if (mountedRef.current) setLoading(false);
-      safeReset(target);
 
-      // Fire-and-forget push token save
-      savePushTokenIfAllowed(meSlim).catch(() => {});
+      // Navigate (pass readiness so downstream screens can render safely)
+      safeReset(target, { readiness });
+
+      // Fire-and-forget: push token handling (both save + flush any pending)
+      Promise.allSettled([
+        savePushTokenIfAllowed(meSlim),
+        flushPendingPushToken(),
+      ]).catch(() => {});
 
       // Optional: Log readiness so we can see why prompts may appear later
       console.log(`🧩 [${TAG}:${rid}] readiness`, readiness);
