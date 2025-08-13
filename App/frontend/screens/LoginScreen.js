@@ -10485,6 +10485,662 @@
 // });
 
 
+// import React, { useEffect, useState, useRef } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   TouchableOpacity,
+//   StyleSheet,
+//   SafeAreaView,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ScrollView,
+//   ActivityIndicator,
+//   Alert,
+//   Dimensions,
+//   Image,
+//   Linking,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react-native";
+// import { useNavigation } from "@react-navigation/native";
+// import * as Location from "expo-location";
+// import * as Notifications from "expo-notifications";
+// import * as IntentLauncher from "expo-intent-launcher";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import Constants from "expo-constants";
+// import { decode as atob } from "base-64";
+
+// import api from "../api/client";
+// import { useAuth, navigationRef } from "../context/AuthProvider";
+
+// /* ---------- polyfills & guards ---------- */
+// // Ensure atob exists for any lib that expects it (Hermes-safe)
+// if (typeof globalThis.atob !== "function") {
+//   // eslint-disable-next-line no-global-assign
+//   globalThis.atob = atob;
+// }
+
+// /* ---------- helpers ---------- */
+// const asBool = (v) => {
+//   if (typeof v === "boolean") return v;
+//   if (typeof v === "number") return v === 1;
+//   if (typeof v === "string") {
+//     const s = v.trim().toLowerCase();
+//     return s === "true" || s === "1" || s === "yes" || s === "y" || s === "on";
+//   }
+//   return false;
+// };
+// const hasStr = (v) => typeof v === "string" && v.trim().length > 0;
+
+// // Support both old and new /users/me shapes
+// const hasDocField = (me, key) => {
+//   if (me?.hasDocs && typeof me.hasDocs[key] !== "undefined") return !!me.hasDocs[key];
+//   return hasStr(me?.[key]);
+// };
+// const hasProfilePic = (me) =>
+//   typeof me?.hasProfilePicture !== "undefined"
+//     ? !!me.hasProfilePicture
+//     : hasStr(me?.profilePicture);
+
+// function parseJwt(token) {
+//   try {
+//     if (!token) return null;
+//     const base64Url = token.split(".")[1];
+//     if (!base64Url) return null;
+//     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+//     const binary = atob(base64);
+//     const jsonPayload = decodeURIComponent(
+//       Array.prototype.map
+//         .call(binary, (c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+//         .join("")
+//     );
+//     return JSON.parse(jsonPayload);
+//   } catch {
+//     return null;
+//   }
+// }
+
+// function roleToScreen(role) {
+//   const r = (role || "").toLowerCase();
+//   if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+//   if (r === "admin") return "AdminDashboard";
+//   return "CustomerDashboard";
+// }
+
+// function shouldRetryLowercaseLogin(err) {
+//   const status = err?.response?.status;
+//   const msg =
+//     (err?.response?.data?.msg || err?.response?.data?.message || err?.message || "")
+//       .toString()
+//       .toLowerCase();
+//   if (status === 404) return true;
+//   if (msg.includes("user not found")) return true;
+//   if (msg.includes("invalid credentials")) return true;
+//   if (status === 400 && (msg.includes("email") || msg.includes("not found"))) return true;
+//   return false;
+// }
+
+// // Push registration (safe; EAS-compatible)
+// async function registerForPushNotificationsAsync() {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+//     if (existingStatus !== "granted") {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+//     if (finalStatus !== "granted") return null;
+
+//     const projectId =
+//       Constants?.expoConfig?.extra?.eas?.projectId ??
+//       Constants?.easConfig?.projectId ??
+//       null;
+
+//     const tokenData = await Notifications.getExpoPushTokenAsync(
+//       projectId ? { projectId } : undefined
+//     );
+//     const token = tokenData?.data || null;
+//     console.log("📮 Expo push token acquired?", !!token);
+//     return token;
+//   } catch (e) {
+//     console.log("❌ registerForPushNotificationsAsync failed:", e?.message);
+//     return null;
+//   }
+// }
+
+// /** Save push token (stash for providers; non-blocking) */
+// async function savePushTokenIfAllowed(me) {
+//   try {
+//     const expoPush = await registerForPushNotificationsAsync();
+//     if (!expoPush) return;
+
+//     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
+//     if (isProvider) {
+//       await AsyncStorage.setItem("pendingPushToken", expoPush);
+//       return;
+//     }
+
+//     await api.post("/users/push-token", { token: expoPush });
+//     await AsyncStorage.removeItem("pendingPushToken");
+//     console.log("✅ Push token sent to backend and stored.");
+//   } catch (e) {
+//     console.log("⚠️ Failed to send push token, will stash:", e?.response?.data || e?.message);
+//     try {
+//       const already = await AsyncStorage.getItem("pendingPushToken");
+//       if (!already) {
+//         const maybe = await registerForPushNotificationsAsync();
+//         if (maybe) await AsyncStorage.setItem("pendingPushToken", maybe);
+//       }
+//     } catch {}
+//   }
+// }
+
+// /**
+//  * Fetch /users/me and cache a **slim** copy (no blobs) to AsyncStorage.
+//  * Returns the full object to caller for immediate use.
+//  */
+// async function fetchCanonicalMe() {
+//   const meRes = await api.get("/users/me");
+//   const me = meRes?.data?.user ?? meRes?.data ?? null;
+
+//   const ppLen = typeof me?.profilePicture === "string" ? me.profilePicture.length : 0;
+//   console.log("👤 /users/me received", {
+//     id: me?._id,
+//     role: me?.role,
+//     hasDocs: me?.hasDocs,
+//     hasProfilePictureKey: typeof me?.hasProfilePicture !== "undefined",
+//     profilePictureInline: ppLen > 0,
+//     profilePictureBytes: ppLen || 0,
+//   });
+
+//   // Slim copy for cache
+//   const slim = me ? { ...me } : {};
+//   const maybeDrop = (k) => {
+//     if (typeof slim[k] === "string" && slim[k].startsWith("data:")) {
+//       delete slim[k];
+//     }
+//   };
+//   ["profilePicture", "w9", "businessLicense", "proofOfInsurance", "independentContractorAgreement"].forEach(
+//     maybeDrop
+//   );
+//   if (typeof me?.profilePicture === "string") slim.hasProfilePicture = true;
+
+//   try {
+//     await AsyncStorage.setItem("me", JSON.stringify(slim || {}));
+//   } catch (e) {
+//     console.log("⚠️ Failed to cache /users/me:", e?.message);
+//   }
+
+//   return me;
+// }
+
+// function evaluateProviderReadiness(me, stripeInfo) {
+//   const missing = [];
+
+//   const accountId = stripeInfo?.accountId || null;
+//   const needsOnboarding = stripeInfo?.needsOnboarding;
+//   if (!accountId) missing.push("Stripe onboarding");
+//   else if (needsOnboarding === true) missing.push("Stripe onboarding");
+
+//   if (!hasStr(me?.aboutMe)) missing.push("About Me");
+//   const yearsOk =
+//     Number.isFinite(me?.yearsExperience) ||
+//     (hasStr(me?.yearsExperience) && !isNaN(Number(me?.yearsExperience)));
+//   if (!yearsOk) missing.push("Years of Experience");
+
+//   if (!hasStr(me?.serviceType)) missing.push("Primary Service");
+//   if (!hasStr(me?.businessName)) missing.push("Business Name");
+//   if (!hasStr(me?.address)) missing.push("Business Address");
+
+//   const zipFirst = Array.isArray(me?.zipcode) ? me.zipcode[0] : me?.zipcode;
+//   if (!hasStr(zipFirst)) missing.push("Zip Code");
+
+//   if (!hasProfilePic(me)) missing.push("Profile Picture");
+//   if (!hasStr(me?.email)) missing.push("Email");
+//   if (!hasStr(me?.phoneNumber)) missing.push("Phone Number");
+
+//   if (!asBool(me?.optInSms)) missing.push("SMS Consent");
+
+//   if (!hasDocField(me, "w9")) missing.push("W-9");
+//   if (!hasDocField(me, "businessLicense")) missing.push("Business License");
+//   if (!hasDocField(me, "proofOfInsurance")) missing.push("Proof of Insurance");
+
+//   const icaViewed =
+//     asBool(me?.icaViewed) ||
+//     hasStr(me?.independentContractorAgreement) ||
+//     asBool(me?.acceptedICA);
+//   if (!icaViewed) missing.push("ICA Viewed");
+//   if (!asBool(me?.acceptedICA)) missing.push("ICA Agreed");
+
+//   return { ok: missing.length === 0, missing };
+// }
+
+// export default function LoginScreen() {
+//   const navigation = useNavigation();
+//   const { setRole } = useAuth();
+
+//   const mountedRef = useRef(true);
+//   useEffect(() => () => { mountedRef.current = false; }, []);
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const { width } = Dimensions.get("window");
+//   const LOGO_SIZE = width * 0.55;
+
+//   /** one-time permissions (non-blocking) */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+//         if (locStatus !== "granted") {
+//           const { status } = await Location.requestForegroundPermissionsAsync();
+//           if (status !== "granted") {
+//             Alert.alert("Location Required", "Enable location in settings.", [
+//               {
+//                 text: "Open Settings",
+//                 onPress: () => {
+//                   if (Platform.OS === "ios") {
+//                     Linking.openURL("app-settings:");
+//                   } else {
+//                     IntentLauncher.startActivityAsync(
+//                       IntentLauncher.ACTION_LOCATION_SOURCE_SETTINGS
+//                     );
+//                   }
+//                 },
+//               },
+//             ]);
+//           }
+//         }
+//         const notifPerm = await Notifications.getPermissionsAsync();
+//         if (notifPerm.status !== "granted") {
+//           await Notifications.requestPermissionsAsync();
+//         }
+//       } catch (e) {
+//         console.log("⚠️ Permission setup error:", e?.message);
+//       }
+//     })();
+//   }, []);
+
+//   const openUrlSafely = async (url) => {
+//     try {
+//       if (url && (await Linking.canOpenURL(url))) {
+//         await Linking.openURL(url);
+//         return true;
+//       }
+//     } catch (e) {
+//       console.log("❌ openUrlSafely error:", e?.message, url);
+//     }
+//     Alert.alert("Error", "Could not open onboarding link.");
+//     return false;
+//   };
+
+//   const safeReset = (routeName, params = {}) => {
+//     try {
+//       const action = { index: 0, routes: [{ name: routeName, params }] };
+//       if (navigationRef?.isReady?.()) {
+//         navigationRef.reset(action);
+//       } else if (navigation && typeof navigation.reset === "function") {
+//         navigation.reset(action);
+//       } else {
+//         navigation.navigate(routeName, params);
+//       }
+//     } catch (e) {
+//       console.log("⚠️ navigation error:", e?.message);
+//     }
+//   };
+
+//   /** run provider checks in background AFTER navigation */
+//   const runProviderGate = async ({ me, stripeAccountId, target }) => {
+//     try {
+//       // Stripe onboarding status
+//       let needsOnboarding = null;
+//       let stripeOnboardingUrl = null;
+//       let stripeDashboardUrl = null;
+//       let requirements = null;
+
+//       if (!stripeAccountId) {
+//         Alert.alert(
+//           "Connect Payouts",
+//           "To receive payouts, connect your Stripe account from your profile.",
+//           [
+//             { text: "Go to Profile", onPress: () => safeReset("ProviderProfile") },
+//             { text: "Later", style: "cancel" },
+//           ]
+//         );
+//         return;
+//       }
+
+//       const checkRes = await api.post("/routes/stripe/check-onboarding", {
+//         stripeAccountId,
+//       });
+//       needsOnboarding = checkRes?.data?.needsOnboarding ?? null;
+//       stripeOnboardingUrl = checkRes?.data?.stripeOnboardingUrl ?? null;
+//       stripeDashboardUrl = checkRes?.data?.stripeDashboardUrl ?? null;
+//       requirements = checkRes?.data?.requirements ?? null;
+
+//       // Evaluate readiness
+//       let readiness = evaluateProviderReadiness(me || {}, {
+//         accountId: stripeAccountId,
+//         needsOnboarding,
+//       });
+
+//       if (!readiness.ok) {
+//         // Re-fetch once from source of truth
+//         try {
+//           const fresh = await fetchCanonicalMe();
+//           me = fresh;
+//           readiness = evaluateProviderReadiness(me || {}, {
+//             accountId: stripeAccountId,
+//             needsOnboarding,
+//           });
+//         } catch (e) {
+//           console.log("⚠️ Re-fetch /users/me failed:", e?.response?.data || e?.message);
+//         }
+//       }
+
+//       console.log("🧩 Provider readiness ok?", readiness.ok);
+
+//       if (!readiness.ok) {
+//         const bullets = readiness.missing.map((m) => `• ${m}`).join("\n");
+//         Alert.alert(
+//           "Finish Account Setup",
+//           `You're signed in, but your profile isn't complete yet.\n\nMissing:\n${bullets}`,
+//           [
+//             needsOnboarding === true
+//               ? {
+//                   text: "Open Stripe",
+//                   onPress: async () => {
+//                     const url = stripeOnboardingUrl || stripeDashboardUrl;
+//                     if (url) await openUrlSafely(url);
+//                     safeReset(target);
+//                   },
+//                 }
+//               : undefined,
+//             {
+//               text: "Fix in App",
+//               onPress: () =>
+//                 safeReset("ProviderProfile", {
+//                   // do NOT pass the full `me` to avoid large nav payloads
+//                   missingItems: readiness.missing,
+//                   missingRequirements: requirements || null,
+//                 }),
+//             },
+//             { text: "Later", style: "cancel" },
+//           ].filter(Boolean)
+//         );
+//       }
+//     } catch (providerGateError) {
+//       console.log("⚠️ Provider gating failed (non-fatal):", providerGateError?.message);
+//     }
+//   };
+
+//   /** ---------- LOGIN ---------- */
+//   const onSubmit = async () => {
+//     try {
+//       setLoading(true);
+//       await AsyncStorage.multiRemove(["token", "refreshToken"]);
+
+//       const typed = email.trim();
+//       if (!typed || !password) {
+//         setLoading(false);
+//         Alert.alert("Missing info", "Please enter your email and password.");
+//         return;
+//       }
+
+//       const tryLogin = async (emailToUse, label) => {
+//         console.log("➡️ POST /auth/login", { email: emailToUse, attempt: label });
+//         return api.post(
+//           "/auth/login",
+//           { email: emailToUse, password },
+//           { headers: { "Content-Type": "application/json" } }
+//         );
+//       };
+
+//       let loginRes = null;
+//       try {
+//         loginRes = await tryLogin(typed, "typed");
+//       } catch (err1) {
+//         const status = err1?.response?.status;
+//         console.log("❌ Login attempt #1 failed:", { status, message: err1?.message });
+//         if (shouldRetryLowercaseLogin(err1)) {
+//           const lower = typed.toLowerCase();
+//           loginRes = await tryLogin(lower, "lowercased");
+//         } else {
+//           throw err1;
+//         }
+//       }
+
+//       const data = loginRes?.data || {};
+//       if (!data?.token) throw new Error("Token missing from response");
+
+//       await AsyncStorage.setItem("token", data.token);
+//       if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
+//       api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+
+//       // Fetch canonical me (returns full; caches slim)
+//       let me = null;
+//       try {
+//         me = await fetchCanonicalMe();
+//       } catch (e) {
+//         console.log("⚠️ Initial /users/me failed:", e?.response?.data || e?.message);
+//       }
+
+//       // Push token (non-blocking)
+//       savePushTokenIfAllowed(me).catch(() => {});
+
+//       const payload = parseJwt(data.token) || {};
+//       const role = payload?.role || me?.role || "customer";
+//       const stripeAccountId =
+//         payload?.stripeAccountId ||
+//         me?.stripeAccountId ||
+//         me?.stripe?.accountId ||
+//         null;
+
+//       setRole(role);
+//       const target = roleToScreen(role);
+
+//       // 🚀 Navigate immediately to avoid heavy work on login view
+//       if (mountedRef.current) setLoading(false);
+//       safeReset(target);
+
+//       // 🔧 Provider gate runs asynchronously in the background
+//       if ((role || "").toLowerCase() === "serviceprovider") {
+//         setTimeout(() => {
+//           runProviderGate({ me, stripeAccountId, target }).catch(() => {});
+//         }, 0);
+//       }
+//     } catch (err) {
+//       if (mountedRef.current) setLoading(false);
+//       const status = err?.response?.status;
+//       const raw =
+//         err?.response?.data?.msg ||
+//         err?.response?.data?.error ||
+//         err?.response?.data?.message ||
+//         err?.message ||
+//         "Login failed – check credentials.";
+
+//       console.log("💥 Login failure:", { status, message: err?.message });
+
+//       let msg = raw;
+//       const lower = (raw || "").toLowerCase();
+//       if (status === 404 && (lower.includes("user") || lower.includes("email"))) {
+//         msg = "We couldn’t find an account with that email.";
+//       }
+//       if (status === 401 && (lower.includes("invalid") || lower.includes("password"))) {
+//         msg = "Invalid email or password.";
+//       }
+//       Alert.alert("Error", msg);
+//     }
+//   };
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <SafeAreaView style={{ flex: 1 }}>
+//         <KeyboardAvoidingView
+//           style={{ flex: 1 }}
+//           behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         >
+//           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//             <View style={styles.header}>
+//               <View className="logoContainer">
+//                 <Image
+//                   source={require("../assets/blinqfix_logo-new.jpeg")}
+//                   style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+//                   resizeMode="contain"
+//                 />
+//               </View>
+//               <Text style={styles.title}>Login</Text>
+//               <Text style={styles.subtitle}>Enter your credentials to access your account</Text>
+//             </View>
+
+//             <View style={styles.formContainer}>
+//               <View style={styles.inputContainer}>
+//                 <Mail color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Email Address"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="email-address"
+//                   autoCapitalize="none"
+//                   autoCorrect={false}
+//                   autoComplete="email"
+//                   value={email}
+//                   onChangeText={setEmail}
+//                   returnKeyType="next"
+//                 />
+//               </View>
+
+//               <View style={styles.inputContainer}>
+//                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Password"
+//                   placeholderTextColor="#94a3b8"
+//                   secureTextEntry={!showPassword}
+//                   value={password}
+//                   onChangeText={setPassword}
+//                   autoComplete="password"
+//                 />
+//                 <TouchableOpacity onPress={() => setShowPassword((p) => !p)} style={styles.eyeIcon}>
+//                   {showPassword ? <EyeOff color="#94a3b8" size={20} /> : <Eye color="#94a3b8" size={20} />}
+//                 </TouchableOpacity>
+//               </View>
+
+//               <TouchableOpacity
+//                 style={styles.forgotPasswordButton}
+//                 onPress={() => navigation.navigate("RequestPasswordResetScreen")}
+//               >
+//                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             <TouchableOpacity style={styles.loginButton} onPress={onSubmit} disabled={loading}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.loginButtonGradient}>
+//                 {loading ? (
+//                   <ActivityIndicator color="#fff" />
+//                 ) : (
+//                   <>
+//                     <Text style={styles.loginButtonText}>Secure Login</Text>
+//                     <ArrowRight color="#fff" size={20} />
+//                   </>
+//                 )}
+//               </LinearGradient>
+//             </TouchableOpacity>
+
+//             <View style={styles.footer}>
+//               <Text style={styles.footerText}>Don't have an account?</Text>
+//               <TouchableOpacity onPress={() => navigation.navigate("Registration")}>
+//                 <Text style={styles.footerLink}>Sign Up</Text>
+//               </TouchableOpacity>
+//             </View>
+
+//             <View style={styles.trustIndicator}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Your connection is secure</Text>
+//             </View>
+//           </ScrollView>
+//         </KeyboardAvoidingView>
+//       </SafeAreaView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: {
+//     flexGrow: 1,
+//     justifyContent: "center",
+//     paddingHorizontal: 20,
+//     paddingVertical: 40,
+//   },
+//   header: { alignItems: "center", marginBottom: 40 },
+//   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   formContainer: { gap: 16 },
+//   inputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//   },
+//   inputIcon: { paddingHorizontal: 16 },
+//   input: { flex: 1, paddingVertical: 18, fontSize: 16, color: "#fff" },
+//   eyeIcon: { paddingHorizontal: 16 },
+//   forgotPasswordButton: { alignSelf: "flex-end", marginTop: 4 },
+//   forgotPasswordText: { color: "#60a5fa", fontSize: 14, fontWeight: "600" },
+//   loginButton: {
+//     marginTop: 24,
+//     borderRadius: 16,
+//     overflow: "hidden",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 5,
+//     elevation: 8,
+//   },
+//   loginButtonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     gap: 12,
+//   },
+//   loginButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   footer: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 40,
+//   },
+//   footerText: { color: "#e0e7ff", fontSize: 16 },
+//   footerLink: {
+//     color: "#60a5fa",
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     marginLeft: 6,
+//   },
+//   trustIndicator: {
+//     flexDirection: "row",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginTop: 24,
+//     backgroundColor: "rgba(34, 197, 94, 0.1)",
+//     alignSelf: "center",
+//     paddingVertical: 8,
+//     paddingHorizontal: 16,
+//     borderRadius: 20,
+//   },
+//   trustText: { color: "#22c55e", marginLeft: 8, fontSize: 12, fontWeight: "500" },
+// });
+
+
+// app/screens/LoginScreen.js
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -10515,34 +11171,15 @@ import { decode as atob } from "base-64";
 import api from "../api/client";
 import { useAuth, navigationRef } from "../context/AuthProvider";
 
-/* ---------- polyfills & guards ---------- */
-// Ensure atob exists for any lib that expects it (Hermes-safe)
+/* ---------- polyfills ---------- */
+// Ensure atob exists for Hermes (iOS real devices often need this)
 if (typeof globalThis.atob !== "function") {
   // eslint-disable-next-line no-global-assign
   globalThis.atob = atob;
 }
 
-/* ---------- helpers ---------- */
-const asBool = (v) => {
-  if (typeof v === "boolean") return v;
-  if (typeof v === "number") return v === 1;
-  if (typeof v === "string") {
-    const s = v.trim().toLowerCase();
-    return s === "true" || s === "1" || s === "yes" || s === "y" || s === "on";
-  }
-  return false;
-};
-const hasStr = (v) => typeof v === "string" && v.trim().length > 0;
-
-// Support both old and new /users/me shapes
-const hasDocField = (me, key) => {
-  if (me?.hasDocs && typeof me.hasDocs[key] !== "undefined") return !!me.hasDocs[key];
-  return hasStr(me?.[key]);
-};
-const hasProfilePic = (me) =>
-  typeof me?.hasProfilePicture !== "undefined"
-    ? !!me.hasProfilePicture
-    : hasStr(me?.profilePicture);
+/* ---------- tiny helpers ---------- */
+const TAG = "LOGIN2";
 
 function parseJwt(token) {
   try {
@@ -10582,7 +11219,7 @@ function shouldRetryLowercaseLogin(err) {
   return false;
 }
 
-// Push registration (safe; EAS-compatible)
+/* ---------- push notifications ---------- */
 async function registerForPushNotificationsAsync() {
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -10602,15 +11239,14 @@ async function registerForPushNotificationsAsync() {
       projectId ? { projectId } : undefined
     );
     const token = tokenData?.data || null;
-    console.log("📮 Expo push token acquired?", !!token);
+    console.log("📮 [PUSH] acquired?", !!token, { projectId });
     return token;
   } catch (e) {
-    console.log("❌ registerForPushNotificationsAsync failed:", e?.message);
+    console.log("❌ [PUSH] failed:", e?.message);
     return null;
   }
 }
 
-/** Save push token (stash for providers; non-blocking) */
 async function savePushTokenIfAllowed(me) {
   try {
     const expoPush = await registerForPushNotificationsAsync();
@@ -10619,14 +11255,15 @@ async function savePushTokenIfAllowed(me) {
     const isProvider = (me?.role || "").toLowerCase() === "serviceprovider";
     if (isProvider) {
       await AsyncStorage.setItem("pendingPushToken", expoPush);
+      console.log("🗃️ [PUSH] stashed for provider");
       return;
     }
 
     await api.post("/users/push-token", { token: expoPush });
     await AsyncStorage.removeItem("pendingPushToken");
-    console.log("✅ Push token sent to backend and stored.");
+    console.log("✅ [PUSH] sent to backend");
   } catch (e) {
-    console.log("⚠️ Failed to send push token, will stash:", e?.response?.data || e?.message);
+    console.log("⚠️ [PUSH] send failed, stashing:", e?.response?.data || e?.message);
     try {
       const already = await AsyncStorage.getItem("pendingPushToken");
       if (!already) {
@@ -10637,86 +11274,54 @@ async function savePushTokenIfAllowed(me) {
   }
 }
 
-/**
- * Fetch /users/me and cache a **slim** copy (no blobs) to AsyncStorage.
- * Returns the full object to caller for immediate use.
- */
-async function fetchCanonicalMe() {
-  const meRes = await api.get("/users/me");
-  const me = meRes?.data?.user ?? meRes?.data ?? null;
-
-  const ppLen = typeof me?.profilePicture === "string" ? me.profilePicture.length : 0;
-  console.log("👤 /users/me received", {
-    id: me?._id,
-    role: me?.role,
-    hasDocs: me?.hasDocs,
-    hasProfilePictureKey: typeof me?.hasProfilePicture !== "undefined",
-    profilePictureInline: ppLen > 0,
-    profilePictureBytes: ppLen || 0,
-  });
-
-  // Slim copy for cache
-  const slim = me ? { ...me } : {};
-  const maybeDrop = (k) => {
-    if (typeof slim[k] === "string" && slim[k].startsWith("data:")) {
-      delete slim[k];
-    }
-  };
-  ["profilePicture", "w9", "businessLicense", "proofOfInsurance", "independentContractorAgreement"].forEach(
-    maybeDrop
-  );
-  if (typeof me?.profilePicture === "string") slim.hasProfilePicture = true;
-
+/* ---------- slim fetchers (no blobs) ---------- */
+function stripBlobsForCache(obj) {
   try {
-    await AsyncStorage.setItem("me", JSON.stringify(slim || {}));
-  } catch (e) {
-    console.log("⚠️ Failed to cache /users/me:", e?.message);
+    if (!obj || typeof obj !== "object") return obj;
+    const clone = { ...obj };
+    const maybeDrop = (k) => {
+      const v = clone[k];
+      if (typeof v === "string" && (v.startsWith("data:") || v.length > 20000)) {
+        delete clone[k];
+      }
+    };
+    ["profilePicture", "w9", "businessLicense", "proofOfInsurance", "independentContractorAgreement"].forEach(
+      maybeDrop
+    );
+    if (typeof obj?.profilePicture === "string") clone.hasProfilePicture = true;
+    return clone;
+  } catch {
+    return obj;
   }
-
-  return me;
 }
 
-function evaluateProviderReadiness(me, stripeInfo) {
-  const missing = [];
-
-  const accountId = stripeInfo?.accountId || null;
-  const needsOnboarding = stripeInfo?.needsOnboarding;
-  if (!accountId) missing.push("Stripe onboarding");
-  else if (needsOnboarding === true) missing.push("Stripe onboarding");
-
-  if (!hasStr(me?.aboutMe)) missing.push("About Me");
-  const yearsOk =
-    Number.isFinite(me?.yearsExperience) ||
-    (hasStr(me?.yearsExperience) && !isNaN(Number(me?.yearsExperience)));
-  if (!yearsOk) missing.push("Years of Experience");
-
-  if (!hasStr(me?.serviceType)) missing.push("Primary Service");
-  if (!hasStr(me?.businessName)) missing.push("Business Name");
-  if (!hasStr(me?.address)) missing.push("Business Address");
-
-  const zipFirst = Array.isArray(me?.zipcode) ? me.zipcode[0] : me?.zipcode;
-  if (!hasStr(zipFirst)) missing.push("Zip Code");
-
-  if (!hasProfilePic(me)) missing.push("Profile Picture");
-  if (!hasStr(me?.email)) missing.push("Email");
-  if (!hasStr(me?.phoneNumber)) missing.push("Phone Number");
-
-  if (!asBool(me?.optInSms)) missing.push("SMS Consent");
-
-  if (!hasDocField(me, "w9")) missing.push("W-9");
-  if (!hasDocField(me, "businessLicense")) missing.push("Business License");
-  if (!hasDocField(me, "proofOfInsurance")) missing.push("Proof of Insurance");
-
-  const icaViewed =
-    asBool(me?.icaViewed) ||
-    hasStr(me?.independentContractorAgreement) ||
-    asBool(me?.acceptedICA);
-  if (!icaViewed) missing.push("ICA Viewed");
-  if (!asBool(me?.acceptedICA)) missing.push("ICA Agreed");
-
-  return { ok: missing.length === 0, missing };
+async function fetchMeSlim() {
+  console.log(`➡️  [${TAG}] GET /users/me`);
+  const res = await api.get("/users/me");
+  const me = res?.data?.user ?? res?.data ?? {};
+  const slim = stripBlobsForCache(me);
+  await AsyncStorage.setItem("meSlim", JSON.stringify(slim));
+  console.log(`⬅️  [${TAG}] /users/me ok`, {
+    id: slim?._id,
+    role: slim?.role,
+    hasProfilePicture: !!slim?.hasProfilePicture,
+  });
+  return slim;
 }
 
+async function fetchReadiness() {
+  console.log(`➡️  [${TAG}] GET /users/me/readiness`);
+  const { data } = await api.get("/users/me/readiness"); // { profileComplete, stripeComplete }
+  const readiness = {
+    profileComplete: !!data?.profileComplete,
+    stripeComplete: !!data?.stripeComplete,
+  };
+  await AsyncStorage.setItem("readiness", JSON.stringify(readiness));
+  console.log(`⬅️  [${TAG}] readiness`, readiness);
+  return readiness;
+}
+
+/* ---------- component ---------- */
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { setRole } = useAuth();
@@ -10731,13 +11336,15 @@ export default function LoginScreen() {
   const { width } = Dimensions.get("window");
   const LOGO_SIZE = width * 0.55;
 
-  /** one-time permissions (non-blocking) */
+  /* one-time permissions (non-blocking) */
   useEffect(() => {
     (async () => {
       try {
         const { status: locStatus } = await Location.getForegroundPermissionsAsync();
+        console.log(`📍 [${TAG}] location perm:`, locStatus);
         if (locStatus !== "granted") {
           const { status } = await Location.requestForegroundPermissionsAsync();
+          console.log(`📍 [${TAG}] location request ->`, status);
           if (status !== "granted") {
             Alert.alert("Location Required", "Enable location in settings.", [
               {
@@ -10756,27 +11363,16 @@ export default function LoginScreen() {
           }
         }
         const notifPerm = await Notifications.getPermissionsAsync();
+        console.log(`🔔 [${TAG}] notif perm:`, notifPerm?.status);
         if (notifPerm.status !== "granted") {
-          await Notifications.requestPermissionsAsync();
+          const req = await Notifications.requestPermissionsAsync();
+          console.log(`🔔 [${TAG}] notif request ->`, req?.status);
         }
       } catch (e) {
-        console.log("⚠️ Permission setup error:", e?.message);
+        console.log(`⚠️ [${TAG}] perm setup error:`, e?.message);
       }
     })();
   }, []);
-
-  const openUrlSafely = async (url) => {
-    try {
-      if (url && (await Linking.canOpenURL(url))) {
-        await Linking.openURL(url);
-        return true;
-      }
-    } catch (e) {
-      console.log("❌ openUrlSafely error:", e?.message, url);
-    }
-    Alert.alert("Error", "Could not open onboarding link.");
-    return false;
-  };
 
   const safeReset = (routeName, params = {}) => {
     try {
@@ -10788,98 +11384,15 @@ export default function LoginScreen() {
       } else {
         navigation.navigate(routeName, params);
       }
+      console.log(`🧭 [${TAG}] reset → ${routeName}`);
     } catch (e) {
-      console.log("⚠️ navigation error:", e?.message);
+      console.log(`⚠️ [${TAG}] navigation error:`, e?.message);
     }
   };
 
-  /** run provider checks in background AFTER navigation */
-  const runProviderGate = async ({ me, stripeAccountId, target }) => {
-    try {
-      // Stripe onboarding status
-      let needsOnboarding = null;
-      let stripeOnboardingUrl = null;
-      let stripeDashboardUrl = null;
-      let requirements = null;
-
-      if (!stripeAccountId) {
-        Alert.alert(
-          "Connect Payouts",
-          "To receive payouts, connect your Stripe account from your profile.",
-          [
-            { text: "Go to Profile", onPress: () => safeReset("ProviderProfile") },
-            { text: "Later", style: "cancel" },
-          ]
-        );
-        return;
-      }
-
-      const checkRes = await api.post("/routes/stripe/check-onboarding", {
-        stripeAccountId,
-      });
-      needsOnboarding = checkRes?.data?.needsOnboarding ?? null;
-      stripeOnboardingUrl = checkRes?.data?.stripeOnboardingUrl ?? null;
-      stripeDashboardUrl = checkRes?.data?.stripeDashboardUrl ?? null;
-      requirements = checkRes?.data?.requirements ?? null;
-
-      // Evaluate readiness
-      let readiness = evaluateProviderReadiness(me || {}, {
-        accountId: stripeAccountId,
-        needsOnboarding,
-      });
-
-      if (!readiness.ok) {
-        // Re-fetch once from source of truth
-        try {
-          const fresh = await fetchCanonicalMe();
-          me = fresh;
-          readiness = evaluateProviderReadiness(me || {}, {
-            accountId: stripeAccountId,
-            needsOnboarding,
-          });
-        } catch (e) {
-          console.log("⚠️ Re-fetch /users/me failed:", e?.response?.data || e?.message);
-        }
-      }
-
-      console.log("🧩 Provider readiness ok?", readiness.ok);
-
-      if (!readiness.ok) {
-        const bullets = readiness.missing.map((m) => `• ${m}`).join("\n");
-        Alert.alert(
-          "Finish Account Setup",
-          `You're signed in, but your profile isn't complete yet.\n\nMissing:\n${bullets}`,
-          [
-            needsOnboarding === true
-              ? {
-                  text: "Open Stripe",
-                  onPress: async () => {
-                    const url = stripeOnboardingUrl || stripeDashboardUrl;
-                    if (url) await openUrlSafely(url);
-                    safeReset(target);
-                  },
-                }
-              : undefined,
-            {
-              text: "Fix in App",
-              onPress: () =>
-                safeReset("ProviderProfile", {
-                  // do NOT pass the full `me` to avoid large nav payloads
-                  missingItems: readiness.missing,
-                  missingRequirements: requirements || null,
-                }),
-            },
-            { text: "Later", style: "cancel" },
-          ].filter(Boolean)
-        );
-      }
-    } catch (providerGateError) {
-      console.log("⚠️ Provider gating failed (non-fatal):", providerGateError?.message);
-    }
-  };
-
-  /** ---------- LOGIN ---------- */
+  /* ---------- LOGIN ---------- */
   const onSubmit = async () => {
+    const rid = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     try {
       setLoading(true);
       await AsyncStorage.multiRemove(["token", "refreshToken"]);
@@ -10892,7 +11405,7 @@ export default function LoginScreen() {
       }
 
       const tryLogin = async (emailToUse, label) => {
-        console.log("➡️ POST /auth/login", { email: emailToUse, attempt: label });
+        console.log(`➡️  [${TAG}:${rid}] POST /auth/login`, { email: emailToUse, attempt: label });
         return api.post(
           "/auth/login",
           { email: emailToUse, password },
@@ -10905,9 +11418,10 @@ export default function LoginScreen() {
         loginRes = await tryLogin(typed, "typed");
       } catch (err1) {
         const status = err1?.response?.status;
-        console.log("❌ Login attempt #1 failed:", { status, message: err1?.message });
+        console.log(`❌ [${TAG}:${rid}] login #1 failed`, { status, msg: err1?.message });
         if (shouldRetryLowercaseLogin(err1)) {
           const lower = typed.toLowerCase();
+          console.log(`↪️ [${TAG}:${rid}] retry lowercased`, lower);
           loginRes = await tryLogin(lower, "lowercased");
         } else {
           throw err1;
@@ -10915,44 +11429,37 @@ export default function LoginScreen() {
       }
 
       const data = loginRes?.data || {};
-      if (!data?.token) throw new Error("Token missing from response");
-
-      await AsyncStorage.setItem("token", data.token);
+      const token = data?.token;
+      if (!token) throw new Error("Token missing from response");
+      await AsyncStorage.setItem("token", token);
       if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
-      api.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
 
-      // Fetch canonical me (returns full; caches slim)
-      let me = null;
+      const payload = parseJwt(token) || {};
+      console.log(`🔑 [${TAG}:${rid}] jwt payload keys`, Object.keys(payload || {}));
+
+      // Fetch small things only (no blobs)
+      let meSlim = {};
+      let readiness = { profileComplete: false, stripeComplete: false };
       try {
-        me = await fetchCanonicalMe();
+        [meSlim, readiness] = await Promise.all([fetchMeSlim(), fetchReadiness()]);
       } catch (e) {
-        console.log("⚠️ Initial /users/me failed:", e?.response?.data || e?.message);
+        console.log(`⚠️ [${TAG}:${rid}] post-login hydrate failed:`, e?.message);
       }
 
-      // Push token (non-blocking)
-      savePushTokenIfAllowed(me).catch(() => {});
-
-      const payload = parseJwt(data.token) || {};
-      const role = payload?.role || me?.role || "customer";
-      const stripeAccountId =
-        payload?.stripeAccountId ||
-        me?.stripeAccountId ||
-        me?.stripe?.accountId ||
-        null;
-
+      const role = meSlim?.role || payload?.role || "customer";
       setRole(role);
       const target = roleToScreen(role);
 
-      // 🚀 Navigate immediately to avoid heavy work on login view
+      // Navigate immediately (no gating here)
       if (mountedRef.current) setLoading(false);
       safeReset(target);
 
-      // 🔧 Provider gate runs asynchronously in the background
-      if ((role || "").toLowerCase() === "serviceprovider") {
-        setTimeout(() => {
-          runProviderGate({ me, stripeAccountId, target }).catch(() => {});
-        }, 0);
-      }
+      // Fire-and-forget push token save
+      savePushTokenIfAllowed(meSlim).catch(() => {});
+
+      // Optional: Log readiness so we can see why prompts may appear later
+      console.log(`🧩 [${TAG}:${rid}] readiness`, readiness);
     } catch (err) {
       if (mountedRef.current) setLoading(false);
       const status = err?.response?.status;
@@ -10962,8 +11469,7 @@ export default function LoginScreen() {
         err?.response?.data?.message ||
         err?.message ||
         "Login failed – check credentials.";
-
-      console.log("💥 Login failure:", { status, message: err?.message });
+      console.log(`💥 [${TAG}:${rid}] login failure`, { status, raw });
 
       let msg = raw;
       const lower = (raw || "").toLowerCase();
@@ -10986,10 +11492,10 @@ export default function LoginScreen() {
         >
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <View className="logoContainer">
+              <View style={styles.logoContainer}>
                 <Image
                   source={require("../assets/blinqfix_logo-new.jpeg")}
-                  style={{ width: LOGO_SIZE, height: LOGO_SIZE, marginInline: "auto" }}
+                  style={{ width: LOGO_SIZE, height: LOGO_SIZE, alignSelf: "center" }}
                   resizeMode="contain"
                 />
               </View>
@@ -11069,6 +11575,7 @@ export default function LoginScreen() {
   );
 }
 
+/* ---------- styles ---------- */
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: {
@@ -11078,6 +11585,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   header: { alignItems: "center", marginBottom: 40 },
+  logoContainer: { borderColor: "rgba(250, 204, 21, 0.3)" },
   title: { fontSize: 32, fontWeight: "900", color: "#fff", marginBottom: 8 },
   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
   formContainer: { gap: 16 },

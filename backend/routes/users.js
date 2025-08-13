@@ -419,6 +419,8 @@
 
 // export default router;
 
+
+// backend/routes/users.js
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
@@ -431,231 +433,285 @@ import Job from "../models/Job.js";
 
 const router = express.Router();
 
-/* -------------------- diagnostics helpers -------------------- */
-
-const rid = () =>
-  (crypto.randomUUID && crypto.randomUUID()) ||
-  Math.random().toString(36).slice(2);
-
-const short = (v, n = 64) =>
-  typeof v === "string" ? (v.length > n ? `${v.slice(0, n)}…(${v.length})` : v) : v;
-
-const bytes = (n) => {
-  if (!Number.isFinite(n)) return "0B";
-  const k = 1024;
-  const units = ["B", "KB", "MB", "GB"];
-  let i = 0;
-  let v = n;
-  while (v >= k && i < units.length - 1) {
-    v /= k;
-    i++;
-  }
-  return `${v.toFixed(2)} ${units[i]}`;
-};
-
-const lenOf = (s) => (typeof s === "string" ? Buffer.byteLength(s) : 0);
-
-const maskEmail = (e = "") => {
-  const at = e.indexOf("@");
-  if (at <= 1) return "***";
-  return `${e.slice(0, 2)}***${e.slice(at - 1)}`;
-};
-const maskPhone = (p = "") => (p ? `***${p.slice(-4)}` : "");
-
-const mem = () => {
-  const m = process.memoryUsage();
-  return {
-    rss: bytes(m.rss),
-    heapUsed: bytes(m.heapUsed),
-    heapTotal: bytes(m.heapTotal),
-    ext: bytes(m.external),
-  };
-};
-
-// register global crash handlers only once
-if (!global.__USERS_ROUTES_CRASH_HOOKS__) {
-  process.on("unhandledRejection", (e) => {
-    console.error("💥 [users routes] UnhandledRejection:", e?.message, e);
-  });
-  process.on("uncaughtException", (e) => {
-    console.error("💥 [users routes] UncaughtException:", e?.message, e);
-  });
-  global.__USERS_ROUTES_CRASH_HOOKS__ = true;
-}
-
-/* ------------ per-request logging & response size hook ----------- */
-router.use((req, res, next) => {
-  req._rid = rid();
-  res.setHeader("x-request-id", req._rid);
-
-  const started = Date.now();
-  const hdrLen = Object.keys(req.headers || {}).length;
-  console.log(
-    `➡️  [${req._rid}] ${req.method} ${req.originalUrl} ` +
-      JSON.stringify({
-        ip: req.ip,
-        ua: req.headers["user-agent"],
-        hdrs: hdrLen,
-        ct: req.headers["content-type"],
-        cl: req.headers["content-length"],
-        mem: mem(),
-      })
-  );
-
-  // wrap res.json to measure payload size
-  const _json = res.json.bind(res);
-  res.json = (body) => {
-    try {
-      const size = Buffer.byteLength(JSON.stringify(body ?? {}));
-      console.log(
-        `📤 [${req._rid}] ${req.method} ${req.originalUrl} response ~${bytes(
-          size
-        )}, dur=${Date.now() - started}ms, mem=`,
-        mem()
-      );
-    } catch (e) {
-      console.log(`📤 [${req._rid}] res.json size calc error:`, e?.message);
-    }
-    return _json(body);
-  };
-
-  res.on("close", () => {
-    if (!res.headersSent) {
-      console.log(
-        `⚠️  [${req._rid}] connection closed before headers; dur=${Date.now() - started}ms`
-      );
-    }
-  });
-
-  next();
-});
-
-/* ---------------- geocoder + multer ---------------- */
+// ---------- utils / setup ----------
 const geocoder = NodeGeocoder({ provider: "openstreetmap" });
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-/* ---------------- Encryption helper (if used elsewhere) ---------------- */
-const algorithm = "aes-256-cbc";
-const encryptionKey = process.env.ENCRYPTION_KEY;
-const encryptionIV = process.env.ENCRYPTION_IV;
+const ridFromReq = (req) =>
+  req.headers["x-request-id"] ||
+  (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
 
-function encrypt(text) {
-  if (!encryptionKey || !encryptionIV) return text;
-  const key = Buffer.from(encryptionKey, "hex");
-  const iv = Buffer.from(encryptionIV, "hex");
-  const cipher = crypto.createCipheriv(algorithm, key, iv);
-  let encrypted = cipher.update(text, "utf8", "hex");
-  return encrypted + cipher.final("hex");
+const memSnap = () => {
+  const m = process.memoryUsage();
+  const mb = (n) => `${(n / 1024 / 1024).toFixed(2)} MB`;
+  return {
+    rss: mb(m.rss),
+    heapUsed: mb(m.heapUsed),
+    heapTotal: mb(m.heapTotal),
+    ext: mb(m.external || 0),
+  };
+};
+
+const bool = (v) =>
+  v === true ||
+  v === "true" ||
+  v === 1 ||
+  v === "1" ||
+  v === "yes" ||
+  v === "on";
+
+// ---------- Slim /me via aggregation (no base64 blobs) ----------
+/**
+ * Returns a slim user object:
+ * - primitives needed by the app
+ * - booleans for docs/profilePicture (hasDocs, hasProfilePicture)
+ * - never returns base64 blobs
+ */
+async function getSlimUserById(userId) {
+  const _id = new mongoose.Types.ObjectId(userId);
+  const [doc] = await Users.aggregate([
+    { $match: { _id } },
+    {
+      $project: {
+        // identity & contact
+        _id: 1,
+        name: 1,
+        role: 1,
+        email: 1,
+        phoneNumber: 1,
+
+        // business/profile
+        businessName: 1,
+        address: 1,
+        zipcode: 1,
+        serviceZipcode: 1,
+        aboutMe: 1,
+        yearsExperience: 1,
+        serviceType: 1,
+        trade: 1,
+        portfolio: 1,
+        isActive: 1,
+
+        // billing
+        billingTier: 1,
+        stripeAccountId: 1,
+
+        // flags (booleans only)
+        optInSms: { $cond: [{ $eq: ["$optInSms", true] }, true, false] },
+        acceptedICA: { $cond: [{ $eq: ["$acceptedICA", true] }, true, false] },
+
+        // "has*" booleans derived from string lengths (never return the strings)
+        hasProfilePicture: {
+          $gt: [{ $strLenBytes: { $ifNull: ["$profilePicture", ""] } }, 0],
+        },
+        "hasDocs.w9": {
+          $gt: [{ $strLenBytes: { $ifNull: ["$w9", ""] } }, 0],
+        },
+        "hasDocs.businessLicense": {
+          $gt: [{ $strLenBytes: { $ifNull: ["$businessLicense", ""] } }, 0],
+        },
+        "hasDocs.proofOfInsurance": {
+          $gt: [{ $strLenBytes: { $ifNull: ["$proofOfInsurance", ""] } }, 0],
+        },
+        "hasDocs.independentContractorAgreement": {
+          $gt: [
+            { $strLenBytes: { $ifNull: ["$independentContractorAgreement", ""] } },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        icaViewed: {
+          $or: [
+            "$acceptedICA",
+            { $gt: [{ $strLenBytes: { $ifNull: ["$independentContractorAgreement", ""] } }, 0] },
+          ],
+        },
+      },
+    },
+    {
+      $project: {
+        // ensure only the fields above are returned
+        independentContractorAgreement: 0,
+      },
+    },
+  ]);
+
+  return doc || null;
 }
 
-/* ---------------- GET /api/users/me ---------------- */
-router.get("/me", auth, async (req, res) => {
-  const t0 = Date.now();
+// ---------- Readiness aggregation (boolean-only, tiny) ----------
+async function getReadinessForUserId(userId) {
+  const _id = new mongoose.Types.ObjectId(userId);
+
+  const [doc] = await Users.aggregate([
+    { $match: { _id } },
+    {
+      $project: {
+        role: 1,
+        stripeAccountId: 1,
+
+        email: { $gt: [{ $strLenBytes: { $ifNull: ["$email", ""] } }, 0] },
+        phoneNumber: { $gt: [{ $strLenBytes: { $ifNull: ["$phoneNumber", ""] } }, 0] },
+        aboutMe: { $gt: [{ $strLenBytes: { $ifNull: ["$aboutMe", ""] } }, 0] },
+        yearsExperience: { $gt: [{ $ifNull: ["$yearsExperience", 0] }, 0] },
+        serviceType: { $gt: [{ $strLenBytes: { $ifNull: ["$serviceType", ""] } }, 0] },
+        businessName: { $gt: [{ $strLenBytes: { $ifNull: ["$businessName", ""] } }, 0] },
+        address: { $gt: [{ $strLenBytes: { $ifNull: ["$address", ""] } }, 0] },
+        zipcodeFirst: { $ifNull: [{ $arrayElemAt: ["$zipcode", 0] }, "" ] },
+        optInSms: { $cond: [{ $eq: ["$optInSms", true] }, true, false] },
+        acceptedICA: { $cond: [{ $eq: ["$acceptedICA", true] }, true, false] },
+
+        hasW9: { $gt: [{ $strLenBytes: { $ifNull: ["$w9", ""] } }, 0] },
+        hasBusinessLicense: { $gt: [{ $strLenBytes: { $ifNull: ["$businessLicense", ""] } }, 0] },
+        hasPOI: { $gt: [{ $strLenBytes: { $ifNull: ["$proofOfInsurance", ""] } }, 0] },
+        hasICAString: {
+          $gt: [{ $strLenBytes: { $ifNull: ["$independentContractorAgreement", ""] } }, 0],
+        },
+        hasProfilePicture: { $gt: [{ $strLenBytes: { $ifNull: ["$profilePicture", ""] } }, 0] },
+      },
+    },
+    {
+      $addFields: {
+        zipcode: { $gt: [{ $strLenBytes: "$zipcodeFirst" }, 0] },
+      },
+    },
+    {
+      $project: {
+        role: 1,
+        stripeAccountId: 1,
+        flags: {
+          email: "$email",
+          phoneNumber: "$phoneNumber",
+          aboutMe: "$aboutMe",
+          yearsExperience: "$yearsExperience",
+          serviceType: "$serviceType",
+          businessName: "$businessName",
+          address: "$address",
+          zipcode: "$zipcode",
+          optInSms: "$optInSms",
+          acceptedICA: "$acceptedICA",
+          hasProfilePicture: "$hasProfilePicture",
+          hasDocs: {
+            w9: "$hasW9",
+            businessLicense: "$hasBusinessLicense",
+            proofOfInsurance: "$hasPOI",
+            icaString: "$hasICAString",
+          },
+        },
+      },
+    },
+  ]);
+
+  if (!doc) return null;
+
+  const f = doc.flags || {};
+  const required = [
+    ["About Me", f.aboutMe],
+    ["Years of Experience", f.yearsExperience],
+    ["Primary Service", f.serviceType],
+    ["Business Name", f.businessName],
+    ["Business Address", f.address],
+    ["Zip Code", f.zipcode],
+    ["Profile Picture", f.hasProfilePicture],
+    ["Email", f.email],
+    ["Phone Number", f.phoneNumber],
+    ["SMS Consent", f.optInSms],
+    ["W-9", f.hasDocs?.w9],
+    ["Business License", f.hasDocs?.businessLicense],
+    ["Proof of Insurance", f.hasDocs?.proofOfInsurance],
+    ["ICA Viewed", f.hasDocs?.icaString || f.acceptedICA],
+    ["ICA Agreed", f.acceptedICA],
+  ];
+
+  const missing = required.filter(([_, ok]) => !ok).map(([label]) => label);
+  const profileComplete = missing.length === 0;
+  const stripeComplete = !!doc.stripeAccountId;
+
+  return {
+    role: doc.role,
+    hasStripeAccountId: !!doc.stripeAccountId,
+    profileComplete,
+    stripeComplete,
+    flags: f,
+    missing,
+  };
+}
+
+// ---------- Routes ----------
+
+// Tiny readiness route (boolean-only)
+router.get("/me/readiness", auth, async (req, res) => {
+  const rid = ridFromReq(req);
+  const verbose = req.query.verbose === "1";
   try {
-    console.log(
-      `👤 [${req._rid}] /me start`,
-      JSON.stringify({
-        uid: req.user?.id,
-        role: req.user?.role,
-        mem: mem(),
-      })
-    );
+    console.log(`🧪 [${rid}] GET /users/me/readiness start`, { uid: req.user.id, mem: memSnap() });
+    const r = await getReadinessForUserId(req.user.id);
+    if (!r) return res.status(404).json({ msg: "User not found" });
 
-    const fields = [
-      "name",
-      "role",
-      "trade",
-      "serviceType",
-      "portfolio",
-      "serviceZipcode",
-      "billingTier",
-      "zipcode",
-      "address",
-      "aboutMe",
-      "yearsExperience",
-      "serviceCost",
-      "businessName",
-      "profilePicture",
-      // blobs are included in your current version — we’ll log their sizes explicitly:
-      "w9",
-      "businessLicense",
-      "proofOfInsurance",
-      "independentContractorAgreement",
-      "isActive",
-      // (email/phone/flags were missing previously — add them if you want to hydrate UI immediately)
-      "email",
-      "phoneNumber",
-      "optInSms",
-      "acceptedICA",
-      "stripeAccountId",
-    ].join(" ");
-
-    console.time(`⏱ [${req._rid}] findUser(me)`);
-    const user = await Users.findById(req.user.id, fields).lean();
-    console.timeEnd(`⏱ [${req._rid}] findUser(me)`);
-
-    if (!user) {
-      console.log(`❌ [${req._rid}] /me not found`);
-      return res.status(404).json({ msg: "User not found" });
+    const payload = {
+      profileComplete: r.profileComplete,
+      stripeComplete: r.stripeComplete,
+    };
+    if (verbose) {
+      payload.missing = r.missing;
+      payload.flags = r.flags;
+      payload.role = r.role;
+      payload.hasStripeAccountId = r.hasStripeAccountId;
     }
 
-    const sizes = {
-      profilePictureB: lenOf(user.profilePicture),
-      w9B: lenOf(user.w9),
-      businessLicenseB: lenOf(user.businessLicense),
-      proofOfInsuranceB: lenOf(user.proofOfInsurance),
-      icaB: lenOf(user.independentContractorAgreement),
-    };
-
-    console.log(
-      `📦 [${req._rid}] /me payload fields`,
-      JSON.stringify({
-        keys: Object.keys(user),
-        email: maskEmail(user.email),
-        phone: maskPhone(user.phoneNumber),
-        optInSms: !!user.optInSms,
-        acceptedICA: !!user.acceptedICA,
-        hasStripe: !!user.stripeAccountId,
-        sizes: {
-          profilePicture: bytes(sizes.profilePictureB),
-          w9: bytes(sizes.w9B),
-          businessLicense: bytes(sizes.businessLicenseB),
-          proofOfInsurance: bytes(sizes.proofOfInsuranceB),
-          independentContractorAgreement: bytes(sizes.icaB),
-        },
-        mem: mem(),
-        tookMs: Date.now() - t0,
-      })
-    );
-
-    return res.json(user);
+    console.log(`🧪 [${rid}] /me/readiness result`, payload, { mem: memSnap() });
+    res.json(payload);
   } catch (err) {
-    console.error(`💥 [${req._rid}] GET /me error:`, err?.message, err);
+    console.error(`💥 [${rid}] GET /users/me/readiness error:`, err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// Slim /me (no blobs)
+router.get("/me", auth, async (req, res) => {
+  const rid = ridFromReq(req);
+  try {
+    console.log(`➡️  [${rid}] GET /api/users/me`, { ip: req.ip, ua: req.headers["user-agent"], mem: memSnap() });
+    const t0 = Date.now();
+    const user = await getSlimUserById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    const resp = user; // already slim
+    const bytes = Buffer.byteLength(JSON.stringify(resp));
+    console.log(`📤 [${rid}] /users/me slim response ~${(bytes / 1024).toFixed(2)} KB, dur=${Date.now() - t0}ms, mem=`, memSnap());
+    res.json(resp);
+  } catch (err) {
+    console.error(`GET /me error [${rid}]:`, err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+router.get("/me/profile-picture", auth, async (req, res) => {
+  try {
+    const u = await Users.findById(req.user.id).select("profilePicture").lean();
+    return res.json({ profilePicture: u?.profilePicture || null });
+  } catch (e) {
+    console.error("GET /me/profile-picture error:", e);
     return res.status(500).json({ msg: "Server error" });
   }
 });
 
-/* -------------- GET /api/users/active-providers -------------- */
+// Active providers (unchanged)
 router.get("/active-providers", async (req, res) => {
-  const t0 = Date.now();
   try {
-    console.time(`⏱ [${req._rid}] active-providers`);
     const activeProviders = await Users.find({
       role: "serviceProvider",
       isOnline: true,
       location: { $exists: true },
     }).select("name serviceType location");
-    console.timeEnd(`⏱ [${req._rid}] active-providers`);
 
-    console.log(
-      `📍 [${req._rid}] active-providers count=${activeProviders.length}, mem=`,
-      mem()
-    );
-
-    return res.json(
+    res.json(
       activeProviders.map((pro) => ({
         id: pro._id,
         name: pro.name,
@@ -667,112 +723,75 @@ router.get("/active-providers", async (req, res) => {
       }))
     );
   } catch (err) {
-    console.error(`💥 [${req._rid}] active-providers error:`, err?.message, err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Failed to fetch active providers:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-/* -------------- GET /api/users/billing-info -------------- */
+// Billing info (unchanged)
 router.get("/billing-info", auth, async (req, res) => {
   try {
-    console.time(`⏱ [${req._rid}] billing-info`);
-    const user = await Users.findById(req.user.id)
-      .select("billingTier isActive")
-      .lean();
-    console.timeEnd(`⏱ [${req._rid}] billing-info`);
+    const user = await Users.findById(req.user.id).select("billingTier isActive").lean();
     if (!user) return res.status(404).json({ msg: "User not found" });
-
-    console.log(
-      `🧾 [${req._rid}] billing-info`,
-      JSON.stringify({ billingTier: user.billingTier, isActive: user.isActive })
-    );
-
-    return res.json(user);
+    res.json(user);
   } catch (err) {
-    console.error(`💥 [${req._rid}] billing-info error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error" });
+    console.error("Billing info fetch failed:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
-/* -------------- GET /api/users/:id -------------- */
+// Minimal public user by id (no blobs)
 router.get("/:id([0-9a-fA-F]{24})", auth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = id === "me" ? req.user.id : id;
-    console.log(`👀 [${req._rid}] GET /users/:id ${userId}`);
-
-    console.time(`⏱ [${req._rid}] findUser(:id)`);
     const user = await Users.findById(userId)
       .select("name email role aboutMe businessName profilePicture averageRating")
       .lean();
-    console.timeEnd(`⏱ [${req._rid}] findUser(:id)`);
 
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    console.log(
-      `📄 [${req._rid}] /users/:id`,
-      JSON.stringify({
-        id: user._id,
-        role: user.role,
-        email: maskEmail(user.email),
-        profilePictureB: bytes(lenOf(user.profilePicture)),
-      })
-    );
-
-    return res.json(user);
+    // send hasProfilePicture boolean, not the data URL
+    const hasProfilePicture = !!(user.profilePicture && user.profilePicture.length);
+    const { profilePicture, ...rest } = user;
+    res.json({ ...rest, hasProfilePicture });
   } catch (err) {
-    console.error(`💥 [${req._rid}] GET /users/:id error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error" });
+    console.error("GET /users/:id error", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
-/* -------------- GET /api/users/me/documents (blobs) -------------- */
+// Documents (when explicitly requested)
 router.get("/me/documents", auth, async (req, res) => {
   try {
-    console.time(`⏱ [${req._rid}] me/documents`);
     const user = await Users.findById(
       req.user.id,
       "w9 businessLicense proofOfInsurance independentContractorAgreement"
     ).lean();
-    console.timeEnd(`⏱ [${req._rid}] me/documents`);
 
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    console.log(
-      `📚 [${req._rid}] me/documents sizes`,
-      JSON.stringify({
-        w9: bytes(lenOf(user.w9)),
-        businessLicense: bytes(lenOf(user.businessLicense)),
-        proofOfInsurance: bytes(lenOf(user.proofOfInsurance)),
-        ica: bytes(lenOf(user.independentContractorAgreement)),
-        mem: mem(),
-      })
-    );
-
-    return res.json({
+    res.json({
       w9: user.w9 || null,
       businessLicense: user.businessLicense || null,
       proofOfInsurance: user.proofOfInsurance || null,
-      independentContractorAgreement:
-        user.independentContractorAgreement || null,
+      independentContractorAgreement: user.independentContractorAgreement || null,
     });
   } catch (err) {
-    console.error(`💥 [${req._rid}] me/documents error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error fetching documents" });
+    console.error("GET /me/documents error:", err);
+    res.status(500).json({ msg: "Server error fetching documents" });
   }
 });
 
-/* -------------- GET /api/users/me/stats -------------- */
+// Provider stats (unchanged)
 router.get("/me/stats", auth, async (req, res) => {
   if (req.user.role !== "serviceProvider")
     return res.status(403).json({ msg: "Only service providers have stats" });
 
-  try {
-    const year = parseInt(req.query.year) || new Date().getFullYear();
-    const providerId = new mongoose.Types.ObjectId(req.user.id);
-    console.log(`📊 [${req._rid}] stats year=${year}`);
+  const year = parseInt(req.query.year) || new Date().getFullYear();
+  const providerId = new mongoose.Types.ObjectId(req.user.id);
 
-    console.time(`⏱ [${req._rid}] statsAgg`);
+  try {
     const stats = await Job.aggregate([
       {
         $match: {
@@ -781,41 +800,25 @@ router.get("/me/stats", auth, async (req, res) => {
           $expr: { $eq: [{ $year: "$createdAt" }, year] },
         },
       },
-      {
-        $group: {
-          _id: null,
-          completedJobsCount: { $sum: 1 },
-          totalAmountPaid: { $sum: "$totalAmountPaid" },
-        },
-      },
+      { $group: { _id: null, completedJobsCount: { $sum: 1 }, totalAmountPaid: { $sum: "$totalAmountPaid" } } },
     ]);
-    console.timeEnd(`⏱ [${req._rid}] statsAgg`);
 
-    const out = stats.length
-      ? stats[0]
-      : { completedJobsCount: 0, totalAmountPaid: 0 };
-
-    console.log(`✅ [${req._rid}] stats`, out);
-    return res.json(out);
+    if (!stats.length) return res.json({ completedJobsCount: 0, totalAmountPaid: 0 });
+    const { completedJobsCount, totalAmountPaid } = stats[0];
+    res.json({ completedJobsCount, totalAmountPaid });
   } catch (err) {
-    console.error(`💥 [${req._rid}] stats error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error fetching stats" });
+    console.error("Error fetching provider stats:", err);
+    res.status(500).json({ msg: "Server error fetching stats" });
   }
 });
 
-/* -------------- GET /api/users/providers/active -------------- */
+// Active providers (map) (unchanged)
 router.get("/providers/active", async (req, res) => {
   try {
-    console.time(`⏱ [${req._rid}] providers/active`);
     const providers = await Users.find(
       { role: "serviceProvider", isActive: true },
       "name serviceType location.coordinates"
     ).lean();
-    console.timeEnd(`⏱ [${req._rid}] providers/active`);
-
-    console.log(
-      `🧭 [${req._rid}] providers/active count=${providers.length}`
-    );
 
     const data = providers.map((p) => {
       const [lng, lat] = p.location?.coordinates || [];
@@ -827,18 +830,14 @@ router.get("/providers/active", async (req, res) => {
       };
     });
 
-    return res.json(data);
+    res.json(data);
   } catch (err) {
-    console.error(
-      `💥 [${req._rid}] providers/active error:`,
-      err?.message,
-      err
-    );
-    return res.status(500).json({ msg: "Server error" });
+    console.error("GET /providers/active error:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
-/* -------------- PUT /api/users/profile (multipart) -------------- */
+// Multipart profile update — returns only readiness + slim user
 router.put(
   "/profile",
   auth,
@@ -850,50 +849,24 @@ router.put(
     { name: "profilePicture", maxCount: 1 },
   ]),
   async (req, res) => {
-    const t0 = Date.now();
+    const rid = ridFromReq(req);
     try {
-      console.log(
-        `✏️  [${req._rid}] PUT /profile body keys=${Object.keys(req.body || {}).join(
-          ","
-        )}, files=${Object.keys(req.files || {}).join(",")}`
-      );
-
-      // file diagnostics
-      if (req.files) {
-        Object.entries(req.files).forEach(([field, arr]) => {
-          const items = Array.isArray(arr) ? arr : [];
-          items.forEach((f, i) => {
-            console.log(
-              `🗂️  [${req._rid}] file ${field}[${i}] ${f.mimetype} ${bytes(
-                f.size || f.buffer?.length || 0
-              )}`
-            );
-          });
-        });
-      }
-
       const user = await Users.findById(req.user.id);
       if (!user) return res.status(404).json({ msg: "User not found" });
 
-      // text fields
-      for (const [key, value] of Object.entries(req.body || {})) {
-        if (value === undefined || value === "") continue;
+      // text fields (coerce booleans + normalize)
+      for (const [key, valueRaw] of Object.entries(req.body || {})) {
+        if (valueRaw === undefined || valueRaw === "") continue;
+        const value = valueRaw;
 
-        if (key === "acceptedICA") {
-          user.acceptedICA = value === "true" || value === true || value === 1 || value === "1";
-        } else if (key === "optInSms" || key === "optInSMS" || key === "acceptSMS") {
-          user.optInSms = value === "true" || value === true || value === 1 || value === "1";
-        } else if (key === "email") {
-          user.email = String(value).toLowerCase();
-        } else if (key === "phoneNumber") {
-          user.phoneNumber = String(value);
-        } else if (key === "zipcode") {
-          const arr = Array.isArray(value) ? value : [value];
-          user.zipcode = arr.map((z) => String(z).trim());
-        } else if (key === "serviceZipcode") {
-          const arr = Array.isArray(value) ? value : [value];
-          user.serviceZipcode = arr.map((z) => String(z).trim());
-        } else if (key === "yearsExperience") {
+        if (key === "acceptedICA") user.acceptedICA = bool(value);
+        else if (key === "optInSms" || key === "optInSMS" || key === "acceptSMS") user.optInSms = bool(value);
+        else if (key === "email") user.email = String(value).toLowerCase();
+        else if (key === "phoneNumber") user.phoneNumber = String(value);
+        else if (key === "zipcode") user.zipcode = Array.isArray(value) ? value.map(String) : [String(value)];
+        else if (key === "serviceZipcode")
+          user.serviceZipcode = Array.isArray(value) ? value.map(String) : [String(value)];
+        else if (key === "yearsExperience") {
           const n = Number(value);
           if (Number.isFinite(n)) user.yearsExperience = n;
         } else {
@@ -901,53 +874,57 @@ router.put(
         }
       }
 
-      const files = req.files || {};
-      if (files.profilePicture?.[0]) {
-        const { buffer, mimetype } = files.profilePicture[0];
+      // files
+      const f = req.files || {};
+      const sizes = {};
+      if (f.profilePicture?.[0]) {
+        const { buffer, mimetype } = f.profilePicture[0];
+        sizes.profilePicture = buffer.length;
         user.profilePicture = `data:${mimetype};base64,${buffer.toString("base64")}`;
       }
-      if (files.w9?.[0]) user.w9 = files.w9[0].buffer.toString("base64");
-      if (files.businessLicense?.[0]) user.businessLicense = files.businessLicense[0].buffer.toString("base64");
-      if (files.proofOfInsurance?.[0]) user.proofOfInsurance = files.proofOfInsurance[0].buffer.toString("base64");
-      if (files.independentContractorAgreement?.[0]) {
-        user.independentContractorAgreement =
-          files.independentContractorAgreement[0].buffer.toString("base64");
+      if (f.w9?.[0]) {
+        sizes.w9 = f.w9[0].buffer.length;
+        user.w9 = f.w9[0].buffer.toString("base64");
+      }
+      if (f.businessLicense?.[0]) {
+        sizes.businessLicense = f.businessLicense[0].buffer.length;
+        user.businessLicense = f.businessLicense[0].buffer.toString("base64");
+      }
+      if (f.proofOfInsurance?.[0]) {
+        sizes.proofOfInsurance = f.proofOfInsurance[0].buffer.length;
+        user.proofOfInsurance = f.proofOfInsurance[0].buffer.toString("base64");
+      }
+      if (f.independentContractorAgreement?.[0]) {
+        sizes.independentContractorAgreement = f.independentContractorAgreement[0].buffer.length;
+        user.independentContractorAgreement = f.independentContractorAgreement[0].buffer.toString("base64");
       }
 
-      console.time(`⏱ [${req._rid}] saveUser(profile)`);
       await user.save({ validateBeforeSave: false });
-      console.timeEnd(`⏱ [${req._rid}] saveUser(profile)`);
 
-      const lens = {
-        profilePicture: bytes(lenOf(user.profilePicture)),
-        w9: bytes(lenOf(user.w9)),
-        businessLicense: bytes(lenOf(user.businessLicense)),
-        proofOfInsurance: bytes(lenOf(user.proofOfInsurance)),
-        ica: bytes(lenOf(user.independentContractorAgreement)),
-      };
+      // respond with tiny payloads only
+      const [slim, readiness] = await Promise.all([
+        getSlimUserById(req.user.id),
+        getReadinessForUserId(req.user.id),
+      ]);
 
-      console.log(
-        `✅ [${req._rid}] profile saved`,
-        JSON.stringify({
-          email: maskEmail(user.email),
-          phone: maskPhone(user.phoneNumber),
-          optInSms: !!user.optInSms,
-          acceptedICA: !!user.acceptedICA,
-          sizes: lens,
-          mem: mem(),
-          tookMs: Date.now() - t0,
-        })
-      );
+      const bytes = Buffer.byteLength(JSON.stringify({ ok: true, readiness, slimUser: slim }));
+      console.log(`✅ [${rid}] PUT /users/profile updated`, {
+        updatedKeys: Object.keys(req.body || {}),
+        fileSizes: sizes,
+        respKB: `${(bytes / 1024).toFixed(2)} KB`,
+        mem: memSnap(),
+      });
 
-      // NOTE: returning full user as in your current code (can be heavy)
-      const body = { msg: "Profile updated", user };
-      // log response size explicitly
-      const size = Buffer.byteLength(JSON.stringify(body));
-      console.log(`📦 [${req._rid}] /profile response size ~${bytes(size)}`);
-
-      return res.json(body);
+      return res.json({
+        ok: true,
+        readiness: {
+          profileComplete: readiness?.profileComplete ?? false,
+          stripeComplete: readiness?.stripeComplete ?? false,
+        },
+        slimUser: slim, // always blob-free
+      });
     } catch (err) {
-      console.error(`💥 [${req._rid}] PUT /profile error:`, err?.message, err);
+      console.error("PUT /profile error:", err);
       if (err instanceof multer.MulterError) {
         return res.status(400).json({ msg: `MulterError: ${err.message}` });
       }
@@ -956,11 +933,58 @@ router.put(
   }
 );
 
-/* -------------- PUT /api/users/location -------------- */
+// JSON-only profile patch — returns slim + readiness
+async function patchProfileHandler(req, res) {
+  const rid = ridFromReq(req);
+  try {
+    const updates = {};
+    const b = req.body || {};
+
+    if (typeof b.optInSms !== "undefined" || typeof b.optInSMS !== "undefined" || typeof b.acceptSMS !== "undefined") {
+      updates.optInSms = bool(b.optInSms ?? b.optInSMS ?? b.acceptSMS);
+    }
+    if (typeof b.acceptedICA !== "undefined") updates.acceptedICA = bool(b.acceptedICA);
+    if (typeof b.independentContractorAgreement !== "undefined")
+      updates.independentContractorAgreement = String(b.independentContractorAgreement || "");
+    if (b.email) updates.email = String(b.email).toLowerCase();
+    if (b.phoneNumber) updates.phoneNumber = String(b.phoneNumber);
+
+    await Users.findByIdAndUpdate(req.user.id, updates, { new: false });
+
+    const [slim, readiness] = await Promise.all([
+      getSlimUserById(req.user.id),
+      getReadinessForUserId(req.user.id),
+    ]);
+
+    const bytes = Buffer.byteLength(JSON.stringify({ slimUser: slim, readiness }));
+    console.log(`🛠️ [${rid}] PATCH /users/profile`, {
+      updates: Object.keys(updates),
+      respKB: `${(bytes / 1024).toFixed(2)} KB`,
+      mem: memSnap(),
+    });
+
+    return res.json({
+      ok: true,
+      readiness: {
+        profileComplete: readiness?.profileComplete ?? false,
+        stripeComplete: readiness?.stripeComplete ?? false,
+      },
+      slimUser: slim,
+    });
+  } catch (err) {
+    console.error("PATCH /profile error:", err);
+    return res.status(500).json({ msg: "Server error updating profile" });
+  }
+}
+
+router.patch("/profile", auth, patchProfileHandler);
+// legacy alias (if FE calls /users/profile)
+router.patch("/users/profile", auth, patchProfileHandler);
+
+// Location (unchanged)
 router.put("/location", auth, async (req, res) => {
   try {
     const loc = req.body.location;
-    console.log(`🗺️  [${req._rid}] PUT /location`, loc);
     if (!Array.isArray(loc) || loc.length !== 2)
       return res.status(400).json({ msg: "Location must be [lat, lng]" });
 
@@ -971,27 +995,19 @@ router.put("/location", auth, async (req, res) => {
       type: "Point",
       coordinates: [Number(loc[1]), Number(loc[0])],
     };
-    console.time(`⏱ [${req._rid}] saveUser(location)`);
     await user.save({ validateBeforeSave: false });
-    console.timeEnd(`⏱ [${req._rid}] saveUser(location)`);
 
-    return res.json({ msg: "Location updated", location: user.location });
+    res.json({ msg: "Location updated", location: user.location });
   } catch (err) {
-    console.error(`💥 [${req._rid}] PUT /location error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error updating location" });
+    console.error("PUT /location error:", err);
+    res.status(500).json({ msg: "Server error updating location" });
   }
 });
 
-/* -------------- POST /api/users/push-token -------------- */
+// Push token (unchanged)
 router.post("/push-token", auth, async (req, res) => {
   try {
     const { token } = req.body;
-    console.log(
-      `🔔 [${req._rid}] push-token tokenLen=${(token || "").length} tokenPreview=${short(
-        token || "",
-        12
-      )}`
-    );
     if (!token || typeof token !== "string") {
       return res.status(400).json({ msg: "Invalid or missing push token." });
     }
@@ -1002,18 +1018,17 @@ router.post("/push-token", auth, async (req, res) => {
     user.expoPushToken = token;
     await user.save();
 
-    return res.status(200).json({ msg: "Push token saved." });
+    res.status(200).json({ msg: "Push token saved." });
   } catch (err) {
-    console.error(`💥 [${req._rid}] push-token error:`, err?.message, err);
-    return res.status(500).json({ msg: "Failed to save push token." });
+    console.error("❌ Error saving push token:", err);
+    res.status(500).json({ msg: "Failed to save push token." });
   }
 });
 
-/* -------------- POST /api/users/save-session -------------- */
+// Save session (unchanged)
 router.post("/save-session", auth, async (req, res) => {
   try {
     const { jobId } = req.body;
-    console.log(`🧠 [${req._rid}] save-session jobId=${jobId}`);
     if (!jobId) return res.status(400).json({ msg: "Missing jobId." });
 
     const user = await Users.findById(req.user.id);
@@ -1022,22 +1037,18 @@ router.post("/save-session", auth, async (req, res) => {
     user.lastActiveJobId = jobId;
     await user.save();
 
-    return res.status(200).json({ msg: "Session saved." });
+    res.status(200).json({ msg: "Session saved." });
   } catch (err) {
-    console.error(`💥 [${req._rid}] save-session error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error saving session." });
+    console.error("Error saving session:", err);
+    res.status(500).json({ msg: "Server error saving session." });
   }
 });
 
-/* -------------- DELETE /api/users/delete -------------- */
+// Soft delete (unchanged)
 router.delete("/delete", auth, async (req, res) => {
   try {
     const userId = req.user._id || req.user.id;
     const { reason } = req.body;
-    console.log(
-      `🗑️  [${req._rid}] delete userId=${userId} reason=${short(reason || "", 32)}`
-    );
-
     const updatedUser = await Users.findByIdAndUpdate(
       userId,
       {
@@ -1053,45 +1064,689 @@ router.delete("/delete", auth, async (req, res) => {
       return res.status(404).json({ msg: "User not found" });
     }
 
-    return res.json({ msg: "Account successfully marked as deleted" });
+    res.json({ msg: "Account successfully marked as deleted" });
   } catch (err) {
-    console.error(`💥 [${req._rid}] delete error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error" });
-  }
-});
-
-/* -------------- PATCH /api/users/users/profile (JSON) -------------- */
-router.patch("/users/profile", auth, async (req, res) => {
-  try {
-    const bool = (v) => v === true || v === "true" || v === 1 || v === "1";
-    const updates = {};
-
-    if (typeof req.body.optInSms !== "undefined") updates.optInSms = bool(req.body.optInSms);
-    if (typeof req.body.acceptedICA !== "undefined") updates.acceptedICA = bool(req.body.acceptedICA);
-    if (typeof req.body.independentContractorAgreement !== "undefined") {
-      updates.independentContractorAgreement = String(req.body.independentContractorAgreement || "");
-    }
-    if (req.body.email) updates.email = String(req.body.email).toLowerCase();
-    if (req.body.phoneNumber) updates.phoneNumber = String(req.body.phoneNumber);
-
-    console.log(`🧩 [${req._rid}] PATCH /users/profile updates=`, updates);
-
-    console.time(`⏱ [${req._rid}] patchProfile`);
-    const user = await Users.findByIdAndUpdate(req.user.id, updates, { new: true });
-    console.timeEnd(`⏱ [${req._rid}] patchProfile`);
-
-    const resp = user || {};
-    const size = Buffer.byteLength(JSON.stringify(resp));
-    console.log(`📦 [${req._rid}] PATCH /users/profile resp ~${bytes(size)}`);
-
-    return res.json(resp);
-  } catch (err) {
-    console.error(`💥 [${req._rid}] PATCH /users/profile error:`, err?.message, err);
-    return res.status(500).json({ msg: "Server error updating profile" });
+    console.error("❌ Delete user error", err);
+    res.status(500).json({ msg: "Server error" });
   }
 });
 
 export default router;
+
+
+// import express from "express";
+// import mongoose from "mongoose";
+// import crypto from "crypto";
+// import NodeGeocoder from "node-geocoder";
+// import multer from "multer";
+
+// import { auth } from "../middlewares/auth.js";
+// import Users from "../models/Users.js";
+// import Job from "../models/Job.js";
+
+// const router = express.Router();
+
+// /* -------------------- diagnostics helpers -------------------- */
+
+// const rid = () =>
+//   (crypto.randomUUID && crypto.randomUUID()) ||
+//   Math.random().toString(36).slice(2);
+
+// const short = (v, n = 64) =>
+//   typeof v === "string" ? (v.length > n ? `${v.slice(0, n)}…(${v.length})` : v) : v;
+
+// const bytes = (n) => {
+//   if (!Number.isFinite(n)) return "0B";
+//   const k = 1024;
+//   const units = ["B", "KB", "MB", "GB"];
+//   let i = 0;
+//   let v = n;
+//   while (v >= k && i < units.length - 1) {
+//     v /= k;
+//     i++;
+//   }
+//   return `${v.toFixed(2)} ${units[i]}`;
+// };
+
+// const lenOf = (s) => (typeof s === "string" ? Buffer.byteLength(s) : 0);
+
+// const maskEmail = (e = "") => {
+//   const at = e.indexOf("@");
+//   if (at <= 1) return "***";
+//   return `${e.slice(0, 2)}***${e.slice(at - 1)}`;
+// };
+// const maskPhone = (p = "") => (p ? `***${p.slice(-4)}` : "");
+
+// const mem = () => {
+//   const m = process.memoryUsage();
+//   return {
+//     rss: bytes(m.rss),
+//     heapUsed: bytes(m.heapUsed),
+//     heapTotal: bytes(m.heapTotal),
+//     ext: bytes(m.external),
+//   };
+// };
+
+// // register global crash handlers only once
+// if (!global.__USERS_ROUTES_CRASH_HOOKS__) {
+//   process.on("unhandledRejection", (e) => {
+//     console.error("💥 [users routes] UnhandledRejection:", e?.message, e);
+//   });
+//   process.on("uncaughtException", (e) => {
+//     console.error("💥 [users routes] UncaughtException:", e?.message, e);
+//   });
+//   global.__USERS_ROUTES_CRASH_HOOKS__ = true;
+// }
+
+// /* ------------ per-request logging & response size hook ----------- */
+// router.use((req, res, next) => {
+//   req._rid = rid();
+//   res.setHeader("x-request-id", req._rid);
+
+//   const started = Date.now();
+//   const hdrLen = Object.keys(req.headers || {}).length;
+//   console.log(
+//     `➡️  [${req._rid}] ${req.method} ${req.originalUrl} ` +
+//       JSON.stringify({
+//         ip: req.ip,
+//         ua: req.headers["user-agent"],
+//         hdrs: hdrLen,
+//         ct: req.headers["content-type"],
+//         cl: req.headers["content-length"],
+//         mem: mem(),
+//       })
+//   );
+
+//   // wrap res.json to measure payload size
+//   const _json = res.json.bind(res);
+//   res.json = (body) => {
+//     try {
+//       const size = Buffer.byteLength(JSON.stringify(body ?? {}));
+//       console.log(
+//         `📤 [${req._rid}] ${req.method} ${req.originalUrl} response ~${bytes(
+//           size
+//         )}, dur=${Date.now() - started}ms, mem=`,
+//         mem()
+//       );
+//     } catch (e) {
+//       console.log(`📤 [${req._rid}] res.json size calc error:`, e?.message);
+//     }
+//     return _json(body);
+//   };
+
+//   res.on("close", () => {
+//     if (!res.headersSent) {
+//       console.log(
+//         `⚠️  [${req._rid}] connection closed before headers; dur=${Date.now() - started}ms`
+//       );
+//     }
+//   });
+
+//   next();
+// });
+
+// /* ---------------- geocoder + multer ---------------- */
+// const geocoder = NodeGeocoder({ provider: "openstreetmap" });
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+// });
+
+// /* ---------------- Encryption helper (if used elsewhere) ---------------- */
+// const algorithm = "aes-256-cbc";
+// const encryptionKey = process.env.ENCRYPTION_KEY;
+// const encryptionIV = process.env.ENCRYPTION_IV;
+
+// function encrypt(text) {
+//   if (!encryptionKey || !encryptionIV) return text;
+//   const key = Buffer.from(encryptionKey, "hex");
+//   const iv = Buffer.from(encryptionIV, "hex");
+//   const cipher = crypto.createCipheriv(algorithm, key, iv);
+//   let encrypted = cipher.update(text, "utf8", "hex");
+//   return encrypted + cipher.final("hex");
+// }
+
+// /* ---------------- GET /api/users/me ---------------- */
+// router.get("/me", auth, async (req, res) => {
+//   const t0 = Date.now();
+//   try {
+//     console.log(
+//       `👤 [${req._rid}] /me start`,
+//       JSON.stringify({
+//         uid: req.user?.id,
+//         role: req.user?.role,
+//         mem: mem(),
+//       })
+//     );
+
+//     const fields = [
+//       "name",
+//       "role",
+//       "trade",
+//       "serviceType",
+//       "portfolio",
+//       "serviceZipcode",
+//       "billingTier",
+//       "zipcode",
+//       "address",
+//       "aboutMe",
+//       "yearsExperience",
+//       "serviceCost",
+//       "businessName",
+//       "profilePicture",
+//       // blobs are included in your current version — we’ll log their sizes explicitly:
+//       "w9",
+//       "businessLicense",
+//       "proofOfInsurance",
+//       "independentContractorAgreement",
+//       "isActive",
+//       // (email/phone/flags were missing previously — add them if you want to hydrate UI immediately)
+//       "email",
+//       "phoneNumber",
+//       "optInSms",
+//       "acceptedICA",
+//       "stripeAccountId",
+//     ].join(" ");
+
+//     console.time(`⏱ [${req._rid}] findUser(me)`);
+//     const user = await Users.findById(req.user.id, fields).lean();
+//     console.timeEnd(`⏱ [${req._rid}] findUser(me)`);
+
+//     if (!user) {
+//       console.log(`❌ [${req._rid}] /me not found`);
+//       return res.status(404).json({ msg: "User not found" });
+//     }
+
+//     const sizes = {
+//       profilePictureB: lenOf(user.profilePicture),
+//       w9B: lenOf(user.w9),
+//       businessLicenseB: lenOf(user.businessLicense),
+//       proofOfInsuranceB: lenOf(user.proofOfInsurance),
+//       icaB: lenOf(user.independentContractorAgreement),
+//     };
+
+//     console.log(
+//       `📦 [${req._rid}] /me payload fields`,
+//       JSON.stringify({
+//         keys: Object.keys(user),
+//         email: maskEmail(user.email),
+//         phone: maskPhone(user.phoneNumber),
+//         optInSms: !!user.optInSms,
+//         acceptedICA: !!user.acceptedICA,
+//         hasStripe: !!user.stripeAccountId,
+//         sizes: {
+//           profilePicture: bytes(sizes.profilePictureB),
+//           w9: bytes(sizes.w9B),
+//           businessLicense: bytes(sizes.businessLicenseB),
+//           proofOfInsurance: bytes(sizes.proofOfInsuranceB),
+//           independentContractorAgreement: bytes(sizes.icaB),
+//         },
+//         mem: mem(),
+//         tookMs: Date.now() - t0,
+//       })
+//     );
+
+//     return res.json(user);
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] GET /me error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// /* -------------- GET /api/users/active-providers -------------- */
+// router.get("/active-providers", async (req, res) => {
+//   const t0 = Date.now();
+//   try {
+//     console.time(`⏱ [${req._rid}] active-providers`);
+//     const activeProviders = await Users.find({
+//       role: "serviceProvider",
+//       isOnline: true,
+//       location: { $exists: true },
+//     }).select("name serviceType location");
+//     console.timeEnd(`⏱ [${req._rid}] active-providers`);
+
+//     console.log(
+//       `📍 [${req._rid}] active-providers count=${activeProviders.length}, mem=`,
+//       mem()
+//     );
+
+//     return res.json(
+//       activeProviders.map((pro) => ({
+//         id: pro._id,
+//         name: pro.name,
+//         category: pro.serviceType,
+//         coords: {
+//           latitude: pro.location?.coordinates?.[1],
+//           longitude: pro.location?.coordinates?.[0],
+//         },
+//       }))
+//     );
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] active-providers error:`, err?.message, err);
+//     return res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+// /* -------------- GET /api/users/billing-info -------------- */
+// router.get("/billing-info", auth, async (req, res) => {
+//   try {
+//     console.time(`⏱ [${req._rid}] billing-info`);
+//     const user = await Users.findById(req.user.id)
+//       .select("billingTier isActive")
+//       .lean();
+//     console.timeEnd(`⏱ [${req._rid}] billing-info`);
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     console.log(
+//       `🧾 [${req._rid}] billing-info`,
+//       JSON.stringify({ billingTier: user.billingTier, isActive: user.isActive })
+//     );
+
+//     return res.json(user);
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] billing-info error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// /* -------------- GET /api/users/:id -------------- */
+// router.get("/:id([0-9a-fA-F]{24})", auth, async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const userId = id === "me" ? req.user.id : id;
+//     console.log(`👀 [${req._rid}] GET /users/:id ${userId}`);
+
+//     console.time(`⏱ [${req._rid}] findUser(:id)`);
+//     const user = await Users.findById(userId)
+//       .select("name email role aboutMe businessName profilePicture averageRating")
+//       .lean();
+//     console.timeEnd(`⏱ [${req._rid}] findUser(:id)`);
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     console.log(
+//       `📄 [${req._rid}] /users/:id`,
+//       JSON.stringify({
+//         id: user._id,
+//         role: user.role,
+//         email: maskEmail(user.email),
+//         profilePictureB: bytes(lenOf(user.profilePicture)),
+//       })
+//     );
+
+//     return res.json(user);
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] GET /users/:id error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// /* -------------- GET /api/users/me/documents (blobs) -------------- */
+// router.get("/me/documents", auth, async (req, res) => {
+//   try {
+//     console.time(`⏱ [${req._rid}] me/documents`);
+//     const user = await Users.findById(
+//       req.user.id,
+//       "w9 businessLicense proofOfInsurance independentContractorAgreement"
+//     ).lean();
+//     console.timeEnd(`⏱ [${req._rid}] me/documents`);
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     console.log(
+//       `📚 [${req._rid}] me/documents sizes`,
+//       JSON.stringify({
+//         w9: bytes(lenOf(user.w9)),
+//         businessLicense: bytes(lenOf(user.businessLicense)),
+//         proofOfInsurance: bytes(lenOf(user.proofOfInsurance)),
+//         ica: bytes(lenOf(user.independentContractorAgreement)),
+//         mem: mem(),
+//       })
+//     );
+
+//     return res.json({
+//       w9: user.w9 || null,
+//       businessLicense: user.businessLicense || null,
+//       proofOfInsurance: user.proofOfInsurance || null,
+//       independentContractorAgreement:
+//         user.independentContractorAgreement || null,
+//     });
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] me/documents error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error fetching documents" });
+//   }
+// });
+
+// /* -------------- GET /api/users/me/stats -------------- */
+// router.get("/me/stats", auth, async (req, res) => {
+//   if (req.user.role !== "serviceProvider")
+//     return res.status(403).json({ msg: "Only service providers have stats" });
+
+//   try {
+//     const year = parseInt(req.query.year) || new Date().getFullYear();
+//     const providerId = new mongoose.Types.ObjectId(req.user.id);
+//     console.log(`📊 [${req._rid}] stats year=${year}`);
+
+//     console.time(`⏱ [${req._rid}] statsAgg`);
+//     const stats = await Job.aggregate([
+//       {
+//         $match: {
+//           acceptedProvider: providerId,
+//           status: "completed",
+//           $expr: { $eq: [{ $year: "$createdAt" }, year] },
+//         },
+//       },
+//       {
+//         $group: {
+//           _id: null,
+//           completedJobsCount: { $sum: 1 },
+//           totalAmountPaid: { $sum: "$totalAmountPaid" },
+//         },
+//       },
+//     ]);
+//     console.timeEnd(`⏱ [${req._rid}] statsAgg`);
+
+//     const out = stats.length
+//       ? stats[0]
+//       : { completedJobsCount: 0, totalAmountPaid: 0 };
+
+//     console.log(`✅ [${req._rid}] stats`, out);
+//     return res.json(out);
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] stats error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error fetching stats" });
+//   }
+// });
+
+// /* -------------- GET /api/users/providers/active -------------- */
+// router.get("/providers/active", async (req, res) => {
+//   try {
+//     console.time(`⏱ [${req._rid}] providers/active`);
+//     const providers = await Users.find(
+//       { role: "serviceProvider", isActive: true },
+//       "name serviceType location.coordinates"
+//     ).lean();
+//     console.timeEnd(`⏱ [${req._rid}] providers/active`);
+
+//     console.log(
+//       `🧭 [${req._rid}] providers/active count=${providers.length}`
+//     );
+
+//     const data = providers.map((p) => {
+//       const [lng, lat] = p.location?.coordinates || [];
+//       return {
+//         id: p._id,
+//         name: p.name,
+//         serviceType: p.serviceType,
+//         position: lat != null && lng != null ? [lat, lng] : null,
+//       };
+//     });
+
+//     return res.json(data);
+//   } catch (err) {
+//     console.error(
+//       `💥 [${req._rid}] providers/active error:`,
+//       err?.message,
+//       err
+//     );
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// /* -------------- PUT /api/users/profile (multipart) -------------- */
+// router.put(
+//   "/profile",
+//   auth,
+//   upload.fields([
+//     { name: "w9", maxCount: 1 },
+//     { name: "businessLicense", maxCount: 1 },
+//     { name: "proofOfInsurance", maxCount: 1 },
+//     { name: "independentContractorAgreement", maxCount: 1 },
+//     { name: "profilePicture", maxCount: 1 },
+//   ]),
+//   async (req, res) => {
+//     const t0 = Date.now();
+//     try {
+//       console.log(
+//         `✏️  [${req._rid}] PUT /profile body keys=${Object.keys(req.body || {}).join(
+//           ","
+//         )}, files=${Object.keys(req.files || {}).join(",")}`
+//       );
+
+//       // file diagnostics
+//       if (req.files) {
+//         Object.entries(req.files).forEach(([field, arr]) => {
+//           const items = Array.isArray(arr) ? arr : [];
+//           items.forEach((f, i) => {
+//             console.log(
+//               `🗂️  [${req._rid}] file ${field}[${i}] ${f.mimetype} ${bytes(
+//                 f.size || f.buffer?.length || 0
+//               )}`
+//             );
+//           });
+//         });
+//       }
+
+//       const user = await Users.findById(req.user.id);
+//       if (!user) return res.status(404).json({ msg: "User not found" });
+
+//       // text fields
+//       for (const [key, value] of Object.entries(req.body || {})) {
+//         if (value === undefined || value === "") continue;
+
+//         if (key === "acceptedICA") {
+//           user.acceptedICA = value === "true" || value === true || value === 1 || value === "1";
+//         } else if (key === "optInSms" || key === "optInSMS" || key === "acceptSMS") {
+//           user.optInSms = value === "true" || value === true || value === 1 || value === "1";
+//         } else if (key === "email") {
+//           user.email = String(value).toLowerCase();
+//         } else if (key === "phoneNumber") {
+//           user.phoneNumber = String(value);
+//         } else if (key === "zipcode") {
+//           const arr = Array.isArray(value) ? value : [value];
+//           user.zipcode = arr.map((z) => String(z).trim());
+//         } else if (key === "serviceZipcode") {
+//           const arr = Array.isArray(value) ? value : [value];
+//           user.serviceZipcode = arr.map((z) => String(z).trim());
+//         } else if (key === "yearsExperience") {
+//           const n = Number(value);
+//           if (Number.isFinite(n)) user.yearsExperience = n;
+//         } else {
+//           user[key] = value;
+//         }
+//       }
+
+//       const files = req.files || {};
+//       if (files.profilePicture?.[0]) {
+//         const { buffer, mimetype } = files.profilePicture[0];
+//         user.profilePicture = `data:${mimetype};base64,${buffer.toString("base64")}`;
+//       }
+//       if (files.w9?.[0]) user.w9 = files.w9[0].buffer.toString("base64");
+//       if (files.businessLicense?.[0]) user.businessLicense = files.businessLicense[0].buffer.toString("base64");
+//       if (files.proofOfInsurance?.[0]) user.proofOfInsurance = files.proofOfInsurance[0].buffer.toString("base64");
+//       if (files.independentContractorAgreement?.[0]) {
+//         user.independentContractorAgreement =
+//           files.independentContractorAgreement[0].buffer.toString("base64");
+//       }
+
+//       console.time(`⏱ [${req._rid}] saveUser(profile)`);
+//       await user.save({ validateBeforeSave: false });
+//       console.timeEnd(`⏱ [${req._rid}] saveUser(profile)`);
+
+//       const lens = {
+//         profilePicture: bytes(lenOf(user.profilePicture)),
+//         w9: bytes(lenOf(user.w9)),
+//         businessLicense: bytes(lenOf(user.businessLicense)),
+//         proofOfInsurance: bytes(lenOf(user.proofOfInsurance)),
+//         ica: bytes(lenOf(user.independentContractorAgreement)),
+//       };
+
+//       console.log(
+//         `✅ [${req._rid}] profile saved`,
+//         JSON.stringify({
+//           email: maskEmail(user.email),
+//           phone: maskPhone(user.phoneNumber),
+//           optInSms: !!user.optInSms,
+//           acceptedICA: !!user.acceptedICA,
+//           sizes: lens,
+//           mem: mem(),
+//           tookMs: Date.now() - t0,
+//         })
+//       );
+
+//       // NOTE: returning full user as in your current code (can be heavy)
+//       const body = { msg: "Profile updated", user };
+//       // log response size explicitly
+//       const size = Buffer.byteLength(JSON.stringify(body));
+//       console.log(`📦 [${req._rid}] /profile response size ~${bytes(size)}`);
+
+//       return res.json(body);
+//     } catch (err) {
+//       console.error(`💥 [${req._rid}] PUT /profile error:`, err?.message, err);
+//       if (err instanceof multer.MulterError) {
+//         return res.status(400).json({ msg: `MulterError: ${err.message}` });
+//       }
+//       return res.status(500).json({ msg: "Server error updating profile" });
+//     }
+//   }
+// );
+
+// /* -------------- PUT /api/users/location -------------- */
+// router.put("/location", auth, async (req, res) => {
+//   try {
+//     const loc = req.body.location;
+//     console.log(`🗺️  [${req._rid}] PUT /location`, loc);
+//     if (!Array.isArray(loc) || loc.length !== 2)
+//       return res.status(400).json({ msg: "Location must be [lat, lng]" });
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     user.location = {
+//       type: "Point",
+//       coordinates: [Number(loc[1]), Number(loc[0])],
+//     };
+//     console.time(`⏱ [${req._rid}] saveUser(location)`);
+//     await user.save({ validateBeforeSave: false });
+//     console.timeEnd(`⏱ [${req._rid}] saveUser(location)`);
+
+//     return res.json({ msg: "Location updated", location: user.location });
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] PUT /location error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error updating location" });
+//   }
+// });
+
+// /* -------------- POST /api/users/push-token -------------- */
+// router.post("/push-token", auth, async (req, res) => {
+//   try {
+//     const { token } = req.body;
+//     console.log(
+//       `🔔 [${req._rid}] push-token tokenLen=${(token || "").length} tokenPreview=${short(
+//         token || "",
+//         12
+//       )}`
+//     );
+//     if (!token || typeof token !== "string") {
+//       return res.status(400).json({ msg: "Invalid or missing push token." });
+//     }
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found." });
+
+//     user.expoPushToken = token;
+//     await user.save();
+
+//     return res.status(200).json({ msg: "Push token saved." });
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] push-token error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Failed to save push token." });
+//   }
+// });
+
+// /* -------------- POST /api/users/save-session -------------- */
+// router.post("/save-session", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     console.log(`🧠 [${req._rid}] save-session jobId=${jobId}`);
+//     if (!jobId) return res.status(400).json({ msg: "Missing jobId." });
+
+//     const user = await Users.findById(req.user.id);
+//     if (!user) return res.status(404).json({ msg: "User not found." });
+
+//     user.lastActiveJobId = jobId;
+//     await user.save();
+
+//     return res.status(200).json({ msg: "Session saved." });
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] save-session error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error saving session." });
+//   }
+// });
+
+// /* -------------- DELETE /api/users/delete -------------- */
+// router.delete("/delete", auth, async (req, res) => {
+//   try {
+//     const userId = req.user._id || req.user.id;
+//     const { reason } = req.body;
+//     console.log(
+//       `🗑️  [${req._rid}] delete userId=${userId} reason=${short(reason || "", 32)}`
+//     );
+
+//     const updatedUser = await Users.findByIdAndUpdate(
+//       userId,
+//       {
+//         isDeleted: true,
+//         isActive: false,
+//         deleteReason: reason || "",
+//         deletedAt: new Date(),
+//       },
+//       { new: true }
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ msg: "User not found" });
+//     }
+
+//     return res.json({ msg: "Account successfully marked as deleted" });
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] delete error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// /* -------------- PATCH /api/users/users/profile (JSON) -------------- */
+// router.patch("/users/profile", auth, async (req, res) => {
+//   try {
+//     const bool = (v) => v === true || v === "true" || v === 1 || v === "1";
+//     const updates = {};
+
+//     if (typeof req.body.optInSms !== "undefined") updates.optInSms = bool(req.body.optInSms);
+//     if (typeof req.body.acceptedICA !== "undefined") updates.acceptedICA = bool(req.body.acceptedICA);
+//     if (typeof req.body.independentContractorAgreement !== "undefined") {
+//       updates.independentContractorAgreement = String(req.body.independentContractorAgreement || "");
+//     }
+//     if (req.body.email) updates.email = String(req.body.email).toLowerCase();
+//     if (req.body.phoneNumber) updates.phoneNumber = String(req.body.phoneNumber);
+
+//     console.log(`🧩 [${req._rid}] PATCH /users/profile updates=`, updates);
+
+//     console.time(`⏱ [${req._rid}] patchProfile`);
+//     const user = await Users.findByIdAndUpdate(req.user.id, updates, { new: true });
+//     console.timeEnd(`⏱ [${req._rid}] patchProfile`);
+
+//     const resp = user || {};
+//     const size = Buffer.byteLength(JSON.stringify(resp));
+//     console.log(`📦 [${req._rid}] PATCH /users/profile resp ~${bytes(size)}`);
+
+//     return res.json(resp);
+//   } catch (err) {
+//     console.error(`💥 [${req._rid}] PATCH /users/profile error:`, err?.message, err);
+//     return res.status(500).json({ msg: "Server error updating profile" });
+//   }
+// });
+
+// export default router;
 
 
 // // backend/routes/users.js
