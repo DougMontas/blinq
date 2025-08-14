@@ -54,6 +54,47 @@ function slimUser(user) {
   return rest;
 }
 
+// router.get("/me", auth, async (req, res) => {
+//   try {
+//     console.time("🔍 MongoDB user fetch");
+
+//     const fields = [
+//       "name",
+//       "role",
+//       "trade",
+//       "serviceType",
+//       "portfolio",
+//       "serviceZipcode",
+//       "billingTier",
+//       "zipcode",
+//       "address",
+//       "aboutMe",
+//       "yearsExperience",
+//       "serviceCost",
+//       "businessName",
+//       "profilePicture",
+//       "w9",
+//       "businessLicense",
+//       "proofOfInsurance",
+//       "independentContractorAgreement",
+//       "isActive",
+//     ].join(" ");
+
+//     const user = await Users.findById(req.user.id, fields).lean();
+//     console.timeEnd("🔍 MongoDB user fetch");
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     // console.log("📦 slimUser output keys:", Object.keys(user));
+//     res.json(user);
+//   } catch (err) {
+//     console.error("GET /me error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// ✅ Add this BEFORE the '/:id' route
+
 router.get("/me", auth, async (req, res) => {
   try {
     console.time("🔍 MongoDB user fetch");
@@ -78,6 +119,11 @@ router.get("/me", auth, async (req, res) => {
       "proofOfInsurance",
       "independentContractorAgreement",
       "isActive",
+      // 👇 add what the client expects
+      "email",
+      "phoneNumber",
+      "acceptedICA",
+      "optInSms",
     ].join(" ");
 
     const user = await Users.findById(req.user.id, fields).lean();
@@ -85,7 +131,12 @@ router.get("/me", auth, async (req, res) => {
 
     if (!user) return res.status(404).json({ msg: "User not found" });
 
-    // console.log("📦 slimUser output keys:", Object.keys(user));
+    // Convenience boolean for the client
+    user.icaViewed = !!(
+      user.independentContractorAgreement &&
+      String(user.independentContractorAgreement).trim()
+    );
+
     res.json(user);
   } catch (err) {
     console.error("GET /me error:", err);
@@ -93,7 +144,7 @@ router.get("/me", auth, async (req, res) => {
   }
 });
 
-// ✅ Add this BEFORE the '/:id' route
+
 router.get("/active-providers", async (req, res) => {
   try {
     const activeProviders = await Users.find({
@@ -254,13 +305,18 @@ router.put("/profile",
 
       // ✅ Update text fields
       for (const [key, value] of Object.entries(req.body)) {
-        if (value !== undefined && value !== "") {
-          // ✅ Special handling for acceptedICA boolean
-          if (key === "acceptedICA") {
-            user.acceptedICA = value === "true";
-          } else {
-            user[key] = value;
-          }
+        if (value === undefined || value === "") continue;
+      
+        if (key === "acceptedICA") {
+          user.acceptedICA =
+            value === true || value === "true" || value === 1 || value === "1";
+        } else if (key === "optInSms") {
+          user.optInSms =
+            value === true || value === "true" || value === 1 || value === "1";
+        } else if (key === "email") {
+          user.email = String(value).toLowerCase();
+        } else {
+          user[key] = value; // includes independentContractorAgreement if sent
         }
       }
 
