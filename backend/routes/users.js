@@ -95,16 +95,65 @@ function slimUser(user) {
 
 // ✅ Add this BEFORE the '/:id' route
 
+// router.get("/me", auth, async (req, res) => {
+//   try {
+//     console.time("🔍 MongoDB user fetch");
+
+//     const fields = [
+//       "name",
+//       "role",
+//       "trade",
+//       "serviceType",
+//       "portfolio",
+//       "serviceZipcode",
+//       "billingTier",
+//       "zipcode",
+//       "address",
+//       "aboutMe",
+//       "yearsExperience",
+//       "serviceCost",
+//       "businessName",
+//       "profilePicture",
+//       "w9",
+//       "businessLicense",
+//       "proofOfInsurance",
+//       "independentContractorAgreement",
+//       "isActive",
+//       // 👇 add what the client expects
+//       "email",
+//       "phoneNumber",
+//       "acceptedICA",
+//       "optInSms",
+//     ].join(" ");
+
+//     const user = await Users.findById(req.user.id, fields).lean();
+//     console.timeEnd("🔍 MongoDB user fetch");
+
+//     if (!user) return res.status(404).json({ msg: "User not found" });
+
+//     // Convenience boolean for the client
+//     user.icaViewed = !!(
+//       user.independentContractorAgreement &&
+//       String(user.independentContractorAgreement).trim()
+//     );
+
+//     res.json(user);
+//   } catch (err) {
+//     console.error("GET /me error:", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// GET /api/users/me  (lightweight)
 router.get("/me", auth, async (req, res) => {
   try {
-    console.time("🔍 MongoDB user fetch");
-
     const fields = [
       "name",
+      "email",
+      "phoneNumber",
       "role",
       "trade",
       "serviceType",
-      "portfolio",
       "serviceZipcode",
       "billingTier",
       "zipcode",
@@ -113,29 +162,14 @@ router.get("/me", auth, async (req, res) => {
       "yearsExperience",
       "serviceCost",
       "businessName",
-      "profilePicture",
-      "w9",
-      "businessLicense",
-      "proofOfInsurance",
-      "independentContractorAgreement",
       "isActive",
-      // 👇 add what the client expects
-      "email",
-      "phoneNumber",
       "acceptedICA",
       "optInSms",
+      "stripeAccountId",
     ].join(" ");
 
-    const user = await Users.findById(req.user.id, fields).lean();
-    console.timeEnd("🔍 MongoDB user fetch");
-
+    const user = await Users.findById(req.user.id).select(fields).lean();
     if (!user) return res.status(404).json({ msg: "User not found" });
-
-    // Convenience boolean for the client
-    user.icaViewed = !!(
-      user.independentContractorAgreement &&
-      String(user.independentContractorAgreement).trim()
-    );
 
     res.json(user);
   } catch (err) {
@@ -143,6 +177,86 @@ router.get("/me", auth, async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
+
+
+// GET /api/users/me/summary  (tiny, boolean-only)
+router.get("/me/summary", auth, async (req, res) => {
+  try {
+    const u = await Users.findById(req.user.id)
+      .select([
+        "name",
+        "email",
+        "phoneNumber",
+        "role",
+        "serviceType",
+        "serviceZipcode",
+        "zipcode",
+        "address",
+        "yearsExperience",
+        "isActive",
+        "acceptedICA",
+        "optInSms",
+        "stripeAccountId",
+        // selected only to compute booleans (NOT returned)
+        "w9",
+        "businessLicense",
+        "proofOfInsurance",
+        "independentContractorAgreement",
+        "profilePicture",
+      ].join(" "))
+      .lean();
+
+    if (!u) return res.status(404).json({ msg: "User not found" });
+
+    const zip = Array.isArray(u.zipcode) ? u.zipcode[0] : u.zipcode;
+
+    const hasDocs = {
+      w9: !!u.w9,
+      businessLicense: !!u.businessLicense,
+      proofOfInsurance: !!u.proofOfInsurance,
+      icaString: !!u.independentContractorAgreement,
+    };
+
+    const checklist = {
+      hasEmail: !!u.email,
+      hasPhone: !!u.phoneNumber,
+      hasServiceType: !!u.serviceType,
+      hasZip: !!zip,
+      hasAddress: !!u.address,
+      acceptedICA: !!u.acceptedICA,
+      hasDocsAll:
+        hasDocs.w9 &&
+        hasDocs.businessLicense &&
+        hasDocs.proofOfInsurance &&
+        hasDocs.icaString,
+      hasProfilePicture: !!u.profilePicture,
+    };
+
+    const profileComplete = Object.values(checklist).every(Boolean);
+
+    res.json({
+      user: {
+        id: String(u._id),
+        name: u.name,
+        firstName: (u.name || "").split(" ")[0] || "",
+        role: u.role,
+        serviceType: u.serviceType,
+        serviceZipcode: u.serviceZipcode,
+        zipcode: zip,
+        isActive: u.isActive,
+      },
+      checklist,
+      hasDocs,
+      profileComplete,
+      // you can tune this logic; this is a sensible default signal
+      needsOnboarding: !!u.stripeAccountId && !profileComplete,
+    });
+  } catch (err) {
+    console.error("GET /me/summary error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
 
 
 router.get("/active-providers", async (req, res) => {
