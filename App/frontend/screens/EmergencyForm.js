@@ -978,6 +978,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
+    borderRadius: 99,
+    borderColor: "white",
+    borderStyle:"solid",
+    padding: 10,
+    width: 44,
+    height: 44,
     top: 60,
     left: 0,
     padding: 8
