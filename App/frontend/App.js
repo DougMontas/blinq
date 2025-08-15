@@ -1506,6 +1506,7 @@ function Job404Redirector() {
 export default function App() {
   const [initialRoute, setInitialRoute] = useState(null);
   const [bootRole, setBootRole] = useState(null);
+  
 
   // Decide initial screen based on token + session
   useEffect(() => {
@@ -1581,7 +1582,7 @@ export default function App() {
           await Notifications.setNotificationChannelAsync("default", {
             name: "Default",
             importance: Notifications.AndroidImportance.MAX,
-            sound: "default",
+            sound: 'notification',
             vibrationPattern: [0, 300, 200, 300],
             enableVibrate: true,
             lockscreenVisibility:
@@ -1591,7 +1592,7 @@ export default function App() {
           await Notifications.setNotificationChannelAsync("job-invites-v2", {
             name: "Job Invitations",
             importance: Notifications.AndroidImportance.MAX,
-            sound: "notification", // maps to assets/notification.mp3 (no extension)
+            sound: 'notification', // maps to assets/notification.mp3 (no extension)
             vibrationPattern: [0, 300, 200, 300],
             enableVibrate: true,
             bypassDnd: true,
