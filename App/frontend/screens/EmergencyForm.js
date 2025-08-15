@@ -892,7 +892,7 @@ export default function EmergencyForm() {
                 </View> */}
                 
                 <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>BlinqFix Fee ({(FEE_RATE * 100).toFixed(0)}%)</Text>
+                  <Text style={styles.priceLabel}>includes BlinqFix Fee ({(FEE_RATE * 100).toFixed(0)}%)</Text>
                   <Text style={styles.priceValue}>${convFee.toFixed(2)}</Text>
                 </View>
                 

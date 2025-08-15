@@ -45,6 +45,7 @@
     "expo-sms": "~13.1.4",
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.9",
+    "expo-updates": "~0.28.17",
     "expo-video": "~2.2.2",
     "jwt-decode": "^4.0.0",
     "lucide-react-native": "^0.539.0",
@@ -54,7 +55,6 @@
     "react-dom": "19.0.0",
     "react-native": "0.79.4",
     "react-native-animatable": "^1.4.0",
-    "react-native-maps": "1.20.1",
     "react-native-maps-directions": "^1.9.0",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "^4.11.1",
@@ -62,7 +62,7 @@
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
     "socket.io-client": "^4.8.1",
-    "expo-updates": "~0.28.17"
+    "react-native-maps": "1.20.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

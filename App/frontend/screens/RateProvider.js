@@ -196,22 +196,34 @@ export default function ProvideRating() {
 
   const getRatingText = (rating) => {
     switch (rating) {
-      case 1: return "Poor";
-      case 2: return "Fair";
-      case 3: return "Good";
-      case 4: return "Very Good";
-      case 5: return "Excellent";
-      default: return "Select Rating";
+      case 1:
+        return "Poor";
+      case 2:
+        return "Fair";
+      case 3:
+        return "Good";
+      case 4:
+        return "Very Good";
+      case 5:
+        return "Excellent";
+      default:
+        return "Select Rating";
     }
   };
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e3a8a', '#312e81']} style={styles.container}>
+    <LinearGradient
+      colors={["#0f172a", "#1e3a8a", "#312e81"]}
+      style={styles.container}
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
               <ArrowLeft color="#fff" size={24} />
             </TouchableOpacity>
             <View style={styles.headerCenter}>
@@ -227,7 +239,7 @@ export default function ProvideRating() {
           {/* Success Message */}
           <View style={styles.successCard}>
             <LinearGradient
-              colors={['rgba(34, 197, 94, 0.2)', 'rgba(16, 185, 129, 0.1)']}
+              colors={["rgba(34, 197, 94, 0.2)", "rgba(16, 185, 129, 0.1)"]}
               style={styles.successGradient}
             >
               <View style={styles.successIcon}>
@@ -235,7 +247,7 @@ export default function ProvideRating() {
               </View>
               <Text style={styles.successTitle}>Service Completed!</Text>
               <Text style={styles.successDescription}>
-                Your BlinqFix professional has successfully completed the job. 
+                Your BlinqFix professional has successfully completed the job.
                 Please take a moment to rate your experience.
               </Text>
             </LinearGradient>
@@ -244,7 +256,7 @@ export default function ProvideRating() {
           {/* Rating Section */}
           <View style={styles.ratingCard}>
             <LinearGradient
-              colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+              colors={["rgba(255,255,255,0.05)", "rgba(255,255,255,0.02)"]}
               style={styles.ratingGradient}
             >
               <View style={styles.ratingHeader}>
@@ -254,12 +266,12 @@ export default function ProvideRating() {
 
               <View style={styles.starsContainer}>
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <TouchableOpacity 
-                    key={i} 
+                  <TouchableOpacity
+                    key={i}
                     onPress={() => setRating(i)}
                     style={styles.starButton}
                   >
-                    <Star 
+                    <Star
                       color={i <= rating ? "#facc15" : "#475569"}
                       fill={i <= rating ? "#facc15" : "transparent"}
                       size={40}
@@ -275,14 +287,14 @@ export default function ProvideRating() {
           {/* Comments Section */}
           <View style={styles.commentsCard}>
             <LinearGradient
-              colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+              colors={["rgba(255,255,255,0.05)", "rgba(255,255,255,0.02)"]}
               style={styles.commentsGradient}
             >
               <View style={styles.commentsHeader}>
                 <MessageSquare color="#60a5fa" size={24} />
                 <Text style={styles.commentsTitle}>Share Your Feedback</Text>
               </View>
-              
+
               <Text style={styles.commentsDescription}>
                 Tell us about your experience to help us improve our service.
               </Text>
@@ -303,16 +315,17 @@ export default function ProvideRating() {
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (submitting || rating === 0 || !jobId) && styles.submitButtonDisabled,
+              (submitting || rating === 0 || !jobId) &&
+                styles.submitButtonDisabled,
             ]}
             onPress={submitRating}
             disabled={submitting || rating === 0 || !jobId}
           >
             <LinearGradient
               colors={
-                (submitting || rating === 0 || !jobId)
-                  ? ['#6b7280', '#4b5563']
-                  : ['#22c55e', '#16a34a']
+                submitting || rating === 0 || !jobId
+                  ? ["#6b7280", "#4b5563"]
+                  : ["#22c55e", "#16a34a"]
               }
               style={styles.submitButtonGradient}
             >
@@ -331,7 +344,9 @@ export default function ProvideRating() {
             </View>
             <View style={styles.trustItem}>
               <User color="#60a5fa" size={16} />
-              <Text style={styles.trustText}>Helps improve service quality</Text>
+              <Text style={styles.trustText}>
+                Helps improve service quality
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -341,185 +356,187 @@ export default function ProvideRating() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1 
+  container: {
+    flex: 1,
   },
-  scrollContent: { 
+  scrollContent: {
     padding: 20,
-    paddingBottom: 40 
+    paddingBottom: 40,
+    marginTop: 40,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingTop: 10,
     paddingBottom: 20,
   },
   backButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     padding: 10,
     borderRadius: 99,
     width: 44,
     height: 44,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerCenter: {
-    alignItems: 'center',
-    flex: 1
+    alignItems: "center",
+    flex: 1,
   },
   headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)'
+    borderColor: "rgba(34, 197, 94, 0.3)",
   },
   headerBadgeText: {
-    color: '#22c55e',
+    color: "#22c55e",
     marginLeft: 6,
     fontSize: 12,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff'
+    fontWeight: "bold",
+    color: "#fff",
   },
   successCard: {
     marginBottom: 24,
     borderRadius: 16,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   successGradient: {
     padding: 32,
-    alignItems: 'center'
+    alignItems: "center",
   },
   successIcon: {
-    marginBottom: 16
+    marginBottom: 16,
   },
   successTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 8,
-    textAlign: 'center'
+    textAlign: "center",
   },
   successDescription: {
     fontSize: 16,
-    color: '#e0e7ff',
-    textAlign: 'center',
-    lineHeight: 24
+    color: "#e0e7ff",
+    textAlign: "center",
+    lineHeight: 24,
   },
   ratingCard: {
     marginBottom: 20,
     borderRadius: 16,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   ratingGradient: {
-    padding: 24
+    padding: 24,
   },
   ratingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 24,
-    justifyContent: 'center'
+    justifyContent: "center",
   },
   ratingTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 12
+    fontWeight: "bold",
+    color: "#fff",
+    marginLeft: 12,
   },
   starsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginBottom: 16,
-    gap: 8
+    gap: 8,
   },
   starButton: {
-    padding: 8
+    padding: 8,
   },
   ratingText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#facc15',
-    textAlign: 'center'
+    fontWeight: "600",
+    color: "#facc15",
+    textAlign: "center",
   },
   commentsCard: {
     marginBottom: 24,
     borderRadius: 16,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   commentsGradient: {
-    padding: 24
+    padding: 24,
   },
   commentsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
   },
   commentsTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 12
+    fontWeight: "bold",
+    color: "#fff",
+    marginLeft: 12,
   },
   commentsDescription: {
     fontSize: 14,
-    color: '#e0e7ff',
+    color: "#e0e7ff",
     marginBottom: 16,
-    lineHeight: 20
+    lineHeight: 20,
   },
   textarea: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: "rgba(255,255,255,0.2)",
     borderRadius: 12,
     padding: 16,
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    textAlignVertical: 'top',
-    minHeight: 100
+    textAlignVertical: "top",
+    minHeight: 100,
   },
   submitButton: {
     borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 32
+    overflow: "hidden",
+    marginBottom: 32,
   },
   submitButtonDisabled: {
-    opacity: 0.6
+    opacity: 0.6,
   },
   submitButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 18,
     paddingHorizontal: 24,
-    gap: 12
+    gap: 12,
   },
   submitButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   trustSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 16
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 16,
+    marginBottom: 60,
   },
   trustItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   trustText: {
-    color: '#e0e7ff',
+    color: "#e0e7ff",
     fontSize: 12,
-    fontWeight: '500'
-  }
+    fontWeight: "500",
+  },
 });

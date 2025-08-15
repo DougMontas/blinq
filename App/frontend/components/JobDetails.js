@@ -957,7 +957,7 @@ export default function JobDetails({ job, onAccept, isTeaser = false }) {
             <DollarSign color="#22c55e" size={20} />
             <Text style={styles.sectionTitle}>Pricing Breakdown (USD)</Text>
           </View>
-
+{/* 
           <PriceRow label="Base Amount" value={Number(baseAmount).toFixed(2)} />
           <PriceRow label="Rush Fee" value={Number(rushFee).toFixed(2)} />
           {Number(adjustmentAmount) > 0 && (
@@ -973,7 +973,7 @@ export default function JobDetails({ job, onAccept, isTeaser = false }) {
           <PriceRow
             label="Convenience Fee (7%)"
             value={convenienceFee.toFixed(2)}
-          />
+          /> */}
 
           <View style={styles.divider} />
           <PriceRow

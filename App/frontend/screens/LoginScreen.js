@@ -1094,6 +1094,9 @@ import { Buffer } from "buffer";
 
 import api from "../api/client";
 import { useAuth, navigationRef } from "../context/AuthProvider";
+import TestMapScreen from "./TestMapScreen";
+
+
 
 /** ---------- helpers ---------- */
 function parseJwt(token) {
@@ -1102,27 +1105,28 @@ function parseJwt(token) {
   if (!base64Url) return null;
   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
   const binary =
-    typeof atob === "function"
-      ? atob(base64)
-      : Buffer.from(base64, "base64").toString("binary");
+  typeof atob === "function"
+  ? atob(base64)
+  : Buffer.from(base64, "base64").toString("binary");
   const jsonPayload = decodeURIComponent(
     binary
-      .split("")
-      .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-      .join("")
-  );
-  return JSON.parse(jsonPayload);
-}
-
-function roleToScreen(role) {
-  const r = role?.toLowerCase();
-  if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
-  if (r === "admin") return "AdminDashboard";
-  return "CustomerDashboard";
-}
-
-// Minimal push registration
-async function registerForPushNotificationsAsync() {
+    .split("")
+    .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+    .join("")
+    );
+    return JSON.parse(jsonPayload);
+  }
+  
+  function roleToScreen(role) {
+    const r = role?.toLowerCase();
+    if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+    if (r === "admin") return "AdminDashboard";
+    return "CustomerDashboard";
+  }
+  
+  // Minimal push registration
+  async function registerForPushNotificationsAsync() {
+  
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -1355,6 +1359,8 @@ export default function Screen() {
                 )}
               </LinearGradient>
             </TouchableOpacity>
+
+           
 
             {/* Footer / Sign Up Link */}
             <View style={styles.footer}>
