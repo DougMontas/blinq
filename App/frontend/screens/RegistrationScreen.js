@@ -521,6 +521,7 @@ import {
 } from "lucide-react-native";
 
 import api from "../api/client";
+import FooterPro from "../components/FooterPro";
 
 const SERVICES = ["Electrician", "HVAC", "Plumbing", "Roofing", "Handyman"];
 const BILLING = ["profit_sharing", "hybrid"];
@@ -915,6 +916,7 @@ export default function RegistrationScreen() {
                 <Text style={styles.footerLink}>Log In</Text>
               </TouchableOpacity>
             </View>
+            <FooterPro />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
