@@ -3967,10 +3967,10 @@ export default function ServiceProviderDashboard() {
       const jobId = payload?.jobId || payload?._id || "";
       const clickable = resolveClickable(payload || {}, cohort);
 
-      const title = clickable ? "New Job Invitation" : "New Job Nearby (Teaser)";
+      const title = clickable ? "New Job Invitation" : "New Job Nearby";
       const body = clickable
         ? "A new customer needs you. Tap to open the invite."
-        : "You’ve received a teaser invite. Open the app to view details.";
+        : "You’ve received a job invite. Open the app to view details.";
 
       try {
         await Notifications.scheduleNotificationAsync({
@@ -4246,7 +4246,7 @@ export default function ServiceProviderDashboard() {
           </View>
 
           {/* Resume Active Job */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={resumeActiveJob}
             activeOpacity={0.9}
             style={styles.resumeButton}
@@ -4260,10 +4260,10 @@ export default function ServiceProviderDashboard() {
                 {resuming ? "Checking…" : "Resume Active Job"}
               </Text>
             </LinearGradient>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Active Job Card */}
-          {activeJob && activeJob._id && (
+          {/* {activeJob && activeJob._id && (
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate("ProviderJobStatus", {
@@ -4291,7 +4291,7 @@ export default function ServiceProviderDashboard() {
                 <ArrowRight color="#22c55e" size={24} />
               </LinearGradient>
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* Profile CTA */}
           <TouchableOpacity
@@ -4509,7 +4509,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 
-  section: { marginTop: 40, marginBottom: 40 },
+  section: { marginTop: 40, marginBottom: 40},
   noJobsCard: {
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 16,

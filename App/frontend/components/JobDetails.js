@@ -948,7 +948,7 @@ export default function JobDetails({ job, onAccept, isTeaser = false }) {
       ) : null}
 
       {/* Pricing Breakdown (Customer) */}
-      <View style={styles.pricingCard}>
+      {/* <View style={styles.pricingCard}>
         <LinearGradient
           colors={["rgba(34, 197, 94, 0.15)", "rgba(16, 185, 129, 0.05)"]}
           style={styles.pricingGradient}
@@ -956,7 +956,7 @@ export default function JobDetails({ job, onAccept, isTeaser = false }) {
           <View style={styles.sectionHeader}>
             <DollarSign color="#22c55e" size={20} />
             <Text style={styles.sectionTitle}>Pricing Breakdown (USD)</Text>
-          </View>
+          </View> */}
 {/* 
           <PriceRow label="Base Amount" value={Number(baseAmount).toFixed(2)} />
           <PriceRow label="Rush Fee" value={Number(rushFee).toFixed(2)} />
@@ -975,14 +975,14 @@ export default function JobDetails({ job, onAccept, isTeaser = false }) {
             value={convenienceFee.toFixed(2)}
           /> */}
 
-          <View style={styles.divider} />
+          {/* <View style={styles.divider} />
           <PriceRow
             label="Estimated Total (Customer)"
             value={estimatedTotal.toFixed(2)}
             isTotal
           />
         </LinearGradient>
-      </View>
+      </View> */}
 
       {/* Provider Earnings (NEW) */}
       <View style={styles.pricingCard}>

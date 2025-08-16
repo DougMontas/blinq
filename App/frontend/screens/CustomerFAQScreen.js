@@ -151,7 +151,7 @@
 //   },
 // });
 
-
+//previous working 
 import React from "react";
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";

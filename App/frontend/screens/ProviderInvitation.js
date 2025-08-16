@@ -5643,7 +5643,7 @@ function computePayout(job) {
 
   const payout = base * (1 - providerFeePct);
   const breakdown = Number.isFinite(customerTotal)
-    ? `Based on customer payment $${customerTotal.toFixed(2)}, minus ${Math.round(
+    ? `Based on customer payment $${base.toFixed(2)}, inclusive of a ${Math.round(
         providerFeePct * 100
       )}% BlinqFix fee.`
     : `Estimated payout after ${Math.round(providerFeePct * 100)}% provider fee.`;
@@ -5971,7 +5971,7 @@ export default function ProviderInvitationScreen() {
   // actions
   const onAccept = async () => {
     if (isTeaser) {
-      Alert.alert("Upgrade required", "This is a teaser invite. Upgrade your subscription to accept jobs.");
+      Alert.alert("Upgrade required", "This is a job invite. Upgrade your subscription to accept jobs.");
       return;
     }
     if (hasActiveJobConflict) {
@@ -6126,7 +6126,7 @@ export default function ProviderInvitationScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 8 }}>
                 <EyeOff size={14} color="#94a3b8" />
                 <Text style={{ color: "#94a3b8", fontSize: 12 }}>
-                  Exact address and customer details are hidden in teaser.
+                  Exact address and customer details are not available until last phase of invites.
                 </Text>
               </View>
             )}
@@ -6261,11 +6261,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { color: "#fff", marginTop: 16, fontSize: 16 },
-  scrollContent: { padding: 20, paddingBottom: 40, marginTop: 40 },
+  scrollContent: { padding: 20, paddingBottom: 40, marginTop: 60, },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "start",
     justifyContent: "space-between",
     marginBottom: 20,
   },
@@ -6276,6 +6276,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 20,
   },
   headerCenter: { alignItems: "center" },
   headerBadge: {

@@ -450,6 +450,7 @@
 //   descriptionText: { color: "red", fontSize: 16, textAlign: "center" },
 // });
 
+//working
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View,
@@ -1207,9 +1208,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   },
   trustSection: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-around',
-    paddingVertical: 16
+    alignItems: "center",
+    paddingVertical: 16,
+    gap: 8,
+    
   },
   trustItem: {
     flexDirection: 'row',
@@ -1218,7 +1222,7 @@ const styles = StyleSheet.create({
   },
   trustText: {
     color: '#e0e7ff',
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '500'
   }
 });
