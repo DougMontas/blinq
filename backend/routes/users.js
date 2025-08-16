@@ -587,6 +587,39 @@ router.patch("/users/profile", auth, async (req, res) => {
   return res.json(user);
 });
 
+// GET /users/me/sms-preferences
+router.get("/users/me/sms-preferences", requireAuth, async (req, res) => {
+  const user = await Users.findById(req.user.id).select("smsPreferences");
+  if (!user) return res.status(404).json({ error: "User not found" });
+  res.json({ smsPreferences: user.smsPreferences || { jobUpdates: false, marketing: false } });
+});
+
+// PUT /users/me/sms-preferences
+router.put("/users/me/sms-preferences", requireAuth, async (req, res) => {
+  const { jobUpdates, marketing } = req.body || {};
+
+  // Must include at least one boolean flag
+  const isBool = (v) => typeof v === "boolean";
+  if (!isBool(jobUpdates) && !isBool(marketing)) {
+    return res.status(400).json({
+      error: "Provide at least one boolean: jobUpdates or marketing",
+    });
+  }
+
+  const update = {};
+  if (isBool(jobUpdates)) update["smsPreferences.jobUpdates"] = jobUpdates;
+  if (isBool(marketing))  update["smsPreferences.marketing"]  = marketing;
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { $set: update },
+    { new: true, select: "smsPreferences" }
+  );
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  return res.json({ smsPreferences: user.smsPreferences });
+});
+
 export default router;
 
 // // backend/routes/users.js
