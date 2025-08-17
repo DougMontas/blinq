@@ -37,6 +37,9 @@ const jobSchema = new Schema(
       required: true,
     },
     pricingV2: { type: PricingV2Schema, required: false },
+    pricing: {
+      smartV2: { type: Object }, // or a specific sub-schema
+    },
     address: { type: String, required: true },
     details: { type: Object },
     serviceCity: { type: String },
