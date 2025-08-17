@@ -23,7 +23,9 @@ import providers from "./routes/providers.js";
 import stripe from "./routes/stripe.js";
 import mapsRoutes from "./routes/maps.js";
 import userStatsRoutes from "./routes/userStats.js";
-
+// _________
+import pricingV2Router from "./routes/pricing.js"
+// _________
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -124,6 +126,9 @@ app.use("/api/admin", auth, adminRoutes);
 app.use("/api/billing", auth, billingRoutes);
 app.use("/api/payments", auth, paymentsRoutes);
 app.use("/api/routes/stripe", auth, stripe);
+// _________
+app.use("/api/routes/pricing/v2", auth, pricingV2Router);
+// _________
 
 // File and Image routes
 app.use("/api/files", auth, filesRoutes);
