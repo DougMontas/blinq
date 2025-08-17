@@ -1,529 +1,144 @@
-// // backend/server.js
-// import express from "express";
-// import cors from "cors";
-// import http from "http";
-// import { Server as SocketIOServer } from "socket.io";
-// import dotenv from "dotenv";
-// import path from "path";
-// import { fileURLToPath } from "url";
-
-// import { connectDB } from "./config/db.js";
-// import { auth } from "./middlewares/auth.js";
-
-// import authRoutes from "./routes/authRoutes.js";
-// import userRoutes from "./routes/users.js";
-// import jobRoutes from "./routes/jobs.js";
-// import adminRoutes from "./routes/admin.js";
-// import billingRoutes from "./routes/billingRoutes.js";
-// import paymentsRoutes from "./routes/payments.js";
-// import filesRoutes from "./routes/files.js";
-// import imagesRoutes from "./routes/images.js";
-// import zipMultiplierRoute from "./routes/zipMultiplier.js";
-// import providers from "./routes/providers.js";
-// import stripe from "./routes/stripe.js";
-// import mapsRoutes from "./routes/maps.js";
-// import userStatsRoutes from "./routes/userStats.js";
-// // _________
-// import pricingV2Router from "./routes/pricing.js"
-// // _________
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-
-// dotenv.config();
-// await connectDB();
-
-// const app = express();
-
-// app.use(
-//   cors({
-//     origin: [
-//       "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
-//       "https://blinqfix.onrender.com",
-//       "blinqfix://",
-//     ],
-//     credentials: true,
-//   })
-// );
-
-// app.options("*", cors());
-// app.use(express.json());
-
-// // ✅ Health check endpoint
-// app.get("/api/health", (_req, res) => {
-//   res.json({ status: "ok", timestamp: Date.now() });
-// });
-
-// app.post("/api/auth/test", (req, res) => {
-//   console.log("Test endpoint hit", req.body);
-//   res.json({ ok: true });
-// });
-
-// // HTTP server and socket.io
-// const server = http.createServer(app);
-// const io = new SocketIOServer(server, { cors: { origin: "*" } });
-
-// io.on("connection", (socket) => {
-//   socket.on("joinUserRoom", ({ userId }) => {
-//     socket.join(userId);
-//     // console.log(`Socket ${socket.id} joined room for user ${userId}`);
-//   });
-// });
-
-// io.on("connection", (socket) => {
-//   socket.on("providerLocationUpdate", ({ jobId, coords }) => {
-//     io.to(`job_${jobId}`).emit("locationUpdate", { provider: coords });
-//   });
-// });
-
-// // Make io available in routes
-// app.use((req, _res, next) => {
-//   req.io = io;
-//   next();
-// });
-
-// // Strip heavy user fields from any outgoing response that includes `.user`
-// app.use((req, res, next) => {
-//   const originalJson = res.json;
-//   res.json = function (data) {
-//     const stripLargeUserFields = (u) => {
-//       if (u && typeof u === "object" && u.role === "serviceProvider") {
-//         delete u.w9;
-//         delete u.proofOfInsurance;
-//         delete u.businessLicense;
-//         delete u.independentContractorAgreement;
-//       }
-//       return u;
-//     };
-
-//     if (Array.isArray(data)) {
-//       data.forEach((item) => {
-//         if (item.user) item.user = stripLargeUserFields(item.user);
-//         if (item.customer) item.customer = stripLargeUserFields(item.customer);
-//         if (item.provider) item.provider = stripLargeUserFields(item.provider);
-//       });
-//     } else if (typeof data === "object") {
-//       if (data.user) data.user = stripLargeUserFields(data.user);
-//       if (data.customer) data.customer = stripLargeUserFields(data.customer);
-//       if (data.provider) data.provider = stripLargeUserFields(data.provider);
-//     }
-
-//     return originalJson.call(this, data);
-//   };
-//   next();
-// });
-
-// app.use("/api/routes", providers);
-// // Public routes
-// app.use("/api/auth", authRoutes);
-// app.use("/api/routes/providers", providers);
-
-// // Protected routes
-// app.use("/api/maps", mapsRoutes);
-// app.use("/api/users", auth, userRoutes);
-// app.use("/api/userStats", auth, userStatsRoutes);
-// app.use("/api/jobs", auth, jobRoutes);
-// app.use("/api/admin", auth, adminRoutes);
-// app.use("/api/billing", auth, billingRoutes);
-// app.use("/api/payments", auth, paymentsRoutes);
-// app.use("/api/routes/stripe", auth, stripe);
-// // _________
-// app.use("/api/routes/pricing/v2", auth, pricingV2Router);
-// app.use("/api/price", auth, pricingV2Router);   
-// // _________
-
-// // File and Image routes
-// app.use("/api/files", auth, filesRoutes);
-// app.use("/api/images", auth, imagesRoutes);
-// app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
-// const PORT = process.env.PORT || 10000;
-// const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`;
-
-// server.listen(PORT, () => {
-//   console.log(`✅ Server running on ${PUBLIC_URL}`);
-// });
-
-
-// routes/pricing.js
+// backend/server.js
 import express from "express";
-const router = express.Router();
+import cors from "cors";
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Smart Estimate v2 (Non‑breaking add‑on)
-// Requires: Node 18+ for global fetch. Optional env: BEA_API_KEY (for RPP).
-// ──────────────────────────────────────────────────────────────────────────────
+import { connectDB } from "./config/db.js";
+import { auth } from "./middlewares/auth.js";
 
-// ===== Config: anchors, NAICS per service, clamps, and weights =====
-const SPV2_SERVICE_ANCHORS = {
-  "Burst or Leaking Pipes": 350,
-  "Roof Leaks or Storm Damage": 750,
-  "HVAC System Failure": 650,
-  "Sewer Backups or Clogged Drains": 300,
-  "Select Electrical Issues Below": 250,
-  "Water Heater Failure": 800,
-  "Mold or Water Damage Remediation": 2500,
-  "Broken Windows or Doors": 400,
-  "Gas Leaks": 500,
-  "Appliance Failures": 275,
-  "Drywall Repair": 200,
-};
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/users.js";
+import jobRoutes from "./routes/jobs.js";
+import adminRoutes from "./routes/admin.js";
+import billingRoutes from "./routes/billingRoutes.js";
+import paymentsRoutes from "./routes/payments.js";
+import filesRoutes from "./routes/files.js";
+import imagesRoutes from "./routes/images.js";
+import zipMultiplierRoute from "./routes/zipMultiplier.js";
+import providers from "./routes/providers.js";
+import stripe from "./routes/stripe.js";
+import mapsRoutes from "./routes/maps.js";
+import userStatsRoutes from "./routes/userStats.js";
+// _________
+import pricingV2Router from "./routes/pricing.js"
+// _________
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// NAICS2017 codes by service for County Business Patterns competition proxy
-const SPV2_NAICS_BY_SERVICE = {
-  "Burst or Leaking Pipes": "238220",
-  "Sewer Backups or Clogged Drains": "238220",
-  "Water Heater Failure": "238220",
-  "HVAC System Failure": "238220",
-  "Gas Leaks": "238220",
-  "Roof Leaks or Storm Damage": "238160",
-  "Select Electrical Issues Below": "238210",
-  "Drywall Repair": "238310",
-  "Broken Windows or Doors": "238350",
-  "Appliance Failures": "811412",
-  "Mold or Water Damage Remediation": "562910",
-};
+dotenv.config();
+await connectDB();
 
-const SPV2_CFG = {
-  location: { rppAlpha: 0.85, acsAlpha: 0.60, clamp: [0.80, 1.30] },
-  competition: { beta: 0.15, clamp: [0.85, 1.15] },
-  severityMult: { minor: 1.00, moderate: 1.25, severe: 1.60 },
-  addOnFees: {
-    urgent: 30,
-    chemicalAttempt: 20,
-    noShutoffAccess: 15,
-    roofSteep: 35,
-    securityEmergency: 75,
-    paintMatch: 125,
-  },
-  rails: {
-    default: [95, 4995],
-    "Drywall Repair": [95, 995],
-    "Appliance Failures": [95, 895],
-    "Burst or Leaking Pipes": [150, 1495],
-    "Sewer Backups or Clogged Drains": [150, 1495],
-    "Roof Leaks or Storm Damage": [250, 2995],
-    "Water Heater Failure": [250, 2495],
-    "HVAC System Failure": [200, 1995],
-    "Select Electrical Issues Below": [150, 1495],
-    "Broken Windows or Doors": [125, 1495],
-    "Gas Leaks": [200, 1995],
-    "Mold or Water Damage Remediation": [750, 4995],
-  },
-  roundTo: 5,
-  cacheTTLms: 10 * 60 * 1000,
-};
+const app = express();
 
-// ===== Tiny cache & helpers =====
-const _spv2_cache = new Map();
-const _spv2_get = (k) => {
-  const v = _spv2_cache.get(k);
-  if (!v) return null;
-  if (Date.now() - v.t > SPV2_CFG.cacheTTLms) { _spv2_cache.delete(k); return null; }
-  return v.v;
-};
-const _spv2_set = (k, v) => _spv2_cache.set(k, { v, t: Date.now() });
+app.use(
+  cors({
+    origin: [
+      "https://blinqfrontend-y6jd-git-master-blinqfixs-projects.vercel.app",
+      "https://blinqfix.onrender.com",
+      "blinqfix://",
+    ],
+    credentials: true,
+  })
+);
 
-const _spv2_clamp = (x, [lo, hi]) => Math.max(lo, Math.min(hi, x));
-const _spv2_roundTo = (x, step) => Math.round(x / step) * step;
-const _spv2_bumpSeverity = (cur, to) => {
-  const order = ['minor','moderate','severe'];
-  return order[Math.max(order.indexOf(cur), order.indexOf(to))];
-};
+app.options("*", cors());
+app.use(express.json());
 
-async function _spv2_fetchJson(url, label='req') {
-  const ctrl = new AbortController();
-  const to = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    const res = await fetch(url, { signal: ctrl.signal });
-    if (!res.ok) throw new Error(`${label} ${res.status} ${res.statusText}`);
-    return await res.json();
-  } finally { clearTimeout(to); }
-}
+// ✅ Health check endpoint
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: Date.now() });
+});
 
-// ===== Free public datasets =====
-async function _spv2_geocodeToFips(addressLine) {
-  const key = `geocode:${addressLine}`;
-  const hit = _spv2_get(key); if (hit) return hit;
-  const base = 'https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress';
-  const url = `${base}?address=${encodeURIComponent(addressLine)}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
-  const json = await _spv2_fetchJson(url, 'census-geocoder');
-  const match = json?.result?.addressMatches?.[0];
-  const county = match?.geographies?.Counties?.[0];
-  if (!match || !county?.STATE || !county?.COUNTY) throw new Error('Address not found or FIPS missing');
-  const out = {
-    normalizedAddress: match.matchedAddress,
-    stateFIPS: county.STATE,
-    countyFIPS: county.COUNTY,
-    lat: match.coordinates?.y,
-    lon: match.coordinates?.x,
-  };
-  _spv2_set(key, out);
-  return out;
-}
+app.post("/api/auth/test", (req, res) => {
+  console.log("Test endpoint hit", req.body);
+  res.json({ ok: true });
+});
 
-async function _spv2_getACS(stateFIPS, countyFIPS) {
-  const key = `acs:${stateFIPS}:${countyFIPS}`;
-  const hit = _spv2_get(key); if (hit) return hit;
-  const vars = 'B19013_001E,B11001_001E';
-  const countyURL = `https://api.census.gov/data/2023/acs/acs5?get=NAME,${vars}&for=county:${countyFIPS}&in=state:${stateFIPS}`;
-  const usURL     = `https://api.census.gov/data/2023/acs/acs5?get=${vars}&for=us:*`;
-  const [cArr, uArr] = await Promise.all([
-    _spv2_fetchJson(countyURL, 'acs-county'),
-    _spv2_fetchJson(usURL, 'acs-us'),
-  ]);
-  const c = cArr?.[1]; const u = uArr?.[1];
-  const out = {
-    county: { name: c?.[0], medianIncome: Number(c?.[1]), households: Number(c?.[2]) },
-    us:     { medianIncome: Number(u?.[0]), households: Number(u?.[1]) },
-  };
-  if (!out.county.medianIncome || !out.us.medianIncome) throw new Error('ACS income unavailable');
-  _spv2_set(key, out);
-  return out;
-}
+// HTTP server and socket.io
+const server = http.createServer(app);
+const io = new SocketIOServer(server, { cors: { origin: "*" } });
 
-async function _spv2_getCBPByNAICS(stateFIPS, countyFIPS, naics) {
-  const key = `cbp:${stateFIPS}:${countyFIPS}:${naics}`;
-  const hit = _spv2_get(key); if (hit) return hit;
-  const countyURL = `https://api.census.gov/data/2023/cbp?get=ESTAB,NAME&for=county:${countyFIPS}&in=state:${stateFIPS}&NAICS2017=${naics}`;
-  const usURL     = `https://api.census.gov/data/2023/cbp?get=ESTAB&for=us:*&NAICS2017=${naics}`;
-  const [cArr, uArr] = await Promise.all([
-    _spv2_fetchJson(countyURL, 'cbp-county'),
-    _spv2_fetchJson(usURL, 'cbp-us'),
-  ]);
-  const countyEst = Number(cArr?.[1]?.[0]);
-  const usEst = Number(uArr?.[1]?.[0]);
-  const out = {
-    ok: Number.isFinite(countyEst) && Number.isFinite(usEst),
-    county: { name: cArr?.[1]?.[1], establishments: countyEst },
-    us:     { establishments: usEst },
-    naics
-  };
-  _spv2_set(key, out);
-  return out;
-}
+io.on("connection", (socket) => {
+  socket.on("joinUserRoom", ({ userId }) => {
+    socket.join(userId);
+    // console.log(`Socket ${socket.id} joined room for user ${userId}`);
+  });
+});
 
-async function _spv2_getCBPPreferTargeted(stateFIPS, countyFIPS, service) {
-  const targeted = SPV2_NAICS_BY_SERVICE[service] || "238220";
-  const primary = await _spv2_getCBPByNAICS(stateFIPS, countyFIPS, targeted);
-  if (primary.ok) return primary;
-  const fallback = await _spv2_getCBPByNAICS(stateFIPS, countyFIPS, "238220");
-  return { ...fallback, naics: fallback.naics };
-}
+io.on("connection", (socket) => {
+  socket.on("providerLocationUpdate", ({ jobId, coords }) => {
+    io.to(`job_${jobId}`).emit("locationUpdate", { provider: coords });
+  });
+});
 
-async function _spv2_getRPP(stateFIPS) {
-  const key = `rpp:${stateFIPS}`;
-  const hit = _spv2_get(key); if (hit) return hit;
-  const user = process.env.BEA_API_KEY;
-  if (!user) return null;
-  const url = `https://apps.bea.gov/api/data/?UserID=${encodeURIComponent(user)}&method=GetData&datasetname=RegionalIncome&TableName=RPP1&LineCode=1&GeoFips=${stateFIPS}&Year=LAST&ResultFormat=json`;
-  try {
-    const json = await _spv2_fetchJson(url, 'bea-rpp');
-    const v = Number(json?.BEAAPI?.Results?.Data?.[0]?.DataValue);
-    if (!v) return null;
-    const out = { rppIndex: v, multiplier: v/100 };
-    _spv2_set(key, out);
-    return out;
-  } catch {
-    return null;
-  }
-}
+// Make io available in routes
+app.use((req, _res, next) => {
+  req.io = io;
+  next();
+});
 
-// ===== Multipliers =====
-function _spv2_locationMultiplier({ rppMult, countyIncome, usIncome }) {
-  if (rppMult) {
-    const m = Math.pow(rppMult, SPV2_CFG.location.rppAlpha);
-    return _spv2_clamp(m, SPV2_CFG.location.clamp);
-  }
-  const ratio = countyIncome / usIncome;
-  const m = Math.pow(ratio, SPV2_CFG.location.acsAlpha);
-  return _spv2_clamp(m, SPV2_CFG.location.clamp);
-}
-function _spv2_competitionMultiplier({ countyEstab, usEstab, countyHH, usHH }) {
-  const countyPer10k = (countyEstab / Math.max(1, countyHH)) * 10000;
-  const usPer10k     = (usEstab / Math.max(1, usHH)) * 10000;
-  const ratio = (countyPer10k || 0.0001) / (usPer10k || 0.0001);
-  const m = Math.pow(ratio, -SPV2_CFG.competition.beta);
-  return _spv2_clamp(m, SPV2_CFG.competition.clamp);
-}
-
-// ===== Questionnaire → severity/multipliers/add‑ons =====
-function _spv2_computeQuestionnaire(service, details = {}) {
-  const norm = (x='') => String(x).toLowerCase();
-  const entries = Object.entries(details).map(([q,a]) => [norm(q), norm(a)]);
-  const seen = (pred) => entries.some(([q,a]) => pred(q,a));
-  let severity = 'moderate';
-  let mult = 1.0;
-  let addOns = 0;
-  const mul = (x) => { mult *= x; };
-  const add = (x) => { addOns += x; };
-
-  switch (service) {
-    case "Burst or Leaking Pipes": {
-      if (seen((q,a) => q.includes('exposed') && (a.includes('behind') || a.includes('ceiling') || a.includes('floor') || a.includes('unknown')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('how long') && (a.includes('6+') || a.includes('unknown')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('still') && a.includes('yes'))) add(SPV2_CFG.addOnFees.urgent);
-      if (seen((q,a) => q.includes('damage') && (a.includes('water-stained') || a.includes('sagging') || a.includes('minor stain')))) mul(1.12);
-      if (seen((q,a) => a.includes('unknown'))) mul(1.06);
-      break;
-    }
-    case "Sewer Backups or Clogged Drains": {
-      if (seen((q,a) => q.includes('area') && (a.includes('entire') || a.includes('unknown')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('overflow') && (a.includes('sewage') || a.includes('toilet') || a.includes('sink')))) mul(1.15);
-      if (seen((q,a) => q.includes('cleanout') && (a.includes('no') || a.includes('maybe') || a.includes('not sure')))) mul(1.10);
-      if (seen((q,a) => q.includes('used') && (a.includes('liquid') || a.includes('snaked')))) add(SPV2_CFG.addOnFees.chemicalAttempt);
-      break;
-    }
-    case "Roof Leaks or Storm Damage": {
-      if (seen((q,a) => q.includes('where') && (a.includes('ceiling drip') || a.includes('skylight') || a.includes('multiple') || a.includes('unknown')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('type of roof') && (a.includes('tile') || a.includes('metal') || a.includes('flat')))) mul(1.10);
-      if (seen((q,a) => q.includes('steep') && (a.includes('steep') || a.includes('moderate')))) add(SPV2_CFG.addOnFees.roofSteep);
-      if (seen((q,a) => q.includes('isolated') && (a.includes('multiple') || a.includes('whole')))) mul(1.15);
-      if (seen((q,a) => q.includes('interior damage') && (a.includes('sagging') || a.includes('furniture') || a.includes('stain')))) mul(1.10);
-      break;
-    }
-    case "HVAC System Failure": {
-      if (seen((q,a) => q.includes('issue') && (a.includes('no power') || a.includes('breaker') || a.includes('water leak')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('type of system') && (a.includes('rooftop') || a.includes('mini-split')))) mul(1.10);
-      if (seen((q,a) => q.includes('which unit') && a.includes('both'))) mul(1.12);
-      if (seen((q,a) => q.includes('water or mold') && (a.includes('stained') || a.includes('mold')))) mul(1.12);
-      break;
-    }
-    case "Select Electrical Issues Below": {
-      if (seen((q,a) => a.includes('no power at all') || a.includes('sparks') || a.includes('smoke') || a.includes('burning'))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => a.includes('flicker'))) mul(1.06);
-      break;
-    }
-    case "Water Heater Failure": {
-      if (seen((q,a) => q.includes('what issue') && (a.includes('leak') || a.includes('not sure')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('type') && (a.includes('gas') || a.includes('tankless')))) mul(1.10);
-      if (seen((q,a) => q.includes('size') && (a.includes('50') || a.includes('75')))) mul(1.06);
-      if (seen((q,a) => q.includes('age') && a.includes('10'))) mul(1.08);
-      if (seen((q,a) => q.includes('visible water') && (a.includes('pooled') || a.includes('mold')))) mul(1.10);
-      break;
-    }
-    case "Mold or Water Damage Remediation": {
-      if (seen((q,a) => q.includes('area') && (a.includes('multiple') || a.includes('not sure')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('visible mold') && a.includes('yes'))) mul(1.15);
-      if (seen((q,a) => q.includes('cause') && a.includes('flood'))) mul(1.20);
-      if (seen((q,a) => q.includes('when') && (a.includes('3+') || a.includes('unknown')))) mul(1.12);
-      break;
-    }
-    case "Broken Windows or Doors": {
-      if (seen((q,a) => q.includes('what is broken') && (a.includes('full door') || a.includes('sliding') || a.includes('frame')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('is this a security emergency') && (a.includes('open') || a.includes('unsafe')))) add(SPV2_CFG.addOnFees.securityEmergency);
-      if (seen((q,a) => q.includes('location') && (a.includes('2nd') || a.includes('balcony')))) mul(1.08);
-      break;
-    }
-    case "Gas Leaks": {
-      if (seen((q,a) => q.includes('smell') && (a.includes('strong') || a.includes('rotten')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('shut off') && (a.includes('no') || a.includes('not sure')))) add(SPV2_CFG.addOnFees.noShutoffAccess);
-      break;
-    }
-    case "Appliance Failures": {
-      if (seen((q,a) => q.includes('appliance type') && (a.includes('fridge') || a.includes('ac')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('issue') && (a.includes('leak') || a.includes('spark') || a.includes('burn')))) mul(1.10);
-      if (seen((q,a) => q.includes('age') && (a.includes('10+') || a.includes('unknown')))) mul(1.06);
-      if (seen((q,a) => q.includes('warranty') && a.includes('yes'))) mul(0.95);
-      break;
-    }
-    case "Drywall Repair": {
-      if (seen((q,a) => q.includes('what size') && (a.includes('multiple') || a.includes('greater')))) severity = _spv2_bumpSeverity(severity,'severe');
-      if (seen((q,a) => q.includes('what caused') && a.includes('water'))) mul(1.15);
-      if (seen((q,a) => q.includes('ceiling') && a.includes('yes'))) mul(1.10);
-      if (seen((q,a) => q.includes('paint') && a.includes('yes'))) add(SPV2_CFG.addOnFees.paintMatch);
-      if (seen((q,a) => q.includes('obstructed') && a.includes('yes'))) mul(1.08);
-      break;
-    }
-    default: {
-      if (seen((q,a) => a.includes('unknown') || a.includes('not sure'))) mul(1.05);
-    }
-  }
-
-  const sevFactor = SPV2_CFG.severityMult[severity] || 1.25;
-  mult *= sevFactor;
-  return { severity, multiplier: Number(mult.toFixed(3)), addOns };
-}
-
-// ===== Final & rails =====
-function _spv2_finalize(service, x) {
-  const rails = SPV2_CFG.rails[service] || SPV2_CFG.rails.default;
-  const clamped = _spv2_clamp(x, rails);
-  return _spv2_roundTo(clamped, SPV2_CFG.roundTo);
-}
-
-// ===== Unified handler, exposed on two paths =====
-const estimateHandler = async (req, res) => {
-  try {
-    const { service, address, city, zipcode, details = {} } = req.body || {};
-    if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
-      return res.status(400).json({ ok: false, error: 'Unknown or missing service' });
-    }
-    const addr = (address || '').trim();
-    const addrLine = `${addr}${city ? ', ' + city : ''}${zipcode ? ' ' + zipcode : ''}`.trim();
-    if (!addrLine) return res.status(400).json({ ok: false, error: 'Address (or address+city+zipcode) required' });
-
-    const geo = await _spv2_geocodeToFips(addrLine);
-
-    const [acs, cbp, rpp] = await Promise.all([
-      _spv2_getACS(geo.stateFIPS, geo.countyFIPS),
-      _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, service),
-      _spv2_getRPP(geo.stateFIPS),
-    ]);
-
-    const locM = _spv2_locationMultiplier({
-      rppMult: rpp?.multiplier,
-      countyIncome: acs.county.medianIncome,
-      usIncome: acs.us.medianIncome,
-    });
-    const compM = _spv2_competitionMultiplier({
-      countyEstab: cbp.county.establishments,
-      usEstab: cbp.us.establishments,
-      countyHH: acs.county.households,
-      usHH: acs.us.households,
-    });
-    const q = _spv2_computeQuestionnaire(service, details);
-
-    const base = SPV2_SERVICE_ANCHORS[service];
-    const raw = (base * locM * compM * q.multiplier) + q.addOns;
-    const priceUSD = _spv2_finalize(service, raw);
-
-    res.json({
-      ok: true,
-      service,
-      priceUSD,
-      address: geo.normalizedAddress,
-      lat: geo.lat, lon: geo.lon,
-      breakdown: {
-        anchorBase: base,
-        locationMultiplier: Number(locM.toFixed(3)),
-        competitionMultiplier: Number(compM.toFixed(3)),
-        questionnaire: { severity: q.severity, multiplier: q.multiplier, addOns: q.addOns },
-        rails: SPV2_CFG.rails[service] || SPV2_CFG.rails.default,
-        roundTo: SPV2_CFG.roundTo,
-        datasets: {
-          acs: {
-            county: acs.county.name,
-            countyMedianHHIncome: acs.county.medianIncome,
-            usMedianHHIncome: acs.us.medianIncome,
-            countyHouseholds: acs.county.households,
-            usHouseholds: acs.us.households
-          },
-          cbp: {
-            naicsUsed: cbp.naics,
-            countyEstablishments: cbp.county.establishments,
-            usEstablishments: cbp.us.establishments
-          },
-          rpp: rpp ? { stateRppIndexAllItems: rpp.rppIndex, multiplier: rpp.multiplier } : null
-        }
+// Strip heavy user fields from any outgoing response that includes `.user`
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function (data) {
+    const stripLargeUserFields = (u) => {
+      if (u && typeof u === "object" && u.role === "serviceProvider") {
+        delete u.w9;
+        delete u.proofOfInsurance;
+        delete u.businessLicense;
+        delete u.independentContractorAgreement;
       }
-    });
-  } catch (err) {
-    console.error('[SmartPriceV2]', err);
-    res.status(500).json({ ok: false, error: err.message || String(err) });
-  }
-};
+      return u;
+    };
 
-router.post('/v2/estimate', estimateHandler); // e.g. /api/price/v2/estimate
-router.post('/estimate', estimateHandler);    // e.g. /api/routes/pricing/v2/estimate
+    if (Array.isArray(data)) {
+      data.forEach((item) => {
+        if (item.user) item.user = stripLargeUserFields(item.user);
+        if (item.customer) item.customer = stripLargeUserFields(item.customer);
+        if (item.provider) item.provider = stripLargeUserFields(item.provider);
+      });
+    } else if (typeof data === "object") {
+      if (data.user) data.user = stripLargeUserFields(data.user);
+      if (data.customer) data.customer = stripLargeUserFields(data.customer);
+      if (data.provider) data.provider = stripLargeUserFields(data.provider);
+    }
 
-export default router;
+    return originalJson.call(this, data);
+  };
+  next();
+});
+
+app.use("/api/routes", providers);
+// Public routes
+app.use("/api/auth", authRoutes);
+app.use("/api/routes/providers", providers);
+
+// Protected routes
+app.use("/api/maps", mapsRoutes);
+app.use("/api/users", auth, userRoutes);
+app.use("/api/userStats", auth, userStatsRoutes);
+app.use("/api/jobs", auth, jobRoutes);
+app.use("/api/admin", auth, adminRoutes);
+app.use("/api/billing", auth, billingRoutes);
+app.use("/api/payments", auth, paymentsRoutes);
+app.use("/api/routes/stripe", auth, stripe);
+// _________
+app.use("/api/routes/pricing/v2", auth, pricingV2Router);
+app.use("/api/price", auth, pricingV2Router);   
+// _________
+
+// File and Image routes
+app.use("/api/files", auth, filesRoutes);
+app.use("/api/images", auth, imagesRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+const PORT = process.env.PORT || 10000;
+const PUBLIC_URL = process.env.SERVER_URL || `https://blinqfix.onrender.com`;
+
+server.listen(PORT, () => {
+  console.log(`✅ Server running on ${PUBLIC_URL}`);
+});
