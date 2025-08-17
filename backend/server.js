@@ -128,6 +128,7 @@ app.use("/api/payments", auth, paymentsRoutes);
 app.use("/api/routes/stripe", auth, stripe);
 // _________
 app.use("/api/routes/pricing/v2", auth, pricingV2Router);
+app.use("/api/price", auth, pricingV2Router);   
 // _________
 
 // File and Image routes
