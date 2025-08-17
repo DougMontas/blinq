@@ -2,6 +2,21 @@ import mongoose from "mongoose";
 
 const { Schema, Types } = mongoose;
 
+const PricingV2Schema = new mongoose.Schema(
+  {
+    ok: Boolean,
+    service: String,
+    priceUSD: Number,
+    address: String,
+    lat: Number,
+    lon: Number,
+    breakdown: mongoose.Schema.Types.Mixed, // or define exact fields
+    usedInTotal: { type: Boolean, default: false },
+    quotedAt: Date,
+  },
+  { _id: false }
+);
+
 const jobSchema = new Schema(
   {
     customer: { type: Types.ObjectId, ref: "Users", required: true },
@@ -21,7 +36,7 @@ const jobSchema = new Schema(
       ],
       required: true,
     },
-
+    pricingV2: { type: PricingV2Schema, required: false },
     address: { type: String, required: true },
     details: { type: Object },
     serviceCity: { type: String },
