@@ -3129,9 +3129,9 @@ export default function ProviderJobStatus() {
           <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              {/* <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                 <ArrowLeft color="#fff" size={24} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               <View style={styles.headerTitleContainer}>
                 <View style={styles.headerBadge}>
                   <Briefcase color="#60a5fa" size={14} />
