@@ -1200,22 +1200,24 @@
 
 // export default router;
 //_________________________________________________//___________________//__________
-
 import express from "express";
 const router = express.Router();
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Smart Estimate v2 (Non‑breaking add‑on)
-// Requires: Node 18+ for global fetch. Optional env: BEA_API_KEY (for RPP).
-// ──────────────────────────────────────────────────────────────────────────────
+/**
+ * Smart Estimate v2 (Resilient)
+ * - Test service short-circuited to $1.00, no extra fees.
+ * - External datasets are optional; if unavailable, we degrade gracefully.
+ * - Requires Node 18+ for native fetch; if fetch is missing, we avoid using it.
+ */
 
-// ⚠️ TEST SERVICE KEY (exact match)
-// -----------------------------------------------------------------------------
-// This is the special test-only service that always prices at $1.00 and applies
-// NO other fees. You can remove this block when you no longer need it.
+// ──────────────────────────────────────────────────────────────────────────────
+// Test service (exact label). Always $1, no other fees.
+// ──────────────────────────────────────────────────────────────────────────────
 const TEST_SERVICE_KEY = "Test $1 Service";
 
-// ===== Config: anchors, NAICS per service, clamps, and weights =====
+// ──────────────────────────────────────────────────────────────────────────────
+// Config: anchors, NAICS mapping, clamps, and weights
+// ──────────────────────────────────────────────────────────────────────────────
 const SPV2_SERVICE_ANCHORS = {
   "Burst or Leaking Pipes": 350,
   "Roof Leaks or Storm Damage": 750,
@@ -1229,11 +1231,11 @@ const SPV2_SERVICE_ANCHORS = {
   "Appliance Failures": 275,
   "Drywall Repair": 200,
 
-  // ✅ ADDED: dev/test service anchored at $1 (anchor is not used—see short‑circuit)
+  // Test service (anchor not used; kept for completeness)
   [TEST_SERVICE_KEY]: 1,
 };
 
-// NAICS2017 codes by service for County Business Patterns competition proxy
+// NAICS2017 codes (competition proxy). Not critical when degrading.
 const SPV2_NAICS_BY_SERVICE = {
   "Burst or Leaking Pipes": "238220",
   "Sewer Backups or Clogged Drains": "238220",
@@ -1247,7 +1249,6 @@ const SPV2_NAICS_BY_SERVICE = {
   "Appliance Failures": "811412",
   "Mold or Water Damage Remediation": "562910",
 
-  // ✅ ADDED: any valid NAICS will do; we don't actually fetch for the test service
   [TEST_SERVICE_KEY]: "238210",
 };
 
@@ -1277,14 +1278,16 @@ const SPV2_CFG = {
     "Gas Leaks": [200, 1995],
     "Mold or Water Damage Remediation": [750, 4995],
 
-    // ✅ ADDED: rails for the test service (not used because we short‑circuit)
+    // Not used for the test service (we short-circuit), but present for clarity
     [TEST_SERVICE_KEY]: [1, 1],
   },
   roundTo: 5,
   cacheTTLms: 10 * 60 * 1000,
 };
 
-// ===== Tiny cache & helpers =====
+// ──────────────────────────────────────────────────────────────────────────────
+// Tiny cache & helpers
+// ──────────────────────────────────────────────────────────────────────────────
 const _spv2_cache = new Map();
 const _spv2_get = (k) => {
   const v = _spv2_cache.get(k);
@@ -1301,32 +1304,46 @@ const _spv2_bumpSeverity = (cur, to) => {
   return order[Math.max(order.indexOf(cur), Math.max(0, order.indexOf(to)))];
 };
 
-async function _spv2_fetchJson(url, label='req') {
+// Centralized resilient fetch wrapper
+async function _spv2_fetchJson(url, label = 'req') {
+  // If fetch is unavailable (Node < 18), gracefully refuse and let caller degrade.
+  if (typeof fetch !== "function") {
+    const e = new Error("fetch-unavailable");
+    e.code = "FETCH_UNAVAILABLE";
+    throw e;
+  }
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 8000);
   try {
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`${label} ${res.status} ${res.statusText}`);
     return await res.json();
-  } finally { clearTimeout(to); }
+  } finally {
+    clearTimeout(to);
+  }
 }
 
-// ===== Free public datasets =====
+// ──────────────────────────────────────────────────────────────────────────────
+/** Public datasets (all optional; we degrade if they fail) */
+// ──────────────────────────────────────────────────────────────────────────────
 async function _spv2_geocodeToFips(addressLine) {
   const key = `geocode:${addressLine}`;
   const hit = _spv2_get(key); if (hit) return hit;
+
   const base = 'https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress';
   const url = `${base}?address=${encodeURIComponent(addressLine)}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
+
   const json = await _spv2_fetchJson(url, 'census-geocoder');
   const match = json?.result?.addressMatches?.[0];
   const county = match?.geographies?.Counties?.[0];
   if (!match || !county?.STATE || !county?.COUNTY) throw new Error('Address not found or FIPS missing');
+
   const out = {
     normalizedAddress: match.matchedAddress,
     stateFIPS: county.STATE,
     countyFIPS: county.COUNTY,
-    lat: match.coordinates?.y,
-    lon: match.coordinates?.x,
+    lat: match.coordinates?.y ?? null,
+    lon: match.coordinates?.x ?? null,
   };
   _spv2_set(key, out);
   return out;
@@ -1335,19 +1352,23 @@ async function _spv2_geocodeToFips(addressLine) {
 async function _spv2_getACS(stateFIPS, countyFIPS) {
   const key = `acs:${stateFIPS}:${countyFIPS}`;
   const hit = _spv2_get(key); if (hit) return hit;
+
   const vars = 'B19013_001E,B11001_001E';
   const countyURL = `https://api.census.gov/data/2023/acs/acs5?get=NAME,${vars}&for=county:${countyFIPS}&in=state:${stateFIPS}`;
   const usURL     = `https://api.census.gov/data/2023/acs/acs5?get=${vars}&for=us:*`;
+
   const [cArr, uArr] = await Promise.all([
     _spv2_fetchJson(countyURL, 'acs-county'),
     _spv2_fetchJson(usURL, 'acs-us'),
   ]);
+
   const c = cArr?.[1]; const u = uArr?.[1];
   const out = {
     county: { name: c?.[0], medianIncome: Number(c?.[1]), households: Number(c?.[2]) },
     us:     { medianIncome: Number(u?.[0]), households: Number(u?.[1]) },
   };
   if (!out.county.medianIncome || !out.us.medianIncome) throw new Error('ACS income unavailable');
+
   _spv2_set(key, out);
   return out;
 }
@@ -1355,14 +1376,18 @@ async function _spv2_getACS(stateFIPS, countyFIPS) {
 async function _spv2_getCBPByNAICS(stateFIPS, countyFIPS, naics) {
   const key = `cbp:${stateFIPS}:${countyFIPS}:${naics}`;
   const hit = _spv2_get(key); if (hit) return hit;
+
   const countyURL = `https://api.census.gov/data/2023/cbp?get=ESTAB,NAME&for=county:${countyFIPS}&in=state:${stateFIPS}&NAICS2017=${naics}`;
   const usURL     = `https://api.census.gov/data/2023/cbp?get=ESTAB&for=us:*&NAICS2017=${naics}`;
+
   const [cArr, uArr] = await Promise.all([
     _spv2_fetchJson(countyURL, 'cbp-county'),
     _spv2_fetchJson(usURL, 'cbp-us'),
   ]);
+
   const countyEst = Number(cArr?.[1]?.[0]);
   const usEst = Number(uArr?.[1]?.[0]);
+
   const out = {
     ok: Number.isFinite(countyEst) && Number.isFinite(usEst),
     county: { name: cArr?.[1]?.[1], establishments: countyEst },
@@ -1386,12 +1411,13 @@ async function _spv2_getRPP(stateFIPS) {
   const hit = _spv2_get(key); if (hit) return hit;
   const user = process.env.BEA_API_KEY;
   if (!user) return null;
+
   const url = `https://apps.bea.gov/api/data/?UserID=${encodeURIComponent(user)}&method=GetData&datasetname=RegionalIncome&TableName=RPP1&LineCode=1&GeoFips=${stateFIPS}&Year=LAST&ResultFormat=json`;
   try {
     const json = await _spv2_fetchJson(url, 'bea-rpp');
     const v = Number(json?.BEAAPI?.Results?.Data?.[0]?.DataValue);
     if (!v) return null;
-    const out = { rppIndex: v, multiplier: v/100 };
+    const out = { rppIndex: v, multiplier: v / 100 };
     _spv2_set(key, out);
     return out;
   } catch {
@@ -1399,25 +1425,30 @@ async function _spv2_getRPP(stateFIPS) {
   }
 }
 
-// ===== Multipliers =====
+// ──────────────────────────────────────────────────────────────────────────────
+// Multipliers
+// ──────────────────────────────────────────────────────────────────────────────
 function _spv2_locationMultiplier({ rppMult, countyIncome, usIncome }) {
   if (rppMult) {
     const m = Math.pow(rppMult, SPV2_CFG.location.rppAlpha);
     return _spv2_clamp(m, SPV2_CFG.location.clamp);
   }
-  const ratio = countyIncome / usIncome;
+  const ratio = (countyIncome && usIncome) ? (countyIncome / usIncome) : 1.0;
   const m = Math.pow(ratio, SPV2_CFG.location.acsAlpha);
   return _spv2_clamp(m, SPV2_CFG.location.clamp);
 }
+
 function _spv2_competitionMultiplier({ countyEstab, usEstab, countyHH, usHH }) {
-  const countyPer10k = (countyEstab / Math.max(1, countyHH)) * 10000;
-  const usPer10k     = (usEstab / Math.max(1, usHH)) * 10000;
+  const countyPer10k = (Number(countyEstab) / Math.max(1, Number(countyHH))) * 10000;
+  const usPer10k     = (Number(usEstab) / Math.max(1, Number(usHH))) * 10000;
   const ratio = (countyPer10k || 0.0001) / (usPer10k || 0.0001);
   const m = Math.pow(ratio, -SPV2_CFG.competition.beta);
   return _spv2_clamp(m, SPV2_CFG.competition.clamp);
 }
 
-// ===== Questionnaire → severity/multipliers/add‑ons =====
+// ──────────────────────────────────────────────────────────────────────────────
+// Questionnaire → severity/multipliers/add-ons
+// ──────────────────────────────────────────────────────────────────────────────
 function _spv2_computeQuestionnaire(service, details = {}) {
   const norm = (x='') => String(x).toLowerCase();
   const entries = Object.entries(details).map(([q,a]) => [norm(q), norm(a)]);
@@ -1505,15 +1536,12 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       if (seen((q,a) => q.includes('obstructed') && a.includes('yes'))) mul(1.08);
       break;
     }
-
-    // ✅ ADDED (defensive; not actually used for the test service since we short‑circuit):
     case TEST_SERVICE_KEY: {
       severity = 'minor';
       mult = 1.0;
       addOns = 0;
       break;
     }
-
     default: {
       if (seen((q,a) => a.includes('unknown') || a.includes('not sure'))) mul(1.05);
     }
@@ -1524,57 +1552,57 @@ function _spv2_computeQuestionnaire(service, details = {}) {
   return { severity, multiplier: Number(mult.toFixed(3)), addOns };
 }
 
-// Dynamic Service/Dispatch Fee: scales gently with market; **min $100**
+// Dynamic service/dispatch fee (min $100)
 function _spv2_dynamicServiceFee({ locM, compM, severity }) {
   const sevBoost = severity === 'severe' ? 1.2 : severity === 'moderate' ? 1.0 : 0.9;
   const raw = 100 * Math.pow(locM, 0.5) * Math.pow(compM, 0.5) * sevBoost;
   return Math.max(100, _spv2_roundTo(raw, SPV2_CFG.roundTo));
 }
 
-// ===== Final & rails =====
+// Final & rails
 function _spv2_finalize(service, x) {
-  // ✅ SPECIAL‑CASE: never round or clamp the test service—just return $1.00
-  if (service === TEST_SERVICE_KEY) return 1.0;
-
+  if (service === TEST_SERVICE_KEY) return 1.0; // never round/clamp test service
   const rails = SPV2_CFG.rails[service] || SPV2_CFG.rails.default;
   const clamped = _spv2_clamp(x, rails);
   return _spv2_roundTo(clamped, SPV2_CFG.roundTo);
 }
 
-// ===== Unified handler (POST /estimate and /v2/estimate) =====
+// ──────────────────────────────────────────────────────────────────────────────
+// Unified handler (POST /estimate and /v2/estimate)
+// ──────────────────────────────────────────────────────────────────────────────
 const estimateHandler = async (req, res) => {
   try {
     const { service, address, city, zipcode, details = {} } = req.body || {};
     if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
       return res.status(400).json({ ok: false, error: 'Unknown or missing service' });
     }
+
+    // Address line (tolerate missing city/zipcode)
     const addr = (address || '').trim();
     const addrLine = `${addr}${city ? ', ' + city : ''}${zipcode ? ' ' + zipcode : ''}`.trim();
-    if (!addrLine) return res.status(400).json({ ok: false, error: 'Address (or address+city+zipcode) required' });
+    if (!addrLine) {
+      return res.status(400).json({ ok: false, error: 'Address (or address+city+zipcode) required' });
+    }
 
-    // ✅ SHORT‑CIRCUIT: Test service returns a fixed $1.00 and zero fees,
-    //    skipping geocoding failures, datasets, multipliers, add‑ons, rails,
-    //    and rounding. We still *try* to normalize address for consistency.
+    // TEST SERVICE: $1.00, no other fees, no external calls
     if (service === TEST_SERVICE_KEY) {
+      // Best-effort normalization; do not fail if geocode is unavailable
       let normalized = addrLine, lat = null, lon = null;
       try {
         const geo = await _spv2_geocodeToFips(addrLine);
         normalized = geo.normalizedAddress || addrLine;
         lat = geo.lat ?? null;
         lon = geo.lon ?? null;
-      } catch {
-        // swallow geocode errors; keep the provided address
-      }
+      } catch { /* swallow */ }
 
       return res.json({
         ok: true,
         service,
-        priceUSD: 1.00,                     // hard‑coded
-        serviceFeeUSD: 0,                   // no dispatch/service fee
-        suggestedSubtotalUSD: 1.00,         // price only
+        priceUSD: 1.00,
+        serviceFeeUSD: 0,
+        suggestedSubtotalUSD: 1.00,
         address: normalized,
         lat, lon,
-        // Helpful flags the client can use to suppress any client‑side extra fees
         flags: { testService: true, noExtraFees: true },
         breakdown: {
           note: "TEST SERVICE: hard-coded $1.00; all multipliers/fees disabled",
@@ -1588,28 +1616,52 @@ const estimateHandler = async (req, res) => {
       });
     }
 
-    // 1) Geocode → FIPS
-    const geo = await _spv2_geocodeToFips(addrLine);
+    // 1) Geocode → FIPS (degrade if unavailable)
+    let geo = null;
+    try {
+      geo = await _spv2_geocodeToFips(addrLine);
+    } catch {
+      geo = {
+        normalizedAddress: addrLine,
+        stateFIPS: null,
+        countyFIPS: null,
+        lat: null,
+        lon: null,
+      };
+    }
 
-    // 2) Datasets
-    const [acs, cbp, rpp] = await Promise.all([
-      _spv2_getACS(geo.stateFIPS, geo.countyFIPS),
-      _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, service),
-      _spv2_getRPP(geo.stateFIPS),
-    ]);
+    // 2) Datasets (degrade individually)
+    let acs = null, cbp = null, rpp = null;
+    try {
+      if (geo.stateFIPS && geo.countyFIPS) {
+        acs = await _spv2_getACS(geo.stateFIPS, geo.countyFIPS);
+      }
+    } catch { /* degrade */ }
+    try {
+      if (geo.stateFIPS && geo.countyFIPS) {
+        cbp = await _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, service);
+      }
+    } catch { /* degrade */ }
+    try {
+      if (geo.stateFIPS) {
+        rpp = await _spv2_getRPP(geo.stateFIPS);
+      }
+    } catch { /* degrade */ }
 
-    // 3) Multipliers
+    // 3) Multipliers with safe fallbacks
     const locM = _spv2_locationMultiplier({
-      rppMult: rpp?.multiplier,
-      countyIncome: acs.county.medianIncome,
-      usIncome: acs.us.medianIncome,
+      rppMult: rpp?.multiplier ?? null,
+      countyIncome: acs?.county?.medianIncome ?? null,
+      usIncome: acs?.us?.medianIncome ?? null,
     });
+
     const compM = _spv2_competitionMultiplier({
-      countyEstab: cbp.county.establishments,
-      usEstab: cbp.us.establishments,
-      countyHH: acs.county.households,
-      usHH: acs.us.households,
+      countyEstab: cbp?.county?.establishments ?? 1,
+      usEstab: cbp?.us?.establishments ?? 1,
+      countyHH: acs?.county?.households ?? 10000,
+      usHH: acs?.us?.households ?? 10000,
     });
+
     const q = _spv2_computeQuestionnaire(service, details);
 
     // 4) Anchor → price (smart)
@@ -1620,11 +1672,11 @@ const estimateHandler = async (req, res) => {
     // 5) Dynamic Service/Dispatch Fee (min $100)
     const serviceFeeUSD = _spv2_dynamicServiceFee({ locM, compM, severity: q.severity });
 
-    res.json({
+    return res.json({
       ok: true,
       service,
-      priceUSD,                 // smart price for the work
-      serviceFeeUSD,            // dynamic service/dispatch fee (min $100)
+      priceUSD,
+      serviceFeeUSD,
       suggestedSubtotalUSD: priceUSD + serviceFeeUSD,
       address: geo.normalizedAddress,
       lat: geo.lat, lon: geo.lon,
@@ -1637,25 +1689,56 @@ const estimateHandler = async (req, res) => {
         rails: SPV2_CFG.rails[service] || SPV2_CFG.rails.default,
         roundTo: SPV2_CFG.roundTo,
         datasets: {
-          acs: {
+          acs: acs ? {
             county: acs.county.name,
             countyMedianHHIncome: acs.county.medianIncome,
             usMedianHHIncome: acs.us.medianIncome,
             countyHouseholds: acs.county.households,
             usHouseholds: acs.us.households
-          },
-          cbp: {
+          } : null,
+          cbp: cbp ? {
             naicsUsed: cbp.naics,
             countyEstablishments: cbp.county.establishments,
             usEstablishments: cbp.us.establishments
-          },
+          } : null,
           rpp: rpp ? { stateRppIndexAllItems: rpp.rppIndex, multiplier: rpp.multiplier } : null
         }
       }
     });
   } catch (err) {
-    console.error('[SmartPriceV2]', err);
-    res.status(500).json({ ok: false, error: err.message || String(err) });
+    console.error('[SmartPriceV2] Fatal:', err?.message || err);
+    // Return a 200 with a conservative fallback price so we never 503 the app
+    try {
+      const { service } = req.body || {};
+      const base = service && SPV2_SERVICE_ANCHORS[service] ? SPV2_SERVICE_ANCHORS[service] : 200;
+      const priceUSD = _spv2_finalize(service, base);
+      const serviceFeeUSD = 100; // conservative min
+      return res.json({
+        ok: true,
+        service,
+        priceUSD,
+        serviceFeeUSD,
+        suggestedSubtotalUSD: priceUSD + serviceFeeUSD,
+        fallback: true,
+        breakdown: {
+          note: "Degraded pricing fallback due to internal error",
+          anchorBase: base,
+          locationMultiplier: 1,
+          competitionMultiplier: 1,
+          questionnaire: { severity: 'moderate', multiplier: 1.25, addOns: 0 },
+        }
+      });
+    } catch {
+      // Absolute last resort: still avoid crashing the app
+      return res.status(200).json({
+        ok: true,
+        service: req.body?.service ?? "Unknown",
+        priceUSD: 200,
+        serviceFeeUSD: 100,
+        suggestedSubtotalUSD: 300,
+        fallback: true,
+      });
+    }
   }
 };
 
