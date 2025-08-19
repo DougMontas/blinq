@@ -63,22 +63,226 @@ export async function createJobPaymentIntent({
  * @desc    Generic Stripe PaymentIntent (testing)
  *******************************************************************************************/
 
-router.post("/stripe", async (req, res) => {
-  const { amount, currency = "usd" } = req.body;
+// routes/payments.js (or wherever your router lives)
+
+// IMPORTANT: This version must be compatible with your stripe-react-native SDK.
+// 2022-11-15 is safe for current SDKs.
+const STRIPE_EPH_API_VERSION = "2022-11-15";
+
+/**
+ * Helper: coerce an amount (dollars or cents) into integer cents.
+ * Accepts numbers like 502.9 -> 50290; if caller already passed cents (e.g., 50290), it still works.
+ */
+function toCents(amount) {
+  if (amount == null) return null;
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return null;
+
+  // If it's an integer and reasonably large, we assume it's already cents (e.g., >= 50 = $0.50).
+  if (Number.isInteger(n) && n >= 50) return n;
+
+  // Otherwise treat as dollars and convert to cents
+  return Math.round(n * 100);
+}
+
+/**
+ * OPTIONAL: fetch your job by id and return the amount (in cents) you want to charge.
+ * This prevents client-side tampering. Replace this stub with your DB lookup.
+ */
+async function resolveAmountCentsFromJob(jobId) {
+  if (!jobId) return null;
+  // TODO: Replace with your DB code:
+  // const job = await Job.findById(jobId).lean();
+  // if (!job) throw new Error("Job not found");
+  // return Math.round(Number(job.estimatedTotal) * 100);
+  return null; // keep null to fall back to body.amount for now
+}
+
+/**
+ * Create (or reuse) a Stripe customer for the current user.
+ * - You can wire this to req.user if you have auth, and persist customer.id in your DB.
+ */
+async function getOrCreateCustomer({ customerId, customerEmail, customerName }) {
+  if (customerId) {
+    // Optionally verify it exists; otherwise just return it.
+    return customerId;
+  }
+  const customer = await stripe.customers.create({
+    email: customerEmail || undefined,
+    name: customerName || undefined,
+    metadata: {
+      source: "blinqfix-app",
+    },
+  });
+  // TODO: persist `customer.id` to your user in DB so you can reuse it later
+  return customer.id;
+}
+
+/**
+ * Build everything the PaymentSheet needs.
+ * Supports Connect when `connectAccountId` is provided.
+ */
+async function buildPaymentSheetSession({
+  jobId,
+  amount,                 // dollars or cents
+  currency = "usd",
+  customerId,             // optional, if you already have one stored
+  customerEmail,          // optional (helps receipts and contact)
+  customerName,           // optional
+  connectAccountId,       // optional Stripe Connect account id (acct_xxx)
+  idempotencyKey,         // optional; recommended (e.g., "job:<id>")
+}) {
+  // 1) Determine amount (prefer server-calculated by jobId)
+  let amountCents = await resolveAmountCentsFromJob(jobId);
+  if (!amountCents) {
+    amountCents = toCents(amount);
+  }
+  if (!amountCents) {
+    const err = new Error("Invalid or missing amount");
+    err.status = 400;
+    throw err;
+  }
+
+  // 2) Ensure a customer exists
+  const custId = await getOrCreateCustomer({ customerId, customerEmail, customerName });
+
+  // 3) Ephemeral key for the mobile SDK (must pass apiVersion here)
+  const ephKey = await stripe.ephemeralKeys.create(
+    { customer: custId },
+    {
+      apiVersion: STRIPE_EPH_API_VERSION,
+      ...(connectAccountId ? { stripeAccount: connectAccountId } : {}),
+    }
+  );
+
+  // 4) PaymentIntent for the total amount
+  const piCreateArgs = {
+    amount: amountCents,
+    currency,
+    customer: custId,
+    // Let Stripe pick available payment methods in the user’s region
+    automatic_payment_methods: { enabled: true },
+    // Save the card for future off-session charges (e.g., add-ons)
+    setup_future_usage: "off_session",
+    receipt_email: customerEmail || undefined,
+    metadata: {
+      jobId: jobId || "",
+      source: "blinqfix-app",
+    },
+  };
+
+  const piOpts = { ...(idempotencyKey ? { idempotencyKey } : {}) };
+  const pi =
+    connectAccountId
+      ? await stripe.paymentIntents.create(piCreateArgs, {
+          ...piOpts,
+          stripeAccount: connectAccountId,
+        })
+      : await stripe.paymentIntents.create(piCreateArgs, piOpts);
+
+  return {
+    ok: true,
+    customer: custId,
+    ephemeralKey: ephKey.secret,
+    paymentIntentClientSecret: pi.client_secret,
+    stripeAccountId: connectAccountId || undefined,
+  };
+}
+
+/**
+ * NEW: PaymentSheet session endpoint (recommended)
+ * Your RN app should POST here with { jobId } OR { amount }, plus optional customer info.
+ */
+router.post("/payments/payment-sheet", async (req, res) => {
   try {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const {
+      jobId,
+      amount,           // dollars or cents
+      currency,
+      customerId,
+      customerEmail,
+      customerName,
+      connectAccountId, // for Connect (optional)
+    } = req.body || {};
+
+    const out = await buildPaymentSheetSession({
+      jobId,
       amount,
       currency,
+      customerId,
+      customerEmail,
+      customerName,
+      connectAccountId,
+      idempotencyKey: jobId ? `job:${jobId}:initial` : undefined,
     });
-    res.json(paymentIntent);
+
+    return res.json(out);
   } catch (err) {
-    console.error("Stripe error:", err);
-    res.status(500).json({
+    console.error("[/payments/payment-sheet] error:", err);
+    return res.status(err.status || 500).json({
+      ok: false,
       code: err.code || "stripe_error",
-      message: err.message,
+      message: err.message || "Stripe error",
     });
   }
 });
+
+/**
+ * LEGACY: Keep /stripe route working but return what PaymentSheet needs.
+ * If your app currently calls /payments/payment-sheet, you can remove this.
+ */
+router.post("/stripe", async (req, res) => {
+  try {
+    const {
+      jobId,
+      amount,
+      currency,
+      customerId,
+      customerEmail,
+      customerName,
+      connectAccountId,
+    } = req.body || {};
+
+    const out = await buildPaymentSheetSession({
+      jobId,
+      amount,
+      currency,
+      customerId,
+      customerEmail,
+      customerName,
+      connectAccountId,
+      idempotencyKey: jobId ? `job:${jobId}:legacy` : undefined,
+    });
+
+    return res.json(out);
+  } catch (err) {
+    console.error("[/stripe] error:", err);
+    return res.status(err.status || 500).json({
+      ok: false,
+      code: err.code || "stripe_error",
+      message: err.message || "Stripe error",
+    });
+  }
+});
+
+
+//working
+// router.post("/stripe", async (req, res) => {
+//   const { amount, currency = "usd" } = req.body;
+//   try {
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount,
+//       currency,
+//     });
+//     res.json(paymentIntent);
+//   } catch (err) {
+//     console.error("Stripe error:", err);
+//     res.status(500).json({
+//       code: err.code || "stripe_error",
+//       message: err.message,
+//     });
+//   }
+// });
 
 /********************************************************************************************
  * @route   POST /api/payments/payment-sheet
