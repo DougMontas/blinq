@@ -389,6 +389,7 @@ export default {
         process.env.EXPO_PUBLIC_API_URL || "https://blinqfix.onrender.com",
       EXPO_PUBLIC_GOOGLE_MAPS_API_KEY:
         process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+      EXPO_PUBLIC_SHOW_TEST_SERVICE: "1", // show it
     },
 
     runtimeVersion: { policy: "sdkVersion" },

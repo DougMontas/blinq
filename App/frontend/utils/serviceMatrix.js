@@ -1,5 +1,11 @@
 // utils/serviceMatrix.js
 const MATRIX = [
+  // {
+  //   Service: "Select Electrical Issues Below",
+  //   Question: `Test $1 Service": "Developer test checkout: fixed $1, no other fees.`,
+  //   Option: "Kitchen",
+  //   Adjustment: 0,
+  // },
   {
     Service: "Burst or Leaking Pipes",
     Question: "Where is the leak located?",
@@ -1607,6 +1613,7 @@ const BASE_PRICE = {
   "Gas Leaks": 500,
   "Appliance Failures": 275,
   "Drywall Repair": 200,
+  "Test $1 Service Developer test checkout: fixed $1, no other fees.": 1,
 };
 
 const RUSH_FEE = 100; // Global rush fee
@@ -1622,6 +1629,7 @@ export const getRushFee = () => RUSH_FEE;
 
 const SERVICE_TO_CATEGORY = {
   // Mappings
+  "Test $1 Service Developer test checkout: fixed $1, no other fees.": "Electrician",
   "Burst or Leaking Pipes": "Plumbing",
   "Sewer Backups or Clogged Drains": "Plumbing",
   "Water Heater Failure": "Plumbing",
