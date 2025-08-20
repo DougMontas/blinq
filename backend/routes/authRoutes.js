@@ -801,7 +801,7 @@ router.post("/register", async (req, res) => {
       }
       if (!billingTier || !BILLING.has(String(billingTier))) {
         return res.status(400).json({
-          msg: "billingTier must be one of 'profit_sharing', 'hybrid', or 'subscription'.",
+          msg: "billingTier must be one of 'profit_sharing' or 'Priority'.",
         });
       }
 
