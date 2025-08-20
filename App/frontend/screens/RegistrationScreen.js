@@ -1946,7 +1946,7 @@
 //   footerLink: { color: "#60a5fa", fontSize: 16, fontWeight: "bold" },
 // });
 
-
+ 
 
 // app/screens/RegistrationScreen.js
 import React, { useState, useEffect } from "react";
@@ -2521,7 +2521,7 @@ export default function RegistrationScreen() {
                   times, and progress updates.
                 </Text>
                 <Text style={styles.preferenceMeta}>
-                  Frequency: As needed per job. Reply STOP to unsubscribe at any
+                  Frequency: As needed per job and for the occasional promtion and or discounts we will offer. Reply STOP to unsubscribe at any
                   time. Reply HELP for help.
                 </Text>
               </View>

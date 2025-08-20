@@ -10,7 +10,7 @@
       "distribution": "store",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://blinqfix.onrender.com",
-        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51RWL9zEI6DlT9jKy5hI2wtjMPn445QOrr7xHmqaORiaawxVrYw3s1JtovLMOgbcANAqap2cQYRHMHs70KaMNOBi800CyPJLzlM",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_51RWL9zEI6DlT9jKy8M42TIsKqZyPpL9tnZEusETLW5BS0XprxoEZ3XuX9y2FQRxeq352MuijUPLmElhyu3edByAs007WF87NDE",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyB9kPNUThmUjr1g52phL9Yz69wdx6ny5Wo"
       },
       "android": {
@@ -31,7 +31,7 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://blinqfix.onrender.com",
-        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_test_51RWL9zEI6DlT9jKy5hI2wtjMPn445QOrr7xHmqaORiaawxVrYw3s1JtovLMOgbcANAqap2cQYRHMHs70KaMNOBi800CyPJLzlM",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_51RWL9zEI6DlT9jKy8M42TIsKqZyPpL9tnZEusETLW5BS0XprxoEZ3XuX9y2FQRxeq352MuijUPLmElhyu3edByAs007WF87NDE",
         "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyB9kPNUThmUjr1g52phL9Yz69wdx6ny5Wo"
       }
     }
