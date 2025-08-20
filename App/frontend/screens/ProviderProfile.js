@@ -6048,6 +6048,7 @@
 //   modalActionButtonText: { color: "#fff", fontWeight: "600" },
 // });
 
+//last working
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -6671,7 +6672,7 @@ export default function ProviderProfile() {
       </SafeAreaView>
 
       {/* ICA Modal */}
-      <Modal visible={modalVisible} transparent={true} animationType="fade">
+      {/* <Modal visible={modalVisible} transparent={true} animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
             <ScrollView contentContainerStyle={styles.modalScroll}>
@@ -6717,7 +6718,60 @@ export default function ProviderProfile() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
+      <Modal visible={modalVisible} transparent={true} animationType="fade">
+  <View style={styles.modalBackdrop}>
+    <View style={styles.modalContainer}>
+      <ScrollView contentContainerStyle={styles.modalScroll}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Independent Contractor Agreement</Text>
+          <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+            <X color="#94a3b8" size={24} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.modalAgreementText}>
+          {`INDEPENDENT CONTRACTOR AGREEMENT\n\nThis Independent Contractor Agreement (\"Agreement\") is made and entered into as of ${new Date().toISOString().split("T")[0]} by and between:\n\nBlinqFix\n(\"BlinqFix\" or \"Company\")\n\nand\n\n${profile.businessName || "[Contractor Name]"}\nAddress: ${profile.address || "[Contractor Address]"}\n(\"Contractor\").\n\n1. ENGAGEMENT OF SERVICES\n   1.1 Services. BlinqFix hereby engages Contractor, and Contractor agrees to provide the following services (\"Services\"):\n       (a) Emergency repair and maintenance services.\n       (b) Contractor shall perform the Services in a professional and workmanlike manner in accordance with industry standards.\n\n   1.2 Independent Contractor Status. Contractor is engaged as an independent contractor. Nothing in this Agreement shall be construed as creating an employer–employee relationship, a partnership, or a joint venture. Contractor is solely responsible for payment of all federal, state, and local taxes and for any benefits, insurance, or other expenses.\n\n2. TERM\n   This Agreement shall commence on the Effective Date and continue until terminated by either party as provided herein.\n\n3. COMPENSATION\n   3.1 Fees. In consideration for the performance of the Services, BlinqFix shall pay Contractor as follows:\n       (a) A fee per job/project, payable upon completion.\n       (b) Reimbursement for pre-approved expenses incurred in connection with the Services.\n\n   3.2 Invoices. Contractor shall submit invoices detailing the Services performed and expenses incurred. Payment shall be due within 30 days of receipt of each invoice.\n\n4. EQUIPMENT AND MATERIALS\n   Contractor shall supply all tools, equipment, and materials necessary to perform the Services unless otherwise agreed by the parties.\n\n5. CONFIDENTIALITY\n   Contractor agrees not to disclose or use any Confidential Information except as necessary for the performance of the Services.\n\n6. INTELLECTUAL PROPERTY\n   6.1 Work Product. Any work product created by Contractor in connection with the Services shall be the exclusive property of BlinqFix.\n   6.2 License. Contractor grants BlinqFix a non-exclusive, royalty-free, perpetual license to use any pre-existing intellectual property incorporated in the Work Product.\n\n7. TERMINATION\n   Either party may terminate this Agreement at any time by providing 14 days' written notice.\n\n8. INDEMNIFICATION\n   Contractor agrees to indemnify and hold harmless BlinqFix and its agents from any claims or liabilities arising from the Contractor’s services.\n\n9. LIMITATION OF LIABILITY\n   In no event shall either party be liable for any indirect or punitive damages arising under this Agreement.\n\n10. GOVERNING LAW\n    This Agreement shall be governed by the laws of the United States of America.\n\n11. ENTIRE AGREEMENT\n    This Agreement constitutes the entire agreement between the parties and supersedes all prior discussions.\n\nBy checking the box, you acknowledge you have read, understood, and agreed to the full terms provided.`}
+        </Text>
+
+        <View style={styles.modalCheckboxContainer}>
+          <Checkbox
+            style={styles.checkbox}
+            value={contractorAgreementChecked}
+            onValueChange={setContractorAgreementChecked}
+            color={contractorAgreementChecked ? "#22c55e" : "#fff"}
+          />
+          <Text style={styles.checkboxLabel}>I have read and agree to the terms.</Text>
+        </View>
+
+        <View style={styles.modalActions}>
+          <TouchableOpacity
+            style={styles.modalDownloadButton}
+            onPress={async () => {
+              const fileUri = FileSystem.documentDirectory + "Contractor_Agreement.txt";
+              await FileSystem.writeAsStringAsync(fileUri, agreementText);
+              await Sharing.shareAsync(fileUri);
+            }}
+          >
+            <Download color="#fff" size={18} />
+            <Text style={styles.modalActionButtonText}>Save or Print</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => {
+              setIcaViewed(true);
+              setModalVisible(false);
+            }}
+          >
+            <CheckCircle color="#fff" size={18} />
+            <Text style={styles.modalActionButtonText}>Acknowledge & Close</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
     </LinearGradient>
   );
 }

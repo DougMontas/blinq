@@ -2907,7 +2907,7 @@ export default function ProviderJobStatus() {
           hasSeenNotCompleteRef.current = true;
         }
 
-        // phone reveal after accept
+        // customer phone number reveal after accept
         if (data.acceptedProvider && !phoneTimer.current) {
           phoneTimer.current = setTimeout(() => setShowPhone(true), 6 * 60 * 1000);
         }

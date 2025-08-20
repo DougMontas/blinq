@@ -355,7 +355,7 @@
 //                 onChangeText={(val) => onChange("dob", val)}
 //                 placeholder="1980-12-31"
 //               />
-    
+
 //               <Text style={styles.label}>Last 4 of SSN</Text>
 //               <TextInput
 //                 style={styles.input}
@@ -646,7 +646,7 @@
 //         stripeDashboardUrl,
 //         subscriptionClientSecret,
 //       } = signupRes.data || {};
-      
+
 //       if (
 //         formData.role === "serviceProvider" &&
 //         formData.billingTier === "hybrid"
@@ -831,7 +831,7 @@
 //             {formData.role === "serviceProvider" && (
 //               <View style={styles.providerSection}>
 //                 <Text style={styles.sectionTitle}>Your Service Details</Text>
-                
+
 //                 <Text style={styles.label}>Primary Service</Text>
 //                 <View style={styles.chipsContainer}>
 //                   {SERVICES.map((svc) => (
@@ -866,7 +866,7 @@
 //                   ))}
 //                 </View>
 //                  <Text style={styles.planDescription}>
-//                     {formData.billingTier === 'hybrid' 
+//                     {formData.billingTier === 'hybrid'
 //                       ? 'Priority access to jobs and lower platform fees. A payment method is required for the monthly subscription.'
 //                       : 'Get started with no upfront cost. Standard platform fees apply to completed jobs.'}
 //                   </Text>
@@ -884,7 +884,6 @@
 //                 />
 //                 <Text style={styles.switchLabel}>I agree to receive SMS alerts for job updates</Text>
 //             </View>
-
 
 //             {/* Submit Button */}
 //             <TouchableOpacity
@@ -1129,7 +1128,6 @@
 //     fontSize: 16,
 //     fontWeight: "bold",
 //   },
-
 
 // });
 
@@ -1646,7 +1644,7 @@
 //             <View style={styles.prefsCard}>
 //               <Text style={styles.prefsHeadline}>Stay Connected with BlinqFix</Text>
 //               <Text style={styles.prefsIntro}>
-               
+
 //                 Message &amp; data rates may apply.
 //               </Text>
 
@@ -1946,14 +1944,13 @@
 //   footerLink: { color: "#60a5fa", fontSize: 16, fontWeight: "bold" },
 // });
 
- 
-
 // app/screens/RegistrationScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
+  Link,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -2220,7 +2217,10 @@ export default function RegistrationScreen() {
         formData.billingTier === "hybrid"
       ) {
         if (!subscriptionClientSecret) {
-          Alert.alert("Stripe Error", "Missing client secret for setup intent.");
+          Alert.alert(
+            "Stripe Error",
+            "Missing client secret for setup intent."
+          );
           setLoading(false);
           return;
         }
@@ -2247,7 +2247,8 @@ export default function RegistrationScreen() {
 
       if (!token) throw new Error("No token returned.");
       await AsyncStorage.setItem("token", token);
-      if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
+      if (refreshToken)
+        await AsyncStorage.setItem("refreshToken", refreshToken);
       await AsyncStorage.setItem("userName", formData.name);
 
       // Persist SMS prefs (now authenticated)
@@ -2262,7 +2263,10 @@ export default function RegistrationScreen() {
       registerPushTokenIfPossible();
 
       if (formData.role === "customer") {
-        Alert.alert("Success", "Welcome to BlinqFix! Please log in to continue.");
+        Alert.alert(
+          "Success",
+          "Welcome to BlinqFix! Please log in to continue."
+        );
         navigation.reset({ index: 0, routes: [{ name: "Login" }] });
       } else {
         if (stripeOnboardingUrl || stripeDashboardUrl) {
@@ -2328,7 +2332,11 @@ export default function RegistrationScreen() {
             <View style={styles.roleSelectionContainer}>
               {[
                 { role: "customer", label: "Book a Job", icon: UserCircle },
-                { role: "serviceProvider", label: "Earn with Blinqfix", icon: Briefcase },
+                {
+                  role: "serviceProvider",
+                  label: "Earn with Blinqfix",
+                  icon: Briefcase,
+                },
               ].map(({ role, label, icon: Icon }) => (
                 <TouchableOpacity
                   key={role}
@@ -2454,7 +2462,8 @@ export default function RegistrationScreen() {
                       <Text
                         style={[
                           styles.chipText,
-                          formData.serviceType === svc && styles.chipTextSelected,
+                          formData.serviceType === svc &&
+                            styles.chipTextSelected,
                         ]}
                       >
                         {svc}
@@ -2477,7 +2486,8 @@ export default function RegistrationScreen() {
                       <Text
                         style={[
                           styles.chipText,
-                          formData.billingTier === tier && styles.chipTextSelected,
+                          formData.billingTier === tier &&
+                            styles.chipTextSelected,
                         ]}
                       >
                         {tier === "hybrid"
@@ -2497,7 +2507,9 @@ export default function RegistrationScreen() {
 
             {/* ✅ SMS Preferences Card */}
             <View style={styles.prefsCard}>
-              <Text style={styles.prefsHeadline}>Stay Connected with BlinqFix</Text>
+              <Text style={styles.prefsHeadline}>
+                Stay Connected with BlinqFix
+              </Text>
               <Text style={styles.prefsIntro}>
                 Message &amp; data rates may apply.
               </Text>
@@ -2511,18 +2523,62 @@ export default function RegistrationScreen() {
                   <Switch
                     value={smsJobUpdates}
                     onValueChange={setSmsJobUpdates}
-                    trackColor={{ false: "rgba(255,255,255,0.2)", true: "#22c55e" }}
+                    trackColor={{
+                      false: "rgba(255,255,255,0.2)",
+                      true: "#22c55e",
+                    }}
                     thumbColor={Platform.OS === "android" ? "#fff" : undefined}
                   />
                 </View>
                 <Text style={styles.preferenceDesc}>
-                  I agree to receive SMS messages about job activity relevant to my
-                  account — including confirmations, scheduling changes, arrival
-                  times, and progress updates.
+                  I agree to receive SMS messages about job activity relevant to
+                  my account — including confirmations, scheduling changes,
+                  arrival times, and progress updates.
+                  
                 </Text>
+                <View
+                  style={{
+                    marginTop: 10,
+                    flexWrap: "wrap",
+                    flexDirection: "row",
+                  }}
+                >
+                  <Text style={styles.preferenceDesc}>
+                    I agree to receive SMS messages about special offers,
+                    promotions, platform updates, and new services from
+                    BlinqFix. I agree to the{" "}
+                    <Text
+                      onPress={() =>
+                        navigation.navigate("ProviderTermsAndAgreement")
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.preferenceDesc,
+                          { textDecorationLine: "underline", color: "#60a5fa" },
+                        ]}
+                      >
+                        Terms of Service
+                      </Text>{" "}
+                      {""}
+                      and{" "}
+                      <Text
+                        style={{
+                          textDecorationLine: "underline",
+                          color: "#60a5fa",
+                        }}
+                        onPress={() => navigation.navigate("PrivacyPolicy")}
+                      >
+                        Privacy Policy
+                      </Text>
+                      .
+                    </Text>
+                  </Text>
+                </View>
                 <Text style={styles.preferenceMeta}>
-                  Frequency: As needed per job and for the occasional promtion and or discounts we will offer. Reply STOP to unsubscribe at any
-                  time. Reply HELP for help.
+                  Frequency: As needed per job and for the occasional promtion
+                  and or discounts we will offer. Reply STOP to unsubscribe at
+                  any time. Reply HELP for help.
                 </Text>
               </View>
 
@@ -2535,14 +2591,28 @@ export default function RegistrationScreen() {
                   <Switch
                     value={smsMarketing}
                     onValueChange={setSmsMarketing}
-                    trackColor={{ false: "rgba(255,255,255,0.2)", true: "#22c55e" }}
+                    trackColor={{
+                      false: "rgba(255,255,255,0.2)",
+                      true: "#22c55e",
+                    }}
                     thumbColor={Platform.OS === "android" ? "#fff" : undefined}
                   />
                 </View>
-                <Text style={styles.preferenceDesc}>
-                  I agree to receive SMS messages about special offers, promotions,
-                  platform updates, and new services from BlinqFix.
-                </Text>
+                <View
+                  style={{
+                    marginTop: 10,
+                    flexWrap: "wrap",
+                    flexDirection: "row",
+                  }}
+                >
+                  <Text style={styles.preferenceDesc}>
+                    I agree to receive SMS messages about special offers,
+                    promotions, platform updates, and new services from
+                    BlinqFix. 
+                      
+                    
+                  </Text>
+                </View>
                 <Text style={styles.preferenceMeta}>
                   Reply STOP to unsubscribe at any time. Reply HELP for help.
                 </Text>
@@ -2551,7 +2621,10 @@ export default function RegistrationScreen() {
               <TouchableOpacity
                 onPress={handleSaveSmsPreferences}
                 disabled={savingSmsPrefs}
-                style={[styles.savePrefsButton, savingSmsPrefs && { opacity: 0.8 }]}
+                style={[
+                  styles.savePrefsButton,
+                  savingSmsPrefs && { opacity: 0.8 },
+                ]}
               >
                 <LinearGradient
                   colors={["#22c55e", "#16a34a"]}
@@ -2560,16 +2633,19 @@ export default function RegistrationScreen() {
                   {savingSmsPrefs ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.savePrefsButtonText}>Save My Preferences</Text>
+                    <Text style={styles.savePrefsButtonText}>
+                      Save My Preferences
+                    </Text>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
 
               <Text style={styles.prefsSmallPrint}>
                 By tapping “Save My Preferences,” you consent to receive the
-                selected types of automated SMS messages from BlinqFix at the phone
-                number provided. Your consent is not a condition of purchase. You
-                can opt out of each type separately by replying STOP.
+                selected types of automated SMS messages from BlinqFix at the
+                phone number provided. Your consent is not a condition of
+                purchase. You can opt out of each type separately by replying
+                STOP.
               </Text>
             </View>
 
@@ -2580,7 +2656,9 @@ export default function RegistrationScreen() {
               disabled={loading}
             >
               <LinearGradient
-                colors={loading ? ["#4ade80", "#3b82f6"] : ["#22c55e", "#16a34a"]}
+                colors={
+                  loading ? ["#4ade80", "#3b82f6"] : ["#22c55e", "#16a34a"]
+                }
                 style={styles.submitButtonGradient}
               >
                 {loading ? (
@@ -2641,7 +2719,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(34, 197, 94, 0.3)",
   },
-  headerBadgeText: { color: "#22c55e", marginLeft: 6, fontSize: 12, fontWeight: "500" },
+  headerBadgeText: {
+    color: "#22c55e",
+    marginLeft: 6,
+    fontSize: 12,
+    fontWeight: "500",
+  },
 
   roleSelectionContainer: {
     flexDirection: "row",
@@ -2659,7 +2742,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  roleCardSelected: { backgroundColor: "rgba(96, 165, 250, 0.2)", borderColor: "#60a5fa" },
+  roleCardSelected: {
+    backgroundColor: "rgba(96, 165, 250, 0.2)",
+    borderColor: "#60a5fa",
+  },
   roleText: { fontSize: 16, color: "#e0e7ff", fontWeight: "600" },
   roleTextSelected: { color: "#fff" },
 
@@ -2685,9 +2771,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
   },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#fff", marginBottom: 16 },
-  label: { fontSize: 16, fontWeight: "600", color: "#e0e7ff", marginBottom: 12 },
-  chipsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#e0e7ff",
+    marginBottom: 12,
+  },
+  chipsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
+  },
   chip: {
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -2747,7 +2848,12 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   preferenceDesc: { color: "#e0e7ff", fontSize: 14, lineHeight: 20 },
-  preferenceMeta: { color: "#c7d2fe", fontSize: 12, marginTop: 6, lineHeight: 18 },
+  preferenceMeta: {
+    color: "#c7d2fe",
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 18,
+  },
   savePrefsButton: {
     borderRadius: 12,
     overflow: "hidden",
@@ -2758,7 +2864,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  savePrefsGradient: { paddingVertical: 14, alignItems: "center", justifyContent: "center" },
+  savePrefsGradient: {
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   savePrefsButtonText: { color: "#fff", fontSize: 16, fontWeight: "800" },
   prefsSmallPrint: {
     color: "#94a3b8",

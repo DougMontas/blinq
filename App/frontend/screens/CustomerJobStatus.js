@@ -8780,7 +8780,7 @@ export default function CustomerJobStatus() {
                 <View style={styles.mapHud}>
                   <View style={styles.mapBadge}>
                     <Text style={styles.mapBadgeText}>
-                      {providerCoords ? `${formatDistance(liveDistance)} away` : "Waiting for location..."}
+                      {providerCoords ? `${formatDistance(liveDistance)} away` : ""}
                       {lastProviderUpdate ? ` • ${secondsAgo(lastProviderUpdate)}` : ""}
                     </Text>
                   </View>
