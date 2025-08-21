@@ -1819,6 +1819,8 @@ import HomeCustomer from "./screens/HomeCustomer";
 import HomeServicePro from "./screens/HomeServicePro";
 import LandingPage from "./screens/LandingPage";
 import TestMapScreen from "./screens/TestMapScreen";
+import "./i18n";
+// import { I18nextProvider } from 'react-i18next';
 
 // ✅ shared AuthProvider + navigationRef
 import AuthProvider, { useAuth, navigationRef } from "./context/AuthProvider";
@@ -2115,6 +2117,7 @@ export default function App() {
   console.log("🚀 Initial route:", initialRoute, "bootRole:", bootRole);
 
   return (
+    // <I18nextProvider>
     <StripeProvider
       publishableKey={stripeKey}
       urlScheme="blinqfix"
@@ -2220,5 +2223,6 @@ export default function App() {
         </AuthProvider>
       </SafeAreaProvider>
     </StripeProvider>
+    // </I18nextProvider>
   );
 }

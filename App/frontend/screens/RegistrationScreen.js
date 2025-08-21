@@ -2578,7 +2578,7 @@ export default function RegistrationScreen() {
                 <Text style={styles.preferenceMeta}>
                   Frequency: As needed per job and for the occasional promtion
                   and or discounts we will offer. Reply STOP to unsubscribe at
-                  any time. Reply HELP for help.
+                  any time. Msg & data rates may apply. Reply HELP for help.
                 </Text>
               </View>
 
