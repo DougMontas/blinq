@@ -65,7 +65,9 @@ export default function SecurityCodeCard({ jobId, role = "customer" }) {
     }
     try {
       setConfirming(true);
-      const { data } = await api.post(`/jobs/${jobId}/security-code/confirm`, { code: input });
+      const { data } = await api.post(`/jobs/${jobId}/security-code/confirm`, {
+        code: input,
+      });
       if (data?.ok) {
         setConfirmedAt(data.confirmedAt);
         Alert.alert("Confirmed", "Arrival confirmed.");
@@ -73,7 +75,10 @@ export default function SecurityCodeCard({ jobId, role = "customer" }) {
         Alert.alert("Error", data?.error || "Invalid code.");
       }
     } catch (err) {
-      Alert.alert("Error", err?.response?.data?.error || "Confirmation failed.");
+      Alert.alert(
+        "Error",
+        err?.response?.data?.error || "Confirmation failed."
+      );
     } finally {
       setConfirming(false);
     }
@@ -83,11 +88,11 @@ export default function SecurityCodeCard({ jobId, role = "customer" }) {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Security Code</Text>
-        {confirmedAt ? (
-          <Text style={[styles.status, { color: "#22c55e" }]}>Confirmed</Text>
+        {/* {confirmedAt ? (
+        //   <Text style={[styles.status, { color: "#22c55e" }]}>Confirmed</Text>
         ) : (
-          <Text style={[styles.status, { color: "#eab308" }]}>Not Confirmed</Text>
-        )}
+        //   <Text style={[styles.status, { color: "#eab308" }]}>Not Confirmed</Text>
+        )} */}
       </View>
 
       {loading ? (
@@ -98,15 +103,20 @@ export default function SecurityCodeCard({ jobId, role = "customer" }) {
         <>
           <View style={styles.codeRow}>
             <Text style={styles.codeBubble}>{revealed ? code : "••••••"}</Text>
-            <TouchableOpacity style={styles.ghostBtn} onPress={() => setRevealed((s) => !s)}>
-              <Text style={styles.ghostBtnText}>{revealed ? "Hide" : "Show"}</Text>
+            <TouchableOpacity
+              style={styles.ghostBtn}
+              onPress={() => setRevealed((s) => !s)}
+            >
+              <Text style={styles.ghostBtnText}>
+                {revealed ? "Hide" : "Show"}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.ghostBtn} onPress={copyCode}>
+            {/* <TouchableOpacity style={styles.ghostBtn} onPress={copyCode}>
               <Text style={styles.ghostBtnText}>Copy</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
-          {role === "provider" && !confirmedAt && (
+          {/* {role === "provider" && !confirmedAt && (
             <View style={styles.confirmRow}>
               <TextInput
                 value={input}
@@ -121,7 +131,7 @@ export default function SecurityCodeCard({ jobId, role = "customer" }) {
                 <Text style={styles.primaryBtnText}>{confirming ? "Confirming…" : "Confirm Arrival"}</Text>
               </TouchableOpacity>
             </View>
-          )}
+          )} */}
 
           {confirmedAt && (
             <Text style={styles.metaText}>
@@ -142,12 +152,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 12,
+    marginBottom: 14
   },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  title: { color: "#e5e7eb", fontWeight: "700", fontSize: 16 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    color: "#e5e7eb",
+    fontWeight: "700",
+    fontSize: 16,
+    marginHorizontal: "25%",
+  },
   status: { fontWeight: "700" },
   errorText: { color: "#ef4444", marginTop: 12 },
-  codeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
+  codeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 12,
+    marginRight: 2,
+    // width:'100vw',
+  },
   codeBubble: {
     color: "#e5e7eb",
     backgroundColor: "#111827",
@@ -159,8 +186,16 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     fontSize: 20,
     fontWeight: "800",
+    marginHorizontal: "25%",
+    
   },
-  confirmRow: { flexDirection: "row", gap: 8, marginTop: 12, alignItems: "center" },
+  confirmRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    // alignItems: "center",
+    // width:'100%',
+  },
   input: {
     flex: 1,
     backgroundColor: "#0b1220",
@@ -168,7 +203,7 @@ const styles = StyleSheet.create({
     borderColor: "#374151",
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 12,
+    // paddingHorizontal: 12,
     paddingVertical: 10,
   },
   primaryBtn: {
@@ -179,12 +214,14 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { color: "#fff", fontWeight: "800" },
   ghostBtn: {
-    borderColor: "#374151",
+    borderColor: "white",
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    marginLeft: -80,
+    // gap: 2,
   },
-  ghostBtnText: { color: "#e5e7eb", fontWeight: "700" },
-  metaText: { color: "#9ca3af", fontSize: 12, marginTop: 8 },
+  ghostBtnText: { color: "#e5e7eb", fontWeight: "700", marginRight: 2, },
+  metaText: { color: "#9ca3af", fontSize: 12, marginTop: 8, marginRight: 18 },
 });

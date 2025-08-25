@@ -8661,11 +8661,11 @@ export default function CustomerJobStatus() {
             </View>
           )}
 
+          <SecurityCodeCard jobId={jobId} role="customer" />
           {/* Provider Info */}
           {providerInfo && (
             <View style={styles.providerCard}>
               <Text style={styles.cardTitle}>Your Service Pro</Text>
-              <SecurityCodeCard jobId={jobId} role="customer" />
               <View style={styles.providerInfo}>
                 {providerInfo.profilePictureUrl ? (
                   <Image
