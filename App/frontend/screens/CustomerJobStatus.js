@@ -7733,6 +7733,7 @@ import {
   Shield,
   Crosshair,
 } from "lucide-react-native";
+import SecurityCodeCard from "../components/SecurityCodeCard";
 
 const NOTIF_SOUND = require("../assets/notification.mp3");
 
@@ -8638,7 +8639,7 @@ export default function CustomerJobStatus() {
                   <Text style={styles.alertTitle}>Service Pro Located!</Text>
                 </View>
                 <Text style={styles.alertText}>
-                  Your BlinqFix professional is en route. We’ll notify you again upon arrival.
+                  Your BlinqFix professional is in route. We’ll notify you again upon arrival.
                 </Text>
               </LinearGradient>
             </View>
@@ -8664,6 +8665,7 @@ export default function CustomerJobStatus() {
           {providerInfo && (
             <View style={styles.providerCard}>
               <Text style={styles.cardTitle}>Your Service Pro</Text>
+              <SecurityCodeCard jobId={jobId} role="customer" />
               <View style={styles.providerInfo}>
                 {providerInfo.profilePictureUrl ? (
                   <Image

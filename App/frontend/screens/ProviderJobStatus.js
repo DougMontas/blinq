@@ -2756,6 +2756,7 @@ import {
 import JobDetails from "../components/JobDetails";
 import api from "../api/client";
 import { saveSession, clearSession } from "../utils/sessionManager";
+import SecurityCodeCard from "../components/SecurityCodeCard";
 
 const TRAVEL_FEE = 100;
 const NOTIF_SOUND = require("../assets/notification.mp3");
@@ -3138,6 +3139,7 @@ export default function ProviderJobStatus() {
                   <Text style={styles.headerBadgeText}>Live Job Status</Text>
                 </View>
                 <Text style={styles.title}>Job Workflow</Text>
+                <SecurityCodeCard jobId={jobId} role="provider" />
               </View>
               <View style={{ width: 44 }} />
             </View>
