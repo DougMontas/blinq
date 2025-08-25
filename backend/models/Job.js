@@ -76,6 +76,27 @@ const jobSchema = new Schema(
     estimatedTotal: { type: Number, default: 0 },
     serviceCost: { type: Number, default: 0 },
 
+    securityCode: {
+      type: String,
+      required: true,
+      default: () => String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0"),
+    },
+    securityCodeConfirmedAt: { type: Date, default: null },
+    securityCodeConfirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Users", default: null },
+
+    // Optional: keep/append to your existing auditLog array
+    auditLog: {
+      type: [
+        {
+          type: { type: String },
+          at: Date,
+          by: { type: mongoose.Schema.Types.ObjectId, ref: "Users" },
+          meta: mongoose.Schema.Types.Mixed,
+        },
+      ],
+      default: [],
+    },
+
     paymentStatus: {
       type: String,
       enum: [

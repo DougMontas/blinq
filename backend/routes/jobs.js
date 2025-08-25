@@ -1116,4 +1116,108 @@ router.get("/:jobId([0-9a-fA-F]{24})", auth, async (req, res) => {
   }
 });
 
+
+// Helper: only job's customer or acceptedProvider are allowed to view code
+function isJobParticipant(job, userId) {
+  const uid = String(userId);
+  const isCustomer = job.customer && String(job.customer) === uid;
+  const isAcceptedProvider = job.acceptedProvider && String(job.acceptedProvider) === uid;
+  return isCustomer || isAcceptedProvider;
+}
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/jobs/:jobId/security-code  (customer or accepted provider)
+router.get("/:jobId/security-code", auth, async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.jobId).lean();
+    if (!job) return res.status(404).json({ ok: false, error: "Job not found" });
+
+    if (!isJobParticipant(job, req.user._id)) {
+      return res.status(403).json({ ok: false, error: "Not authorized to view security code" });
+    }
+
+    // Backfill if somehow missing (legacy jobs)
+    let { securityCode, securityCodeConfirmedAt, securityCodeConfirmedBy } = job;
+    if (!securityCode) {
+      const updated = await Job.findByIdAndUpdate(
+        req.params.jobId,
+        { securityCode: String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0") },
+        { new: true }
+      ).lean();
+      securityCode = updated.securityCode;
+      securityCodeConfirmedAt = updated.securityCodeConfirmedAt;
+      securityCodeConfirmedBy = updated.securityCodeConfirmedBy;
+    }
+
+    return res.json({
+      ok: true,
+      jobId: job._id,
+      securityCode,
+      confirmedAt: securityCodeConfirmedAt || null,
+      confirmedBy: securityCodeConfirmedBy || null,
+    });
+  } catch (err) {
+    console.error("[SecurityCode GET]", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// POST /api/jobs/:jobId/security-code/confirm   { code: "123456" }
+// Only the acceptedProvider can confirm arrival with the code
+router.post("/:jobId/security-code/confirm", auth, async (req, res) => {
+  try {
+    const { code } = req.body || {};
+    const job = await Job.findById(req.params.jobId);
+    if (!job) return res.status(404).json({ ok: false, error: "Job not found" });
+
+    const isAcceptedProvider =
+      job.acceptedProvider && String(job.acceptedProvider) === String(req.user._id);
+    if (!isAcceptedProvider) {
+      return res.status(403).json({ ok: false, error: "Only accepted provider may confirm" });
+    }
+
+    if (job.securityCodeConfirmedAt) {
+      return res.json({
+        ok: true,
+        alreadyConfirmed: true,
+        confirmedAt: job.securityCodeConfirmedAt,
+        confirmedBy: job.securityCodeConfirmedBy,
+      });
+    }
+
+    if (!code || String(code) !== String(job.securityCode)) {
+      return res.status(400).json({ ok: false, error: "Invalid security code" });
+    }
+
+    job.securityCodeConfirmedAt = new Date();
+    job.securityCodeConfirmedBy = req.user._id;
+
+    job.auditLog = job.auditLog || [];
+    job.auditLog.push({
+      type: "SECURITY_CODE_CONFIRMED",
+      at: new Date(),
+      by: req.user._id,
+    });
+
+    // Optional: auto-mark as arrived
+    if (job.status !== "arrived") job.status = "arrived";
+
+    await job.save();
+
+    // Optional: if you use Socket.IO rooms per job, emit an update
+    if (req.io) { req.io.to(`job_${job._id}`).emit("jobUpdated", job.toObject()); }
+
+    return res.json({
+      ok: true,
+      confirmedAt: job.securityCodeConfirmedAt,
+      confirmedBy: job.securityCodeConfirmedBy,
+    });
+  } catch (err) {
+    console.error("[SecurityCode CONFIRM]", err);
+    return res.status(500).json({ ok: false, error: "Server error" });
+  }
+});
+
+
 export default router;
