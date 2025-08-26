@@ -661,21 +661,18 @@
 
 
 import express from "express";
-import mongoose, { Types } from "mongoose";
+const router = express.Router();
 import { auth } from "../middlewares/auth.js";
 
 import Users from "../models/Users.js";
 import Job from "../models/Job.js";
 import Configuration from "../models/Configuration.js";
+import mongoose, { Types } from "mongoose";
 import sendEmail from "../utils/sendEmail.js";
-
-const router = express.Router();
 
 const FEE_RATE = parseFloat(process.env.CONVENIENCE_FEE_RATE) || 0.07;
 
-// -----------------------------------------------------------------------------
-// Middleware
-// -----------------------------------------------------------------------------
+// Middleware to check admin role
 const checkAdmin = (req, res, next) => {
   if (!req.user || (req.user.role !== "admin" && req.user.role !== "superadmin")) {
     return res.status(403).json({ msg: "Access denied" });
@@ -687,84 +684,43 @@ const checkAdmin = (req, res, next) => {
 function toDataUrl(binOrBuf, mime = "image/jpeg") {
   if (!binOrBuf) return null;
   const buf = binOrBuf?.buffer
-    ? Buffer.from(binOrBuf.buffer) // Mongo Binary
+    ? Buffer.from(binOrBuf.buffer)
     : Buffer.isBuffer(binOrBuf)
     ? binOrBuf
-    : Buffer.from(binOrBuf); // fallback
+    : Buffer.from(binOrBuf);
   return `data:${mime};base64,${buf.toString("base64")}`;
 }
 
 function escapeRegex(str = "") {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return str.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
 }
 
-// pick nested property by dot path(s)
-const pick = (obj, paths = []) => {
-  for (const p of paths) {
-    const parts = p.split(".");
-    let cur = obj;
-    for (const part of parts) {
-      if (!cur) break;
-      cur = cur[part];
-    }
-    if (cur !== undefined && cur !== null && cur !== "") return cur;
-  }
-  return undefined;
-};
-
-// normalize a user doc field into a standard document descriptor
-const normalizeDoc = (user, key, label, candidates) => {
-  const raw = pick(user, candidates);
-  if (!raw) return null;
-  let doc = { type: label, filename: "file", url: null, uploadedAt: null, _raw: raw, _key: key };
-
-  if (typeof raw === "string") {
-    if (raw.startsWith("http") || raw.startsWith("data:")) {
-      doc.url = raw;
-    } else if (/^[A-Fa-f0-9]{24}$/.test(raw)) {
-      doc.url = `/admin/provider/${user._id}/documents/${key}/download?id=${raw}`;
-    } else {
-      // attempt base64 fallback
-      doc.url = `/admin/provider/${user._id}/documents/${key}/download`;
-    }
-  } else if (typeof raw === "object") {
-    if (raw.url) {
-      doc.url = raw.url;
-      if (raw.filename) doc.filename = raw.filename;
-      if (raw.uploadedAt) doc.uploadedAt = raw.uploadedAt;
-    } else if (raw.buffer || raw.data) {
-      doc.url = `/admin/provider/${user._id}/documents/${key}/download`;
-      if (raw.filename) doc.filename = raw.filename;
-      if (raw.uploadedAt) doc.uploadedAt = raw.uploadedAt;
-    } else if (raw._id && /^[A-Fa-f0-9]{24}$/.test(String(raw._id))) {
-      doc.url = `/admin/provider/${user._id}/documents/${key}/download?id=${raw._id}`;
-      if (raw.filename) doc.filename = raw.filename;
-      if (raw.uploadedAt) doc.uploadedAt = raw.uploadedAt;
-    }
-  }
-  return doc.url ? doc : null;
-};
-
-const collectProviderDocs = (user) => {
-  const defs = [
-    { key: "id", label: "Government ID", candidates: ["idDocument", "governmentId", "documents.id", "kyc.id", "id"] },
-    { key: "w9", label: "W‑9", candidates: ["w9", "documents.w9", "tax.w9", "tax.w9.url"] },
-    { key: "license", label: "Business License", candidates: ["businessLicense", "documents.businessLicense", "license", "license.url"] },
-    { key: "insurance", label: "Insurance", candidates: ["proofOfInsurance", "documents.insurance", "insurance", "insurance.url"] },
-    { key: "background", label: "Background Check", candidates: ["backgroundCheck", "documents.backgroundCheck", "background", "background.url"] },
-    { key: "ica", label: "Independent Contractor Agreement", candidates: ["independentContractorAgreement", "documents.independentContractorAgreement", "ica", "ica.url"] },
-  ];
+// helper to collect provider documents
+function collectProviderDocs(user) {
   const docs = [];
-  for (const d of defs) {
-    const n = normalizeDoc(user, d.key, d.label, d.candidates);
-    if (n) docs.push(n);
+  const map = [
+    { key: "id", label: "Government ID", value: user.idDocument || user.governmentId },
+    { key: "w9", label: "W-9", value: user.w9 },
+    { key: "license", label: "Business License", value: user.businessLicense },
+    { key: "insurance", label: "Insurance", value: user.proofOfInsurance },
+    { key: "background", label: "Background Check", value: user.backgroundCheck },
+    { key: "ica", label: "Independent Contractor Agreement", value: user.independentContractorAgreement },
+  ];
+  for (const d of map) {
+    if (d.value) {
+      let url = null;
+      if (typeof d.value === "string" && d.value.startsWith("http")) {
+        url = d.value;
+      } else {
+        url = `/admin/provider/${user._id}/documents/${d.key}/download`;
+      }
+      docs.push({ type: d.label, filename: d.key, url });
+    }
   }
   return docs;
-};
+}
 
-// -----------------------------------------------------------------------------
-// USERS LIST
-// -----------------------------------------------------------------------------
+// ------- USERS LIST -------
 router.get("/users", auth, async (req, res) => {
   try {
     const providers = await Users.find(
@@ -778,10 +734,8 @@ router.get("/users", auth, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// STATS (secure with auth so only logged-in admins can fetch)
-// -----------------------------------------------------------------------------
-router.get("/admin/stats", auth, checkAdmin, async (req, res) => {
+// ------- STATS -------
+router.get("/admin/stats", async (req, res) => {
   try {
     const [customerCount, providerCount] = await Promise.all([
       Users.countDocuments({ role: "customer" }),
@@ -794,10 +748,8 @@ router.get("/admin/stats", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// FEES
-// -----------------------------------------------------------------------------
-router.get("/convenience-fees", auth, checkAdmin, async (req, res) => {
+// ------- FEES -------
+router.get("/convenience-fees", auth, async (req, res) => {
   try {
     const PRO_SHARE_RATE = 0.07;
     const CUSTOMER_FEE_RATE = 0.07;
@@ -826,13 +778,27 @@ router.get("/convenience-fees", auth, checkAdmin, async (req, res) => {
         },
       },
       { $addFields: { totalBilled: { $add: ["$baseTotal", "$extra"] } } },
-      { $addFields: { convenienceFee: { $round: [{ $multiply: ["$totalBilled", TOTAL_FEE_RATE] }, 2] } } },
-      { $group: { _id: { month: "$month", year: "$year" }, totalConvenienceFee: { $sum: "$convenienceFee" } } },
+      {
+        $addFields: {
+          convenienceFee: {
+            $round: [{ $multiply: ["$totalBilled", TOTAL_FEE_RATE] }, 2],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { month: "$month", year: "$year" },
+          totalConvenienceFee: { $sum: "$convenienceFee" },
+        },
+      },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ];
 
     const monthlyFees = await Job.aggregate(pipeline);
-    const ytdTotal = monthlyFees.reduce((sum, f) => sum + (f.totalConvenienceFee || 0), 0);
+    const ytdTotal = monthlyFees.reduce(
+      (sum, f) => sum + (f.totalConvenienceFee || 0),
+      0
+    );
 
     res.json({ monthlyFees, ytdTotal });
   } catch (err) {
@@ -841,13 +807,15 @@ router.get("/convenience-fees", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// CANCEL STALE JOBS
-// -----------------------------------------------------------------------------
-router.put("/jobs/cancel-stale", auth, checkAdmin, async (req, res) => {
+// ------- CANCEL STALE JOBS -------
+router.put("/jobs/cancel-stale", auth, async (req, res) => {
   try {
     const result = await Job.updateMany(
-      { status: { $in: ["pending", "cancelled-by-customer", "cancelled-by-serviceProvider"] } },
+      {
+        status: {
+          $in: ["pending", "cancelled-by-customer", "cancelled-by-serviceProvider"],
+        },
+      },
       { $set: { status: "cancelled-auto" } }
     );
     res.json({ message: `Cancelled ${result.modifiedCount} stale jobs.` });
@@ -857,10 +825,8 @@ router.put("/jobs/cancel-stale", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// CONFIG GET/PUT
-// -----------------------------------------------------------------------------
-router.get("/configuration", auth, checkAdmin, async (req, res) => {
+// ------- CONFIG GET/PUT -------
+router.get("/configuration", auth, async (req, res) => {
   try {
     const cfg = await Configuration.findOne().lean();
     res.json({ hardcodedEnabled: cfg?.hardcodedEnabled ?? false });
@@ -887,13 +853,21 @@ router.put("/configuration", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// JOBS LIST
-// -----------------------------------------------------------------------------
-router.get("/jobs", auth, checkAdmin, async (req, res) => {
+// ------- JOBS LIST -------
+router.get("/jobs", auth, async (req, res) => {
   try {
-    const jobs = await Job.find({}).select("status createdAt serviceType").limit(1000).lean();
-    const safeJobs = jobs.map((job) => ({ _id: job._id, status: job.status, createdAt: job.createdAt, serviceType: job.serviceType }));
+    const jobs = await Job.find({})
+      .select("status createdAt serviceType")
+      .limit(1000)
+      .lean();
+
+    const safeJobs = jobs.map((job) => ({
+      _id: job._id,
+      status: job.status,
+      createdAt: job.createdAt,
+      serviceType: job.serviceType,
+    }));
+
     return res.json({ jobs: safeJobs });
   } catch (err) {
     console.error("❌ GET /admin/jobs error:", err);
@@ -901,10 +875,8 @@ router.get("/jobs", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// COMPLETE PROVIDERS
-// -----------------------------------------------------------------------------
-router.get("/complete-providers", auth, checkAdmin, async (req, res) => {
+// ------- COMPLETE PROVIDERS -------
+router.get("/complete-providers", auth, async (req, res) => {
   try {
     const providers = await Users.find({
       role: "serviceProvider",
@@ -922,12 +894,14 @@ router.get("/complete-providers", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// ACTIVATE ONE PROVIDER
-// -----------------------------------------------------------------------------
-router.put("/provider/:id/activate", auth, checkAdmin, async (req, res) => {
+// ------- ACTIVATE ONE PROVIDER -------
+router.put("/provider/:id/activate", auth, async (req, res) => {
   try {
-    const user = await Users.findByIdAndUpdate(req.params.id, { isActive: true }, { new: true });
+    const user = await Users.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true },
+      { new: true }
+    );
     if (!user) return res.status(404).json({ msg: "User not found." });
     res.json({ msg: "User activated", user });
   } catch (err) {
@@ -936,9 +910,7 @@ router.put("/provider/:id/activate", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// TOGGLE ACTIVE
-// -----------------------------------------------------------------------------
+// ------- TOGGLE ACTIVE -------
 router.put("/provider/:providerId/active", auth, checkAdmin, async (req, res) => {
   try {
     const { providerId } = req.params;
@@ -960,9 +932,7 @@ router.put("/provider/:providerId/active", auth, checkAdmin, async (req, res) =>
   }
 });
 
-// -----------------------------------------------------------------------------
-// UPDATE ZIP CODES
-// -----------------------------------------------------------------------------
+// ------- UPDATE ZIP CODES -------
 router.put("/provider/:providerId/zipcodes", auth, checkAdmin, async (req, res) => {
   try {
     const { providerId } = req.params;
@@ -987,9 +957,7 @@ router.put("/provider/:providerId/zipcodes", auth, checkAdmin, async (req, res) 
   }
 });
 
-// -----------------------------------------------------------------------------
-// JOB MEDIA (JSON with data URLs)
-// -----------------------------------------------------------------------------
+// ------- JOB MEDIA -------
 router.get("/job-media", auth, checkAdmin, async (req, res) => {
   try {
     const { jobId, address } = req.query;
@@ -1009,7 +977,9 @@ router.get("/job-media", auth, checkAdmin, async (req, res) => {
     }
 
     const jobs = await Job.find(query)
-      .select("_id address arrivalImage arrivalImageMime completionImage completionImageMime progressImages createdAt")
+      .select(
+        "_id address arrivalImage arrivalImageMime completionImage completionImageMime progressImages createdAt"
+      )
       .limit(20)
       .lean();
 
@@ -1017,18 +987,36 @@ router.get("/job-media", auth, checkAdmin, async (req, res) => {
       const images = [];
 
       if (j.arrivalImage) {
-        images.push({ kind: "arrival", at: j.createdAt, src: toDataUrl(j.arrivalImage, j.arrivalImageMime || "image/jpeg") });
+        images.push({
+          kind: "arrival",
+          at: j.createdAt,
+          src: toDataUrl(j.arrivalImage, j.arrivalImageMime || "image/jpeg"),
+        });
       }
       if (j.completionImage) {
-        images.push({ kind: "completion", at: j.createdAt, src: toDataUrl(j.completionImage, j.completionImageMime || "image/jpeg") });
+        images.push({
+          kind: "completion",
+          at: j.createdAt,
+          src: toDataUrl(j.completionImage, j.completionImageMime || "image/jpeg"),
+        });
       }
       if (Array.isArray(j.progressImages)) {
         for (const p of j.progressImages) {
-          images.push({ kind: "progress", id: String(p._id || ""), at: p.createdAt || j.createdAt, src: toDataUrl(p.data, p.mimeType || "image/jpeg") });
+          images.push({
+            kind: "progress",
+            id: String(p._id || ""),
+            at: p.createdAt || j.createdAt,
+            src: toDataUrl(p.data, p.mimeType || "image/jpeg"),
+          });
         }
       }
 
-      return { jobId: String(j._id), address: j.address, imageCount: images.length, images };
+      return {
+        jobId: String(j._id),
+        address: j.address,
+        imageCount: images.length,
+        images,
+      };
     });
 
     return res.json({ jobs: payload });
@@ -1038,113 +1026,56 @@ router.get("/job-media", auth, checkAdmin, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------------------
-// NEW: PROVIDER DOCUMENTS (view / download / email)
-// -----------------------------------------------------------------------------
+// ------- PROVIDER DOCUMENTS -------
 router.get("/provider/:id/documents", auth, checkAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ ok: false, error: "Invalid provider id" });
-    }
+    const provider = await Users.findById(req.params.id).lean();
+    if (!provider) return res.status(404).json({ error: "Provider not found" });
 
-    const user = await Users.findById(id).lean();
-    if (!user) return res.status(404).json({ ok: false, error: "Provider not found" });
-
-    const documents = collectProviderDocs(user);
-    return res.json({ ok: true, documents });
+    const documents = collectProviderDocs(provider);
+    res.json({ ok: true, documents });
   } catch (err) {
-    console.error("GET /admin/provider/:id/documents error", err);
-    return res.status(500).json({ ok: false, error: "Failed to load documents" });
-  }
-});
-
-router.get("/provider/:id/documents/:key/download", auth, checkAdmin, async (req, res) => {
-  try {
-    const { id, key } = req.params;
-    const user = await Users.findById(id).lean();
-    if (!user) return res.status(404).send("Not found");
-
-    const mapping = {
-      id: ["idDocument", "governmentId", "documents.id", "kyc.id"],
-      w9: ["w9", "documents.w9", "tax.w9"],
-      license: ["businessLicense", "documents.businessLicense", "license"],
-      insurance: ["proofOfInsurance", "documents.insurance", "insurance"],
-      background: ["backgroundCheck", "documents.backgroundCheck", "background"],
-      ica: ["independentContractorAgreement", "documents.independentContractorAgreement", "ica"],
-    };
-
-    const raw = pick(user, mapping[key] || []);
-    if (!raw) return res.status(404).send("Document not found");
-
-    let data,
-      filename = `${key}.pdf`,
-      contentType = "application/octet-stream";
-
-    if (typeof raw === "string") {
-      if (raw.startsWith("data:")) {
-        const match = raw.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) {
-          contentType = match[1];
-          data = Buffer.from(match[2], "base64");
-        }
-      } else if (raw.startsWith("http")) {
-        return res.redirect(raw);
-      } else {
-        data = Buffer.from(raw, "base64");
-      }
-    } else if (raw && typeof raw === "object") {
-      if (raw.url && typeof raw.url === "string") {
-        return res.redirect(raw.url);
-      }
-      if (raw.contentType) contentType = raw.contentType;
-      if (raw.filename) filename = raw.filename;
-      if (raw.data) data = Buffer.from(raw.data, "base64");
-      if (!data && raw.buffer) data = Buffer.from(raw.buffer);
-    }
-
-    if (!data) return res.status(404).send("Document data not available");
-
-    res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", `attachment; filename=\"${filename}\"`);
-    return res.send(data);
-  } catch (err) {
-    console.error("download doc error", err);
-    return res.status(500).send("Download failed");
+    console.error("GET /admin/provider/:id/documents error:", err);
+    res.status(500).json({ error: "Failed to load documents" });
   }
 });
 
 router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-    const user = await Users.findById(id).lean();
-    if (!user) return res.status(404).json({ ok: false, error: "Provider not found" });
+    const provider = await Users.findById(req.params.id).lean();
+    if (!provider) return res.status(404).json({ error: "Provider not found" });
 
-    const docs = collectProviderDocs(user);
+    const docs = collectProviderDocs(provider);
     const rows = docs
       .map((d) => `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb">${d.type}</td><td style="padding:6px 10px;border:1px solid #e5e7eb"><a href="${d.url}">${d.filename || "View"}</a></td></tr>`)
       .join("");
 
     const html = `
-      <p>Documents for <strong>${user.name || user.email || user._id}</strong></p>
+      <p>Documents for <strong>${provider.name || provider.email || provider._id}</strong></p>
       <table style="border-collapse:collapse;border:1px solid #e5e7eb">
         <thead>
           <tr>
-            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Type</th>
-            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Link</th>
+            <th style=\"text-align:left;padding:6px 10px;border:1px solid #e5e7eb\">Type</th>
+            <th style=\"text-align:left;padding:6px 10px;border:1px solid #e5e7eb\">Link</th>
           </tr>
         </thead>
         <tbody>${rows || '<tr><td colspan="2" style="padding:8px">No documents.</td></tr>'}</tbody>
       </table>
     `;
 
-    const to = process.env.ADMIN_EMAIL || req.user.email;
-    await sendEmail({ to, subject: `Provider Documents – ${user.name || user.email || user._id}`, html });
+    // Always send to support unless SUPPORT_EMAIL overrides it
+    const to = process.env.SUPPORT_EMAIL || "support@blinqfix.com";
+
+    await sendEmail({
+      to,
+      subject: `Provider Documents – ${provider.name || provider.email || provider._id}`,
+      html,
+    });
 
     return res.json({ ok: true, message: `Email sent to ${to}` });
   } catch (err) {
-    console.error("email docs error", err);
-    return res.status(500).json({ ok: false, error: "Failed to send email" });
+    console.error("POST /admin/provider/:id/documents/email error:", err?.response?.data || err.message || err);
+    return res.status(500).json({ error: "Failed to send email" });
   }
 });
 
