@@ -518,6 +518,8 @@ const usersSchema = new mongoose.Schema(
     proofOfInsurance: { type: String, default: null },
     independentContractorAgreement: { type: String, default: null },
     yearsExperience: { type: Number },
+    governmentId: { type: String, trim: true },     // driver's license / federal ID
+    backgroundCheck: { type: String, trim: true },  // PDF/image of receipt or result
 
     profilePicture: {
       type: String, // base64-encoded data URL
