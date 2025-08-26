@@ -1040,41 +1040,57 @@ router.get("/provider/:id/documents", auth, checkAdmin, async (req, res) => {
   }
 });
 
+// Email all provider documents to support
 router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const user = await Users.findById(id).lean();
-    if (!user) return res.status(404).json({ ok: false, error: "Provider not found" });
+    if (!user) {
+      return res.status(404).json({ ok: false, error: "Provider not found" });
+    }
 
     const docs = collectProviderDocs(user);
 
+    // Build HTML table (template literal kept on one string)
     const rows = docs
-      .map((d) => `<tr><td style=\"padding:6px 10px;border:1px solid #e5e7eb\">${d.type}</td><td style=\"padding:6px 10px;border:1px solid #e5e7eb\"><a href=\"${d.url}\">${d.filename || "View"}</a></td></tr>`)
+      .map(
+        (d) => `
+          <tr>
+            <td style="padding:6px 10px;border:1px solid #e5e7eb">${d.type}</td>
+            <td style="padding:6px 10px;border:1px solid #e5e7eb">
+              <a href="${d.url}">${d.filename || "View"}</a>
+            </td>
+          </tr>`
+      )
       .join("");
 
     const html = `
       <p>Documents for <strong>${user.name || user.email || user._id}</strong></p>
-      <table style=\"border-collapse:collapse;border:1px solid #e5e7eb\">
+      <table style="border-collapse:collapse;border:1px solid #e5e7eb">
         <thead>
           <tr>
-            <th style=\"text-align:left;padding:6px 10px;border:1px solid #e5e7eb\">Type</th>
-            <th style=\"text-align:left;padding:6px 10px;border:1px solid #e5e7eb\">Link</th>
+            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Type</th>
+            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Link</th>
           </tr>
         </thead>
         <tbody>${rows || '<tr><td colspan="2" style="padding:8px">No documents.</td></tr>'}</tbody>
       </table>
     `;
 
+    // Plain-text fallback is REQUIRED by your mailer
     const text = [
       `Documents for ${user.name || user.email || user._id}`,
       "",
       ...docs.map((d) => `• ${d.type} — ${d.filename || "file"} — ${d.url}`),
-    ].join("
-");
+    ].join("\n");
 
     const to = process.env.SUPPORT_EMAIL || "support@blinqfix.com";
-
-    await sendEmail({ to, subject: `Provider Documents – ${user.name || user.email || user._id}`, text, html });
+    await sendEmail({
+      to,
+      subject: `Provider Documents – ${user.name || user.email || user._id}`,
+      text,
+      html,
+    });
 
     return res.json({ ok: true, message: `Email sent to ${to}` });
   } catch (err) {
