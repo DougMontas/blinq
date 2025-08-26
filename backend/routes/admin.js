@@ -1042,17 +1042,19 @@ router.get("/provider/:id/documents", auth, checkAdmin, async (req, res) => {
 
 router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) => {
   try {
-    const provider = await Users.findById(req.params.id).lean();
-    if (!provider) return res.status(404).json({ error: "Provider not found" });
+    const { id } = req.params;
+    const user = await Users.findById(id).lean();
+    if (!user) return res.status(404).json({ ok: false, error: "Provider not found" });
 
-    const docs = collectProviderDocs(provider);
+    const docs = collectProviderDocs(user);
+
     const rows = docs
-      .map((d) => `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb">${d.type}</td><td style="padding:6px 10px;border:1px solid #e5e7eb"><a href="${d.url}">${d.filename || "View"}</a></td></tr>`)
+      .map((d) => `<tr><td style=\"padding:6px 10px;border:1px solid #e5e7eb\">${d.type}</td><td style=\"padding:6px 10px;border:1px solid #e5e7eb\"><a href=\"${d.url}\">${d.filename || "View"}</a></td></tr>`)
       .join("");
 
     const html = `
-      <p>Documents for <strong>${provider.name || provider.email || provider._id}</strong></p>
-      <table style="border-collapse:collapse;border:1px solid #e5e7eb">
+      <p>Documents for <strong>${user.name || user.email || user._id}</strong></p>
+      <table style=\"border-collapse:collapse;border:1px solid #e5e7eb\">
         <thead>
           <tr>
             <th style=\"text-align:left;padding:6px 10px;border:1px solid #e5e7eb\">Type</th>
@@ -1063,19 +1065,21 @@ router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) 
       </table>
     `;
 
-    // Always send to support unless SUPPORT_EMAIL overrides it
+    const text = [
+      `Documents for ${user.name || user.email || user._id}`,
+      "",
+      ...docs.map((d) => `• ${d.type} — ${d.filename || "file"} — ${d.url}`),
+    ].join("
+");
+
     const to = process.env.SUPPORT_EMAIL || "support@blinqfix.com";
 
-    await sendEmail({
-      to,
-      subject: `Provider Documents – ${provider.name || provider.email || provider._id}`,
-      html,
-    });
+    await sendEmail({ to, subject: `Provider Documents – ${user.name || user.email || user._id}`, text, html });
 
     return res.json({ ok: true, message: `Email sent to ${to}` });
   } catch (err) {
-    console.error("POST /admin/provider/:id/documents/email error:", err?.response?.data || err.message || err);
-    return res.status(500).json({ error: "Failed to send email" });
+    console.error("email docs error", err);
+    return res.status(500).json({ ok: false, error: "Failed to send email" });
   }
 });
 
