@@ -2075,7 +2075,7 @@ router.post("/provider/:id/documents/email-one", auth, checkAdmin, async (req, r
 
   try {
     const { id } = req.params;
-    const key = (req.body?.key || "w9").toLowerCase();
+    const key = (req.body?.key ?? "w9").toLowerCase();
     const mode = (req.body?.mode || "link").toLowerCase();
 
     console.log(`[email-one:${rid}] start`, { providerId: id, key, mode });
