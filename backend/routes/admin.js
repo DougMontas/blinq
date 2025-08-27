@@ -670,6 +670,7 @@ import Users from "../models/Users.js";
 import Job from "../models/Job.js";
 import Configuration from "../models/Configuration.js";
 import sendEmail from "../utils/sendEmail.js";
+import crypto from "crypto";
 
 const FEE_RATE = parseFloat(process.env.CONVENIENCE_FEE_RATE) || 0.07;
 const SIGNING_SECRET =
@@ -1203,13 +1204,64 @@ router.get("/provider/:id/documents/:key/download", async (req, res, next) => {
 });
 
 /** Email all provider docs to support (signed links) */
+// router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const user = await Users.findById(id).lean();
+//     if (!user) return res.status(404).json({ ok: false, error: "Provider not found" });
+
+//     const docs = collectProviderDocs(req, user);
+//     const rows = docs
+//       .map((d) => `<tr><td>${d.type}</td><td><a href="${d.url}">${d.filename}</a></td></tr>`)
+//       .join("");
+
+//     const html = `
+//       <p>Documents for <strong>${user.name || user.email}</strong></p>
+//       <table border="1" cellspacing="0" cellpadding="4">
+//         ${rows || "<tr><td colspan='2'>No documents.</td></tr>"}
+//       </table>
+//     `;
+//     const text = [
+//       `Documents for ${user.name || user.email}`,
+//       ...docs.map((d) => `${d.type}: ${d.url}`),
+//     ].join("\n");
+
+//     const to = process.env.SUPPORT_EMAIL || "support@blinqfix.com";
+//     await sendEmail({
+//       to,
+//       subject: `Provider Documents – ${user.name || user.email}`,
+//       text,
+//       html,
+//     });
+
+//     return res.json({ ok: true, message: `Email sent to ${to}` });
+//   } catch (err) {
+//     console.error("email docs error", err);
+//     return res.status(500).json({ ok: false, error: "Failed to send email" });
+//   }
+// });
+
 router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) => {
+  const rid = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
+  const t0 = Date.now();
+
   try {
     const { id } = req.params;
+    console.log(`[email-docs:${rid}] start for provider=${id}`);
+
     const user = await Users.findById(id).lean();
-    if (!user) return res.status(404).json({ ok: false, error: "Provider not found" });
+    if (!user) {
+      console.warn(`[email-docs:${rid}] provider not found`);
+      return res.status(404).json({ ok: false, error: "Provider not found", rid });
+    }
 
     const docs = collectProviderDocs(req, user);
+    console.log(`[email-docs:${rid}] docs collected`, {
+      count: docs.length,
+      names: docs.map((d) => d.filename),
+      to: process.env.SUPPORT_EMAIL || "support@blinqfix.com",
+    });
+
     const rows = docs
       .map((d) => `<tr><td>${d.type}</td><td><a href="${d.url}">${d.filename}</a></td></tr>`)
       .join("");
@@ -1226,6 +1278,12 @@ router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) 
     ].join("\n");
 
     const to = process.env.SUPPORT_EMAIL || "support@blinqfix.com";
+    console.log(`[email-docs:${rid}] calling sendEmail`, {
+      to,
+      subject: `Provider Documents – ${user.name || user.email}`,
+      textPreview: text.slice(0, 80) + (text.length > 80 ? "…" : ""),
+    });
+
     await sendEmail({
       to,
       subject: `Provider Documents – ${user.name || user.email}`,
@@ -1233,11 +1291,29 @@ router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) 
       html,
     });
 
-    return res.json({ ok: true, message: `Email sent to ${to}` });
+    const ms = Date.now() - t0;
+    console.log(`[email-docs:${rid}] SUCCESS in ${ms}ms`);
+    return res.json({ ok: true, message: `Email sent to ${to}`, rid });
   } catch (err) {
-    console.error("email docs error", err);
-    return res.status(500).json({ ok: false, error: "Failed to send email" });
+    const ms = Date.now() - t0;
+    // Pull out sanitized nodemailer fields if present
+    const meta = {
+      message: err?.message,
+      code: err?.code,
+      responseCode: err?.responseCode,
+      command: err?.command,
+      // err.response may contain provider’s "535 authentication rejected" text — useful for debugging
+      response: err?.response,
+    };
+    console.error(`[email-docs:${rid}] ERROR after ${ms}ms`, meta);
+    return res.status(500).json({
+      ok: false,
+      error: "Failed to send email",
+      rid,
+      meta, // this is safe, no secrets
+    });
   }
 });
+
 
 export default router;

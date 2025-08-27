@@ -66,12 +66,8 @@
 
 // export default sendEmail;
 
-
 // backend/utils/sendEmail.js
 import nodemailer from "nodemailer";
-
-// Node 18+ has global fetch; if you're on older Node, polyfill fetch.
-const hasFetch = typeof fetch === "function";
 
 const mask = (v) => {
   if (!v) return v;
@@ -86,68 +82,29 @@ const simplify = (err) => ({
   response: err?.response,
 });
 
-/* -------------------- ENV -------------------- */
-// Primary (your existing)
+// current envs you’re using
 const SMTP_USER = process.env.GODADDY_EMAIL_USER || "";
 const SMTP_PASS = process.env.GODADDY_EMAIL_PASS || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || SMTP_USER;
 
-// Optional SMTP overrides
-const SMTP_HOST = process.env.SMTP_HOST;                        // if set, we try it first
+// optional overrides (if you set them)
+const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
-const SMTP_SECURE = process.env.SMTP_SECURE;                    // "true" | "false"
-const SMTP_EHLO_NAME = process.env.SMTP_EHLO_NAME;              // optional
+const SMTP_SECURE = process.env.SMTP_SECURE; // "true" | "false"
+const SMTP_EHLO_NAME = process.env.SMTP_EHLO_NAME; // optional
 const TLS_REJECT_UNAUTH = process.env.SMTP_TLS_REJECT_UNAUTH === "false" ? false : true;
 
-// Provider API (Resend) — ZERO SMTP needed if set
-const EMAIL_DRIVER = (process.env.EMAIL_DRIVER || "").toLowerCase(); // "resend" | "smtp" | ""
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "";             // set this to enable API send
-const RESEND_FROM = process.env.RESEND_FROM || EMAIL_FROM;           // recommended: a verified sender
-
-/* -------------------- RESEND (API) -------------------- */
-async function sendViaResend({ to, subject, text, html }) {
-  if (!hasFetch) {
-    throw new Error("Global fetch not available; cannot use Resend API on this Node version.");
-  }
-  if (!RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY not set");
-  }
-  const body = {
-    from: RESEND_FROM,
-    to,
-    subject,
-    text,
-    ...(html ? { html } : {}),
-  };
-
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => "");
-    throw new Error(`Resend API error ${resp.status}: ${errText || resp.statusText}`);
-  }
-
-  const data = await resp.json().catch(() => ({}));
-  console.log("✅ Resend API accepted", data);
-}
-
-/* -------------------- SMTP (GoDaddy / custom) -------------------- */
-function buildSmtpAttempts() {
+// build the two GoDaddy attempts (plus one override if provided)
+function buildAttempts() {
   const attempts = [];
 
-  // If overrides are set, try them first
   if (SMTP_HOST && SMTP_PORT !== undefined) {
     const secure =
-      SMTP_SECURE === "true" ? true : SMTP_SECURE === "false" ? false : SMTP_PORT === 465;
+      SMTP_SECURE === "true" ? true :
+      SMTP_SECURE === "false" ? false :
+      (SMTP_PORT === 465);
     attempts.push({
-      label: "OVERRIDE",
+      label: `OVERRIDE ${SMTP_HOST}:${SMTP_PORT} secure=${secure}`,
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure,
@@ -156,7 +113,6 @@ function buildSmtpAttempts() {
     });
   }
 
-  // GoDaddy common working combos
   attempts.push({
     label: "GoDaddy SMTPS 465 (LOGIN)",
     host: "smtpout.secureserver.net",
@@ -177,10 +133,10 @@ function buildSmtpAttempts() {
   return attempts;
 }
 
-async function trySmtpSend(cfg, mailOptions) {
+async function tryOnce(cfg, mailOptions) {
   const { label, host, port, secure, requireTLS, authMethod } = cfg;
 
-  console.log("📧 Trying SMTP", {
+  console.log("📧 [sendEmail] Attempt:", {
     label,
     host,
     port,
@@ -189,99 +145,121 @@ async function trySmtpSend(cfg, mailOptions) {
     authMethod,
     user: mask(SMTP_USER),
     from: mask(mailOptions.from),
+    to: mask(mailOptions.to),
+    subject: mailOptions.subject,
   });
 
   const transporter = nodemailer.createTransport({
     host,
     port,
-    secure, // true:465 SSL, false:587 STARTTLS
-    requireTLS,
-    name: SMTP_EHLO_NAME || undefined, // optional
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-    authMethod, // Force LOGIN (PLAIN often 535s)
-    pool: false,
+    secure,                  // true:465 SSL, false:587 STARTTLS
+    requireTLS,              // STARTTLS path when secure=false
+    name: SMTP_EHLO_NAME || undefined,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    authMethod,              // Force LOGIN (PLAIN often 535s)
     connectionTimeout: 15000,
     greetingTimeout: 10000,
     socketTimeout: 20000,
     tls: { rejectUnauthorized: TLS_REJECT_UNAUTH },
   });
 
-  // Some providers barf on verify — don't fail the send if verify errors:
+  // Some providers fail verify() even though sendMail works; log but don’t fail early
   try {
     await transporter.verify();
-    console.log("✅ SMTP verify OK");
+    console.log("✅ [sendEmail] verify OK:", label);
   } catch (e) {
-    console.warn("⚠️ SMTP verify warning:", simplify(e));
+    console.warn("⚠️  [sendEmail] verify warning:", label, simplify(e));
   }
 
-  const info = await transporter.sendMail(mailOptions);
-  console.log("✅ SMTP email sent", {
-    messageId: info.messageId,
-    accepted: info.accepted,
-    rejected: info.rejected,
-    response: info.response,
-  });
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("✅ [sendEmail] sent:", {
+      label,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      response: info.response,
+    });
+    return info;
+  } catch (err) {
+    const s = simplify(err);
+    // Re-throw with the attempt label attached so the route can include it
+    const e = new Error(`${label}: ${s.message || "sendMail failed"}`);
+    e.code = s.code;
+    e.responseCode = s.responseCode;
+    e.command = s.command;
+    e.response = s.response;
+    e.attempt = label;
+    console.error("❌ [sendEmail] attempt failed:", label, s);
+    throw e;
+  }
 }
 
-/* -------------------- PUBLIC API -------------------- */
 /**
- * Send email (no breaking changes):
- * - required: { to, subject, text }
- * - optional: { html } (will be used if provided)
+ * No breaking changes: same signature & behavior
+ * Required: { to, subject, text }
+ * Optional: { html }
  */
 export default async function sendEmail({ to, subject, text, html }) {
-  console.log("📨 sendEmail() called with:", { to, subject });
+  console.log("📨 [sendEmail] called:", { to: mask(to), subject });
 
-  if (!to || typeof to !== "string") throw new Error("❌ sendEmail.to is required");
-  if (!subject || typeof subject !== "string") throw new Error("❌ sendEmail.subject is required");
-  if (!text || typeof text !== "string") throw new Error("❌ sendEmail.text is required");
+  if (!to || typeof to !== "string")
+    throw new Error("❌ sendEmail.to is required");
+  if (!subject || typeof subject !== "string")
+    throw new Error("❌ sendEmail.subject is required");
+  if (!text || typeof text !== "string")
+    throw new Error("❌ sendEmail.text is required");
+
+  if (!SMTP_USER || !SMTP_PASS) {
+    console.error("❌ [sendEmail] missing SMTP creds", {
+      GODADDY_EMAIL_USER_set: !!SMTP_USER,
+      GODADDY_EMAIL_PASS_set: !!SMTP_PASS,
+    });
+    throw new Error("Missing SMTP credentials");
+  }
 
   const mailOptions = {
-    from: `"BlinqFix Support" <${EMAIL_FROM}>`, // should be the authenticated mailbox for SMTP providers
+    from: `"BlinqFix Support" <${EMAIL_FROM}>`, // must usually equal SMTP_USER mailbox
     to,
     subject,
     text,
     ...(html ? { html } : {}),
   };
 
-  // 1) If explicitly asked to use RESEND, or API key present and driver not forced to "smtp":
-  if ((EMAIL_DRIVER === "resend" || !!RESEND_API_KEY) && EMAIL_DRIVER !== "smtp") {
-    try {
-      console.log("🟦 Using Resend API driver");
-      await sendViaResend({ to, subject, text, html });
-      return;
-    } catch (apiErr) {
-      console.error("❌ Resend API failed:", simplify(apiErr));
-      // Fall back to SMTP if creds exist; else bubble error
-      if (!SMTP_USER || !SMTP_PASS) throw apiErr;
-      console.log("↩️ Falling back to SMTP after Resend failure");
-    }
-  }
+  console.log("🧪 [sendEmail] env snapshot:", {
+    EMAIL_FROM: mask(EMAIL_FROM),
+    TLS_REJECT_UNAUTH,
+  });
 
-  // 2) SMTP path (your original behavior)
-  if (!SMTP_USER || !SMTP_PASS) {
-    throw new Error(
-      "❌ Missing SMTP creds: GODADDY_EMAIL_USER or GODADDY_EMAIL_PASS. Set RESEND_API_KEY to use API driver instead."
-    );
-  }
-
-  const attempts = buildSmtpAttempts();
+  const attempts = buildAttempts();
   const errors = [];
+
   for (const cfg of attempts) {
     try {
-      await trySmtpSend(cfg, mailOptions);
+      await tryOnce(cfg, mailOptions);
       return; // success
     } catch (err) {
-      console.error("❌ SMTP attempt failed:", cfg.label, simplify(err));
-      errors.push({ cfg: cfg.label, err: simplify(err) });
-      // next attempt
+      errors.push({
+        attempt: cfg.label,
+        err: {
+          message: err.message,
+          code: err.code,
+          responseCode: err.responseCode,
+          command: err.command,
+          // response may contain provider text like "535 authentication rejected"
+          response: err.response,
+        },
+      });
     }
   }
 
-  console.error("❌ All SMTP attempts failed. Summary:", errors);
+  console.error("🚨 [sendEmail] All attempts failed:", errors);
+  // Throw the first error so the route can display something concrete
   const first = errors[0]?.err || {};
-  throw new Error(first.message || "SMTP send failed");
+  const e = new Error(first.message || "SMTP send failed");
+  e.code = first.code;
+  e.responseCode = first.responseCode;
+  e.command = first.command;
+  e.response = first.response;
+  throw e;
 }
