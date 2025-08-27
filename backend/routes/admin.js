@@ -670,7 +670,7 @@ import Users from "../models/Users.js";
 import Job from "../models/Job.js";
 import Configuration from "../models/Configuration.js";
 import sendEmail from "../utils/sendEmail.js";
-import crypto from "crypto";
+
 
 const FEE_RATE = parseFloat(process.env.CONVENIENCE_FEE_RATE) || 0.07;
 const SIGNING_SECRET =
