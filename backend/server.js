@@ -23,7 +23,7 @@ import providers from "./routes/providers.js";
 import stripe from "./routes/stripe.js";
 import mapsRoutes from "./routes/maps.js";
 import userStatsRoutes from "./routes/userStats.js";
-import adminDocumentsRoutes from "./routes/adminDocumentsRoutes.js";
+import adminDocumentsRoutes from "./routes/admin.js";
 // _________
 import pricingV2Router from "./routes/pricing.js"
 // _________
