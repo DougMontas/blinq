@@ -672,9 +672,9 @@ import sendEmail from "../utils/sendEmail.js";
 
 const FEE_RATE = parseFloat(process.env.CONVENIENCE_FEE_RATE) || 0.07;
 
-/* -------------------------------------------------------------------------- */
-/*                               Admin guard                                  */
-/* -------------------------------------------------------------------------- */
+// -----------------------------------------------------------------------------
+// Admin guard
+// -----------------------------------------------------------------------------
 const checkAdmin = (req, res, next) => {
   if (!req.user || (req.user.role !== "admin" && req.user.role !== "superadmin")) {
     return res.status(403).json({ msg: "Access denied" });
@@ -682,10 +682,9 @@ const checkAdmin = (req, res, next) => {
   next();
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Helpers                                  */
-/* -------------------------------------------------------------------------- */
-// unify binary -> base64 data URL
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 function toDataUrl(binOrBuf, mime = "image/jpeg") {
   if (!binOrBuf) return null;
   const buf = binOrBuf?.buffer
@@ -701,7 +700,6 @@ function escapeRegex(str = "") {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// absolute URL (needed for RN Linking + email clients)
 function absoluteUrl(req, path) {
   if (!path) return null;
   if (/^https?:\/\//i.test(path) || path.startsWith("data:")) return path; // already absolute
@@ -724,13 +722,29 @@ const pick = (obj, paths = []) => {
   return undefined;
 };
 
-/* -------------------------------------------------------------------------- */
-/*                         Provider documents collector                        */
-/* -------------------------------------------------------------------------- */
+// Guess content-type from base64 prefix or filename
+function inferContentTypeFromBase64(base64) {
+  if (!base64) return "application/octet-stream";
+  const head = String(base64).slice(0, 16);
+  if (head.startsWith("JVBERi0")) return "application/pdf"; // %PDF
+  if (head.startsWith("iVBORw0")) return "image/png";       // PNG
+  if (head.startsWith("/9j/")) return "image/jpeg";          // JPEG
+  return "application/octet-stream";
+}
+
+function inferTypeFromName(name) {
+  const lower = String(name || "").toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".heic")) return "image/heic";
+  return "application/octet-stream";
+}
+
+// Collect/normalize provider documents from various fields in Users
 function collectProviderDocsRaw(user) {
   const docs = [];
   const defs = [
-    // Try multiple field names you’ve used across the codebase
     { key: "id",        label: "Government ID", candidates: ["idDocument", "governmentId", "documents.id", "kyc.id", "id"] },
     { key: "w9",        label: "W-9",           candidates: ["w9", "documents.w9", "tax.w9", "tax.w9.url"] },
     { key: "license",   label: "Business License", candidates: ["businessLicense", "documents.businessLicense", "license", "license.url"] },
@@ -743,6 +757,9 @@ function collectProviderDocsRaw(user) {
     const raw = pick(user, d.candidates);
     if (!raw) continue;
 
+    // Skip sentinel strings like "viewed@..." (not a file)
+    if (typeof raw === "string" && /^viewed@/i.test(raw)) continue;
+
     let url = null;
     let filename = d.key;
     let uploadedAt = null;
@@ -751,7 +768,7 @@ function collectProviderDocsRaw(user) {
       if (raw.startsWith("http") || raw.startsWith("data:") || raw.startsWith("/uploads/")) {
         url = raw;
       } else {
-        // base64 or opaque id → serve via download route
+        // base64-only stored in Mongo (your case)
         url = `/admin/provider/${user._id}/documents/${d.key}/download`;
       }
     } else if (typeof raw === "object") {
@@ -769,16 +786,12 @@ function collectProviderDocsRaw(user) {
   return docs;
 }
 
-function collectProviderDocs(req, user) {
-  // ensure absolute links for email/RN
-  return collectProviderDocsRaw(user).map((d) => ({ ...d, url: absoluteUrl(req, d.url) }));
-}
+const collectProviderDocs = (req, user) =>
+  collectProviderDocsRaw(user).map((d) => ({ ...d, url: absoluteUrl(req, d.url) }));
 
-/* -------------------------------------------------------------------------- */
-/*                                  Routes                                    */
-/* -------------------------------------------------------------------------- */
-
-/* USERS LIST */
+// -----------------------------------------------------------------------------
+// USERS LIST
+// -----------------------------------------------------------------------------
 router.get("/users", auth, async (req, res) => {
   try {
     const providers = await Users.find(
@@ -792,8 +805,10 @@ router.get("/users", auth, async (req, res) => {
   }
 });
 
-/* STATS */
-router.get("/admin/stats", auth, checkAdmin, async (req, res) => {
+// -----------------------------------------------------------------------------
+// STATS
+// -----------------------------------------------------------------------------
+router.get("/admin/stats", async (req, res) => {
   try {
     const [customerCount, providerCount] = await Promise.all([
       Users.countDocuments({ role: "customer" }),
@@ -806,8 +821,10 @@ router.get("/admin/stats", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* FEES */
-router.get("/convenience-fees", auth, checkAdmin, async (req, res) => {
+// -----------------------------------------------------------------------------
+// FEES
+// -----------------------------------------------------------------------------
+router.get("/convenience-fees", auth, async (req, res) => {
   try {
     const PRO_SHARE_RATE = 0.07;
     const CUSTOMER_FEE_RATE = 0.07;
@@ -836,13 +853,27 @@ router.get("/convenience-fees", auth, checkAdmin, async (req, res) => {
         },
       },
       { $addFields: { totalBilled: { $add: ["$baseTotal", "$extra"] } } },
-      { $addFields: { convenienceFee: { $round: [{ $multiply: ["$totalBilled", TOTAL_FEE_RATE] }, 2] } } },
-      { $group: { _id: { month: "$month", year: "$year" }, totalConvenienceFee: { $sum: "$convenienceFee" } } },
+      {
+        $addFields: {
+          convenienceFee: {
+            $round: [{ $multiply: ["$totalBilled", TOTAL_FEE_RATE] }, 2],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { month: "$month", year: "$year" },
+          totalConvenienceFee: { $sum: "$convenienceFee" },
+        },
+      },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ];
 
     const monthlyFees = await Job.aggregate(pipeline);
-    const ytdTotal = monthlyFees.reduce((sum, f) => sum + (f.totalConvenienceFee || 0), 0);
+    const ytdTotal = monthlyFees.reduce(
+      (sum, f) => sum + (f.totalConvenienceFee || 0),
+      0
+    );
 
     res.json({ monthlyFees, ytdTotal });
   } catch (err) {
@@ -851,8 +882,10 @@ router.get("/convenience-fees", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* CANCEL STALE JOBS */
-router.put("/jobs/cancel-stale", auth, checkAdmin, async (req, res) => {
+// -----------------------------------------------------------------------------
+// CANCEL STALE JOBS
+// -----------------------------------------------------------------------------
+router.put("/jobs/cancel-stale", auth, async (req, res) => {
   try {
     const result = await Job.updateMany(
       {
@@ -869,8 +902,10 @@ router.put("/jobs/cancel-stale", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* CONFIG GET/PUT */
-router.get("/configuration", auth, checkAdmin, async (req, res) => {
+// -----------------------------------------------------------------------------
+// CONFIG GET/PUT
+// -----------------------------------------------------------------------------
+router.get("/configuration", auth, async (req, res) => {
   try {
     const cfg = await Configuration.findOne().lean();
     res.json({ hardcodedEnabled: cfg?.hardcodedEnabled ?? false });
@@ -897,8 +932,10 @@ router.put("/configuration", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* JOBS LIST */
-router.get("/jobs", auth, checkAdmin, async (req, res) => {
+// -----------------------------------------------------------------------------
+// JOBS LIST
+// -----------------------------------------------------------------------------
+router.get("/jobs", auth, async (req, res) => {
   try {
     const jobs = await Job.find({})
       .select("status createdAt serviceType")
@@ -919,8 +956,10 @@ router.get("/jobs", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* COMPLETE PROVIDERS */
-router.get("/complete-providers", auth, checkAdmin, async (req, res) => {
+// -----------------------------------------------------------------------------
+// COMPLETE PROVIDERS
+// -----------------------------------------------------------------------------
+router.get("/complete-providers", auth, async (req, res) => {
   try {
     const providers = await Users.find({
       role: "serviceProvider",
@@ -938,8 +977,10 @@ router.get("/complete-providers", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* ACTIVATE ONE PROVIDER */
-router.put("/provider/:id/activate", auth, checkAdmin, async (req, res) => {
+// -----------------------------------------------------------------------------
+// ACTIVATE ONE PROVIDER
+// -----------------------------------------------------------------------------
+router.put("/provider/:id/activate", auth, async (req, res) => {
   try {
     const user = await Users.findByIdAndUpdate(
       req.params.id,
@@ -954,7 +995,9 @@ router.put("/provider/:id/activate", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* TOGGLE ACTIVE */
+// -----------------------------------------------------------------------------
+// TOGGLE ACTIVE
+// -----------------------------------------------------------------------------
 router.put("/provider/:providerId/active", auth, checkAdmin, async (req, res) => {
   try {
     const { providerId } = req.params;
@@ -976,7 +1019,9 @@ router.put("/provider/:providerId/active", auth, checkAdmin, async (req, res) =>
   }
 });
 
-/* UPDATE ZIP CODES */
+// -----------------------------------------------------------------------------
+// UPDATE ZIP CODES
+// -----------------------------------------------------------------------------
 router.put("/provider/:providerId/zipcodes", auth, checkAdmin, async (req, res) => {
   try {
     const { providerId } = req.params;
@@ -1001,7 +1046,9 @@ router.put("/provider/:providerId/zipcodes", auth, checkAdmin, async (req, res) 
   }
 });
 
-/* JOB MEDIA */
+// -----------------------------------------------------------------------------
+// JOB MEDIA
+// -----------------------------------------------------------------------------
 router.get("/job-media", auth, checkAdmin, async (req, res) => {
   try {
     const { jobId, address } = req.query;
@@ -1055,12 +1102,7 @@ router.get("/job-media", auth, checkAdmin, async (req, res) => {
         }
       }
 
-      return {
-        jobId: String(j._id),
-        address: j.address,
-        imageCount: images.length,
-        images,
-      };
+      return { jobId: String(j._id), address: j.address, imageCount: images.length, images };
     });
 
     return res.json({ jobs: payload });
@@ -1070,9 +1112,9 @@ router.get("/job-media", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* -------------------------------------------------------------------------- */
-/*                      PROVIDER DOCUMENTS (view/email)                        */
-/* -------------------------------------------------------------------------- */
+// -----------------------------------------------------------------------------
+// PROVIDER DOCUMENTS (list / download / email)
+// -----------------------------------------------------------------------------
 router.get("/provider/:id/documents", auth, checkAdmin, async (req, res) => {
   try {
     const provider = await Users.findById(req.params.id).lean();
@@ -1086,7 +1128,6 @@ router.get("/provider/:id/documents", auth, checkAdmin, async (req, res) => {
   }
 });
 
-/* DOWNLOAD (serves inline or redirects to external URL) */
 router.get("/provider/:id/documents/:key/download", auth, checkAdmin, async (req, res) => {
   try {
     const { id, key } = req.params;
@@ -1105,18 +1146,10 @@ router.get("/provider/:id/documents/:key/download", auth, checkAdmin, async (req
     const raw = pick(user, mapping[key] || []);
     if (!raw) return res.status(404).send("Document not found");
 
+    // Handle common storage forms
     let data;
     let filename = `${key}.pdf`;
     let contentType = "application/octet-stream";
-
-    const inferTypeFromName = (name) => {
-      const lower = String(name).toLowerCase();
-      if (lower.endsWith(".pdf")) return "application/pdf";
-      if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-      if (lower.endsWith(".png")) return "image/png";
-      if (lower.endsWith(".heic")) return "image/heic";
-      return "application/octet-stream";
-    };
 
     if (typeof raw === "string") {
       if (raw.startsWith("data:")) {
@@ -1130,13 +1163,9 @@ router.get("/provider/:id/documents/:key/download", auth, checkAdmin, async (req
       } else if (raw.startsWith("/uploads/")) {
         return res.redirect(absoluteUrl(req, raw));
       } else {
-        // try base64 blob
-        contentType = inferTypeFromName(raw);
-        try {
-          data = Buffer.from(raw, "base64");
-        } catch {
-          return res.status(404).send("Unsupported document format");
-        }
+        // base64-only (your current Mongo values like JVBERi0... for PDFs or iVBORw0... for PNGs)
+        contentType = inferContentTypeFromBase64(raw) || inferTypeFromName(filename);
+        data = Buffer.from(raw, "base64");
       }
     } else if (raw && typeof raw === "object") {
       if (raw.url && typeof raw.url === "string") {
@@ -1149,9 +1178,10 @@ router.get("/provider/:id/documents/:key/download", auth, checkAdmin, async (req
     }
 
     if (!data) return res.status(404).send("Document data not available");
+
     if (!contentType) contentType = inferTypeFromName(filename);
 
-    // Inline so PDFs open in-browser; change to 'attachment' to force download
+    // Inline so PDFs/images open in browser; swap to 'attachment' to force download
     res.setHeader("Content-Type", contentType);
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     return res.send(data);
@@ -1161,7 +1191,6 @@ router.get("/provider/:id/documents/:key/download", auth, checkAdmin, async (req
   }
 });
 
-/* EMAIL ALL DOCS TO SUPPORT */
 router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1172,26 +1201,11 @@ router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) 
 
     const rows = docs
       .map(
-        (d) => `
-          <tr>
-            <td style="padding:6px 10px;border:1px solid #e5e7eb">${d.type}</td>
-            <td style="padding:6px 10px;border:1px solid #e5e7eb"><a href="${d.url}">${d.filename || "View"}</a></td>
-          </tr>`
+        (d) => `\n          <tr>\n            <td style="padding:6px 10px;border:1px solid #e5e7eb">${d.type}</td>\n            <td style="padding:6px 10px;border:1px solid #e5e7eb"><a href="${d.url}">${d.filename || "View"}</a></td>\n          </tr>`
       )
       .join("");
 
-    const html = `
-      <p>Documents for <strong>${user.name || user.email || user._id}</strong></p>
-      <table style="border-collapse:collapse;border:1px solid #e5e7eb">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Type</th>
-            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Link</th>
-          </tr>
-        </thead>
-        <tbody>${rows || '<tr><td colspan="2" style="padding:8px">No documents.</td></tr>'}</tbody>
-      </table>
-    `;
+    const html = `\n      <p>Documents for <strong>${user.name || user.email || user._id}</strong></p>\n      <table style="border-collapse:collapse;border:1px solid #e5e7eb">\n        <thead>\n          <tr>\n            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Type</th>\n            <th style="text-align:left;padding:6px 10px;border:1px solid #e5e7eb">Link</th>\n          </tr>\n        </thead>\n        <tbody>${rows || '<tr><td colspan="2" style="padding:8px">No documents.</td></tr>'}</tbody>\n      </table>\n    `;
 
     const text = [
       `Documents for ${user.name || user.email || user._id}`,
