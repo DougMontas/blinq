@@ -1316,4 +1316,128 @@ router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) 
 });
 
 
+
+// --- small helpers for this test ---
+function detectContentTypeFromBase64(b64) {
+  if (!b64) return "application/octet-stream";
+  const head = String(b64).slice(0, 12);
+  if (head.startsWith("JVBERi0")) return "application/pdf"; // PDF
+  if (head.startsWith("iVBORw0")) return "image/png";       // PNG
+  if (head.startsWith("/9j/"))     return "image/jpeg";      // JPG
+  return "application/octet-stream";
+}
+
+// If you already have signDocUrl(req, userId, key, ttlSec), reuse that; otherwise:
+function signDocUrl(req, userId, key, ttlSec = 3600) {
+  // unsigned path under /api/admin
+  const base = req.baseUrl || ""; // e.g. "/api/admin"
+  const unsigned = `${base}/provider/${userId}/documents/${key}/download`;
+  // absolute URL
+  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
+  const host  = (req.headers["x-forwarded-host"]  || req.get("host")).split(",")[0].trim();
+  return `${proto}://${host}${unsigned}`;
+}
+
+/**
+ * POST /api/admin/provider/:id/documents/email-one
+ * Body: { key?: "w9"|"license"|"insurance"|"background"|"id"|"ica", mode?: "link"|"attachment" }
+ *
+ * Sends exactly ONE document by email:
+ *  - mode="link"       -> email contains a single hyperlink to view/download
+ *  - mode="attachment" -> email contains the actual file attached (tests size)
+ */
+router.post("/provider/:id/documents/email-one", auth, checkAdmin, async (req, res) => {
+  const rid = (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
+  const t0 = Date.now();
+
+  try {
+    const { id } = req.params;
+    const key = (req.body?.key || "w9").toLowerCase(); // default 'w9'
+    const mode = (req.body?.mode || "link").toLowerCase(); // default 'link'
+
+    console.log(`[email-one:${rid}] start`, { providerId: id, key, mode });
+
+    const user = await Users.findById(id).lean();
+    if (!user) {
+      console.warn(`[email-one:${rid}] provider not found`);
+      return res.status(404).json({ ok: false, error: "Provider not found", rid });
+    }
+
+    // map key -> stored value
+    const fieldMap = {
+      id:         user.idDocument || user.governmentId,
+      w9:         user.w9,
+      license:    user.businessLicense,
+      insurance:  user.proofOfInsurance,
+      background: user.backgroundCheck,
+      ica:        user.independentContractorAgreement,
+    };
+
+    let raw = fieldMap[key];
+    if (!raw || typeof raw !== "string" || /^viewed@/i.test(raw)) {
+      console.warn(`[email-one:${rid}] doc not found or not a file`, { key });
+      return res.status(404).json({ ok: false, error: `Document not found for key "${key}"`, rid });
+    }
+
+    const to = process.env.SUPPORT_EMAIL || "support@blinqfix.com";
+    const subject = `TEST: single doc (${key}) – ${user.name || user.email || user._id}`;
+    let html, text, attachments;
+
+    if (mode === "attachment") {
+      // Prepare single attachment from base64/data URL
+      let contentType, buffer;
+      if (raw.startsWith("data:")) {
+        const m = raw.match(/^data:([^;]+);base64,(.+)$/);
+        if (!m) {
+          console.error(`[email-one:${rid}] invalid data URL for ${key}`);
+          return res.status(400).json({ ok: false, error: "Invalid data URL", rid });
+        }
+        contentType = m[1];
+        buffer = Buffer.from(m[2], "base64");
+      } else {
+        contentType = detectContentTypeFromBase64(raw);
+        buffer = Buffer.from(raw, "base64");
+      }
+      const filename = `${key}${contentType === "application/pdf" ? ".pdf" : contentType.startsWith("image/") ? ".jpg" : ""}`;
+      console.log(`[email-one:${rid}] attachment prepared`, {
+        key, contentType, bytes: buffer.length, filename,
+      });
+
+      attachments = [{ filename, content: buffer, contentType }];
+      html = `<p>Attached: <strong>${key}</strong> (${contentType}, ${buffer.length} bytes)</p>`;
+      text = `Attached: ${key} (${contentType}, ${buffer.length} bytes)`;
+    } else {
+      // Link-only email (tiny; rules out size/attachment as cause)
+      const url = signDocUrl(req, user._id, key, 3600);
+      html = `<p>Single document link (<strong>${key}</strong>): <a href="${url}">${url}</a></p>`;
+      text = `Single document link (${key}): ${url}`;
+      console.log(`[email-one:${rid}] link prepared`, { key, url });
+    }
+
+    // Call your mailer. If your sendEmail supports attachments (optional param), they’ll be included.
+    await sendEmail({ to, subject, text, html, attachments });
+
+    const ms = Date.now() - t0;
+    console.log(`[email-one:${rid}] SUCCESS in ${ms}ms`);
+    return res.json({
+      ok: true,
+      rid,
+      message: `Single document (${key}) email sent to ${to} in ${ms}ms`,
+      mode,
+    });
+  } catch (err) {
+    const ms = Date.now() - t0;
+    const meta = {
+      message: err?.message,
+      code: err?.code,
+      responseCode: err?.responseCode,
+      command: err?.command,
+      response: err?.response,
+    };
+    console.error(`[email-one:${rid}] ERROR after ${ms}ms`, meta);
+    return res.status(500).json({ ok: false, rid, error: "Failed to send test email", meta });
+  }
+});
+
+
 export default router;
