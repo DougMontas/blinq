@@ -23,6 +23,7 @@ import providers from "./routes/providers.js";
 import stripe from "./routes/stripe.js";
 import mapsRoutes from "./routes/maps.js";
 import userStatsRoutes from "./routes/userStats.js";
+import adminDocumentsRoutes from "./routes/adminDocumentsRoutes.js";
 // _________
 import pricingV2Router from "./routes/pricing.js"
 // _________
@@ -116,6 +117,7 @@ app.use("/api/routes", providers);
 // Public routes
 app.use("/api/auth", authRoutes);
 app.use("/api/routes/providers", providers);
+app.use("/api/admin", adminDocumentsRoutes);
 
 // Protected routes
 app.use("/api/maps", mapsRoutes);
