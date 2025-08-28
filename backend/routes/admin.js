@@ -2166,7 +2166,6 @@
 
 // export default router;
 
-
 import express from "express";
 const router = express.Router();
 
@@ -2201,15 +2200,36 @@ const checkAdmin = (req, res, next) => {
 /*                                   Helpers                                  */
 /* -------------------------------------------------------------------------- */
 
-// ★ FIX: robust coercion + validation for doc keys and modes
+// robust coercion + validation for doc keys and modes
 const VALID_DOC_KEYS = new Set(["id", "w9", "license", "insurance", "background", "ica"]);
 
+function isReactEvent(obj) {
+  // Detect common React SyntheticEvent shapes accidentally sent from the client
+  return !!(
+    obj &&
+    typeof obj === "object" &&
+    ("nativeEvent" in obj ||
+      "_dispatchListeners" in obj ||
+      "isDefaultPrevented" in obj ||
+      "_reactName" in obj ||
+      ("dispatchConfig" in obj && "_targetInst" in obj))
+  );
+}
+
 function coerceString(value, fallback = "") {
-  const raw = value == null ? fallback : value;
-  if (typeof raw === "string") return raw;
-  if (Array.isArray(raw)) return raw[0] == null ? "" : String(raw[0]);
-  if (typeof raw === "object" && raw !== null && "value" in raw) return String(raw.value);
-  return String(raw);
+  if (value == null) return fallback;
+
+  // Ignore accidentally-posted React events; use fallback
+  if (isReactEvent(value)) return fallback;
+
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value[0] == null ? fallback : String(value[0]);
+  if (typeof value === "object") {
+    if ("value" in value && value.value != null) return String(value.value);
+    if ("key" in value && value.key != null) return String(value.key);
+    if ("docKey" in value && value.docKey != null) return String(value.docKey);
+  }
+  return String(value);
 }
 
 function normalizeDocKey(input, fallback = "w9") {
@@ -2266,14 +2286,13 @@ function detectContentType(raw) {
   if (!raw) return "application/octet-stream";
   const head = String(raw).slice(0, 12);
   if (head.startsWith("JVBERi0")) return "application/pdf"; // %PDF
-  if (head.startsWith("iVBORw0")) return "image/png";       // PNG
-  if (head.startsWith("/9j/")) return "image/jpeg";          // JPG
+  if (head.startsWith("iVBORw0")) return "image/png"; // PNG
+  if (head.startsWith("/9j/")) return "image/jpeg"; // JPG
   return "application/octet-stream";
 }
 
 // HMAC-signed links so emails / RN can open without Authorization header
 function signDocUrl(req, userId, key, ttlSec = 3600) {
-  // ★ FIX: normalize key
   const safeKey = normalizeDocKey(key);
   const base = req.baseUrl || ""; // e.g. /api/admin
   const exp = Math.floor(Date.now() / 1000) + ttlSec;
@@ -2288,7 +2307,6 @@ function verifySignature(userId, key, exp, sig) {
   if (!exp || !sig) return false;
   const now = Math.floor(Date.now() / 1000);
   if (Number.isNaN(+exp) || +exp < now) return false;
-  // ★ FIX: normalize key to match signer
   const safeKey = normalizeDocKey(key);
   const payload = `${userId}:${safeKey}:${exp}`;
   const expected = crypto.createHmac("sha256", SIGNING_SECRET).update(payload).digest("hex");
@@ -2347,7 +2365,6 @@ function collectProviderDocs(req, user) {
 }
 
 async function serveDoc(req, res, id, key) {
-  // ★ FIX: normalize route param key consistently
   const safeKey = normalizeDocKey(key);
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -2739,12 +2756,11 @@ router.get("/provider/:id/documents/:key/download", async (req, res, next) => {
   try {
     const { id } = req.params;
     const rawKey = req.params.key;
-    const safeKey = normalizeDocKey(rawKey); // ★ FIX: normalize early
+    const safeKey = normalizeDocKey(rawKey);
     const { sig, exp } = req.query;
 
-    const hasValidSig = verifySignature(id, safeKey, exp, sig); // safe both sides
+    const hasValidSig = verifySignature(id, safeKey, exp, sig);
     if (!hasValidSig) {
-      // ★ FIX: run auth + admin, then serveDoc with proper error handling
       return auth(req, res, () =>
         checkAdmin(req, res, async () => {
           try {
@@ -2838,7 +2854,7 @@ router.post("/provider/:id/documents/email", auth, checkAdmin, async (req, res) 
 
 /**
  * TEST endpoint: send exactly ONE provider document by email.
- * Body: { key?: "w9"|"license"|"insurance"|"background"|"id"|"ica", mode?: "link"|"attachment" }
+ * Body/query: key? = "w9"|"license"|"insurance"|"background"|"id"|"ica", mode? = "link"|"attachment"
  * - mode="link"      : tiny email with 1 clickable signed link (rules out size/attachments)
  * - mode="attachment": attaches 1 file (tests message size / provider attachment policy)
  */
@@ -2848,9 +2864,13 @@ router.post("/provider/:id/documents/email-one", auth, checkAdmin, async (req, r
 
   try {
     const { id } = req.params;
-    // ★ FIX: safe normalization (no more .toLowerCase() on non-strings)
-    const key  = normalizeDocKey(req.body?.key, "w9");
-    const mode = normalizeMode(req.body?.mode, "link");
+
+    // accept multiple shapes/locations + guard against React events
+    const rawKey  = req.body?.key ?? req.body?.docKey ?? req.query?.key ?? "w9";
+    const rawMode = req.body?.mode ?? req.query?.mode ?? "link";
+
+    const key  = normalizeDocKey(rawKey, "w9");
+    const mode = normalizeMode(rawMode, "link");
 
     console.log(`[email-one:${rid}] start`, { providerId: id, key, mode });
 
@@ -2891,7 +2911,7 @@ router.post("/provider/:id/documents/email-one", auth, checkAdmin, async (req, r
         contentType = m[1];
         buffer = Buffer.from(m[2], "base64");
       } else if (raw.startsWith("http") || raw.startsWith("/uploads/")) {
-        // You could fetch external content here if needed; for now, prefer mode="link"
+        // Prefer link mode for external URLs
         return res.status(400).json({ ok: false, rid, error: "Attachment mode not supported for external URLs. Use mode=\"link\"." });
       } else {
         contentType = detectContentType(raw);
