@@ -2510,9 +2510,9 @@ export default function RegistrationScreen() {
               <Text style={styles.prefsHeadline}>
                 Stay Connected with BlinqFix
               </Text>
-              <Text style={styles.prefsIntro}>
+              {/* <Text style={styles.prefsIntro}>
                 Message &amp; data rates may apply.
-              </Text>
+              </Text> */}
 
               {/* Job Notifications & Updates */}
               <View style={styles.preferenceBlock}>
@@ -2531,9 +2531,8 @@ export default function RegistrationScreen() {
                   />
                 </View>
                 <Text style={styles.preferenceDesc}>
-                  I agree to receive SMS messages about job activity relevant to
-                  my account — including confirmations, scheduling changes,
-                  arrival times, and progress updates.
+                Customers opt in on the BlinqFix website or app to receive SMS notifications for emergency repair updates and appointment reminders. Opt-in is collected via an unchecked checkbox with full disclosure, including message purpose, frequency, STOP/HELP instructions, data rate notice, and a direct Privacy Policy link.
+
                   
                 </Text>
                 <View
@@ -2541,12 +2540,11 @@ export default function RegistrationScreen() {
                     marginTop: 10,
                     flexWrap: "wrap",
                     flexDirection: "row",
+                    
                   }}
                 >
                   <Text style={styles.preferenceDesc}>
-                    I agree to receive SMS messages about special offers,
-                    promotions, platform updates, and new services from
-                    BlinqFix. I agree to the{" "}
+                   
                     <Text
                       onPress={() =>
                         navigation.navigate("ProviderTermsAndAgreement")
@@ -2566,6 +2564,7 @@ export default function RegistrationScreen() {
                         style={{
                           textDecorationLine: "underline",
                           color: "#60a5fa",
+                          
                         }}
                         onPress={() => navigation.navigate("PrivacyPolicy")}
                       >
@@ -2575,15 +2574,15 @@ export default function RegistrationScreen() {
                     </Text>
                   </Text>
                 </View>
-                <Text style={styles.preferenceMeta}>
+                {/* <Text style={styles.preferenceMeta}>
                   Frequency: As needed per job and for the occasional promtion
                   and or discounts we will offer. Reply STOP to unsubscribe at
                   any time. Msg & data rates may apply. Reply HELP for help.
-                </Text>
+                </Text> */}
               </View>
 
               {/* Promotions & Marketing */}
-              <View style={styles.preferenceBlock}>
+              {/* <View style={styles.preferenceBlock}>
                 <View style={styles.preferenceHeader}>
                   <Text style={styles.preferenceTitle}>
                     Promotions &amp; Marketing Messages
@@ -2616,7 +2615,7 @@ export default function RegistrationScreen() {
                 <Text style={styles.preferenceMeta}>
                   Reply STOP to unsubscribe at any time. Reply HELP for help.
                 </Text>
-              </View>
+              </View> */}
 
               <TouchableOpacity
                 onPress={handleSaveSmsPreferences}
@@ -2853,6 +2852,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
     lineHeight: 18,
+    textAlign: 'center'
   },
   savePrefsButton: {
     borderRadius: 12,

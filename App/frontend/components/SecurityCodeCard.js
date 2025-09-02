@@ -345,10 +345,10 @@ export default function SecurityCodeCard({ jobId, role = "customer", style, onCo
       accessibilityLabel="Security code card"
       accessibilityRole="summary">
       <Text style={themed.secmessage}>
-        For security purposes, the service pro must confirm the security code upon arrival.
+        ***For security purposes, the service pro must verbally confirm the security code upon arrival.***
       </Text>
 
-      <View style={themed.headerRow}>
+      {/* <View style={themed.headerRow}>
         <Text style={themed.title}>Security Code</Text>
         {!!confirmedAt && (
           <View style={[themed.badge, themed.badgeSuccess]}>
@@ -356,11 +356,11 @@ export default function SecurityCodeCard({ jobId, role = "customer", style, onCo
           </View>
         )}
         {!confirmedAt && (
-          <View style={[themed.badge, themed.badgeWarning]}>
+          // <View style={[themed.badge, themed.badgeWarning]}>
             <Text style={themed.badgeText}>Not confirmed</Text>
           </View>
         )}
-      </View>
+      </View> */}
 
       {loading ? (
         <ActivityIndicator color={isDark ? "#fff" : "#111"} style={{ marginTop: scale.vs(8) }} />
@@ -376,9 +376,9 @@ export default function SecurityCodeCard({ jobId, role = "customer", style, onCo
               <TouchableOpacity style={themed.ghostBtn} onPress={() => setRevealed((s) => !s)} accessibilityRole="button">
                 <Text style={themed.ghostBtnText}>{revealed ? "Hide" : "Show"}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={themed.ghostBtn} onPress={copyCode} accessibilityRole="button">
+              {/* <TouchableOpacity style={themed.ghostBtn} onPress={copyCode} accessibilityRole="button">
                 <Text style={themed.ghostBtnText}>Copy</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
 
@@ -438,7 +438,7 @@ function getStyles(scale, isDark) {
       gap: scale.vs(8),
     },
     title: {
-      color: text,
+      color: 'white',
       fontWeight: "800",
       fontSize: scale.vs(18),
     },
@@ -517,10 +517,10 @@ function getStyles(scale, isDark) {
       alignItems: "center",
       justifyContent: "center",
     },
-    ghostBtnText: { color: text, fontWeight: "800", fontSize: scale.vs(14) },
+    ghostBtnText: { color: 'white', fontWeight: "800", fontSize: scale.vs(14) },
     metaText: { color: subtext, fontSize: scale.vs(12), marginTop: scale.vs(8) },
     secmessage: {
-      color: "#22c55e",
+      color: "white",
       textAlign: "center",
       marginBottom: scale.vs(8),
       fontSize: scale.vs(14),

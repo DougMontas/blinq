@@ -486,11 +486,11 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: "absolute",
-    backgroundColor: "rgba(99, 102, 241, 0.18)", // indigo glow
-    shadowColor: "#6366f1",
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 10 },
+    // backgroundColor: "rgba(99, 102, 241, 0.18)", // indigo glow
+    // shadowColor: "white",
+    // shadowOpacity: 0.5,
+    // shadowRadius: 30,
+    // shadowOffset: { width: 0, height: 10 },
     elevation: 18,
   },
 });
