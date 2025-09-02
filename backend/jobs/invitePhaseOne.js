@@ -1144,7 +1144,8 @@ function summarizeSettled(label, settled) {
     },
     { fulfilled: 0, rejected: 0, errors: [] }
   );
-  console.log(`\n📊 ${label} — fulfilled=${summary.fulfilled}, rejected=${summary.rejected}`);
+  console.log(`
+📊 ${label} — fulfilled=${summary.fulfilled}, rejected=${summary.rejected}`);
   if (summary.errors.length) {
     for (const [i, err] of summary.errors.entries()) {
       console.warn(`   └─ (${i + 1}) ${err}`);
@@ -1239,11 +1240,50 @@ async function sendOrderedInvites({ io, provider, payload, jobIdStr, isTeaser, j
   summarizeSettled(`provider=${providerId} (${cohort}/${inviteKind})`, settled);
 }
 
+/**
+ * Helper: SMS updates to the customer per phase.
+ * Sends once per phase using job.customerNotifiedPhases to prevent spam.
+ */
+async function notifyCustomerForPhase({ job, customer, phase, hybridCount, profitCount, tierMiles, expiresAt }) {
+  try {
+    if (!customer?.phone) {
+      console.log("ℹ️ Customer has no phone on file — skipping customer SMS.");
+      return;
+    }
+
+    // initialize bookkeeping
+    job.customerNotifiedPhases = Array.from(new Set([...(job.customerNotifiedPhases || []).map(String)]));
+    const already = new Set(job.customerNotifiedPhases);
+
+    if (already.has(String(phase))) {
+      console.log(`ℹ️ Customer already notified for phase ${phase}.`);
+      return;
+    }
+
+    const etaMin = Math.max(1, Math.round((expiresAt.getTime() - Date.now()) / 60000));
+    const base = phase === 1
+      ? `BlinqFix: We’re notifying nearby pros now for your ${job.serviceType} request.`
+      : `BlinqFix: Expanding search to ${tierMiles} miles for faster response.`;
+
+    const details = ` Invites sent: ${hybridCount} direct + ${profitCount} teaser. Window ~${etaMin} min.`;
+    const msg = `${base}${details}`;
+
+    await sendSMS(customer.phone, msg);
+    console.log(`👤 customer sms ok → phase=${phase}, phone=${customer.phone}`);
+
+    job.customerNotifiedPhases.push(String(phase));
+    await job.save();
+  } catch (e) {
+    console.warn(`⚠️ customer sms failed → phase=${phase}:`, e?.message || e);
+  }
+}
+
 export async function invitePhaseOne(job, customer, io, phase = 1) {
   const startedAt = Date.now();
   try {
     const jobIdStr = job?._id?.toString?.() || "unknown";
-    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`📣 invitePhaseOne: Phase ${phase} for job ${jobIdStr}`);
 
     if (!job || job.status === "accepted" || job.acceptedProvider) {
@@ -1319,6 +1359,17 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
     await job.save();
 
     console.log(`🧾 saved job invitations → phase=${phase}, newlyInvited=${newlyInvited.length}`);
+
+    // 🔔 Notify the customer for this phase (once per phase)
+    await notifyCustomerForPhase({
+      job,
+      customer,
+      phase,
+      hybridCount: hybrid.length,
+      profitCount: profit.length,
+      tierMiles: tier.miles,
+      expiresAt,
+    });
 
     // Dispatch (order: socket → push → sms) --------------------------------
     const perProviderPromises = [];
@@ -1407,3 +1458,4 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
 // 3) Ensure sendSMS() rejects with an Error on failures and logs Twilio SID on success.
 // 4) Ensure sendPushNotification() returns a promise and rejects on errors.
 // 5) Verify getEligibleProviders(allProviders, tier, zipcode) returns provider objects with {_id, phone, expoPushToken}.
+// 6) NEW: Job model should include optional `customerNotifiedPhases: [String]` for deduping customer SMS.
