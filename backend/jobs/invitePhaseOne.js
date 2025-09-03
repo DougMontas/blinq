@@ -1104,7 +1104,7 @@
 //   }
 // }
 
-
+//the latest sent trying
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
@@ -1112,6 +1112,103 @@ import sendSMS from "../utils/sendSMS.js";
 import sendPushNotification from "../utils/sendPushNotification.js";
 import Users from "../models/Users.js";
 import mongoose from "mongoose";
+
+/* -------------------------------------------------------------------------- */
+/*                         PHONE HELPERS (resolve + log)                       */
+/* -------------------------------------------------------------------------- */
+const PHONE_KEYS = [
+  "phone",
+  "phoneNumber",
+  "mobile",
+  "mobileNumber",
+  "contactPhone",
+  "phone_number",
+  "tel",
+  "telephone",
+];
+
+function maskPhone(p) {
+  if (!p) return "-";
+  const d = String(p).replace(/\D/g, "");
+  if (d.length < 4) return "***";
+  return `***${d.slice(-4)}`;
+}
+
+function getPhoneWithKey(obj) {
+  if (!obj || typeof obj !== "object") return { value: null, key: null };
+  for (const k of PHONE_KEYS) {
+    const v = obj?.[k];
+    if (typeof v === "string" && v.trim()) return { value: v.trim(), key: k };
+  }
+  if (obj.contact?.phone) return { value: String(obj.contact.phone).trim(), key: "contact.phone" };
+  if (obj.profile?.phone) return { value: String(obj.profile.phone).trim(), key: "profile.phone" };
+  return { value: null, key: null };
+}
+
+function toIdString(v) {
+  if (!v) return null;
+  if (typeof v === "string") return v;
+  if (typeof v === "object") {
+    if (v._id) return String(v._id);
+    if (typeof v.toString === "function") return String(v.toString());
+  }
+  return null;
+}
+
+function extractCustomerId(job, customer) {
+  const ids = [];
+  const add = (src, val) => { const id = toIdString(val); if (id) ids.push({ src, id }); };
+  add("arg.customer._id", customer?._id);
+  add("job.customer", job?.customer);
+  add("job.customerId", job?.customerId);
+  add("job.createdBy", job?.createdBy);
+  add("job.owner", job?.owner);
+  add("job.ownerId", job?.ownerId);
+  add("job.user", job?.user);
+  add("job.userId", job?.userId);
+  add("job.requester", job?.requester);
+  add("job.requesterId", job?.requesterId);
+  add("job.customerUserId", job?.customerUserId);
+  return ids.length ? ids[0] : null;
+}
+
+async function resolveCustomerDoc(job, customer) {
+  // If caller already passed a phone-bearing customer, use it.
+  const direct = getPhoneWithKey(customer);
+  if (direct.value) {
+    console.log(`[SMS_DEBUG] customer from arg has ${direct.key} ${maskPhone(direct.value)}`);
+    return customer;
+  }
+
+  // Try job-level phone first (best effort immediate send)
+  const jobLevelPhone = job?.customerPhone || job?.customer_phone || job?.contactPhone;
+  if (jobLevelPhone) {
+    console.log(`[SMS_DEBUG] customerPhone present on job: ${maskPhone(jobLevelPhone)}`);
+    return { _id: null, phone: jobLevelPhone };
+  }
+
+  // Fetch by id from job fields
+  const cand = extractCustomerId(job, customer);
+  if (!cand) {
+    console.log("[SMS_DEBUG] no customer id resolvable from job — will skip customer SMS");
+    return null;
+  }
+  try {
+    const fresh = await Users.findById(cand.id).select(
+      "phone phoneNumber mobile contactPhone optInSms smsPreferences name"
+    ).lean();
+    if (fresh) {
+      const ph = getPhoneWithKey(fresh);
+      console.log(
+        `[SMS_DEBUG] customer loaded by ${cand.src}=${cand.id} phoneKey=${ph.key} phone=${maskPhone(ph.value)} optIn=${fresh.optInSms}`
+      );
+    }
+    return fresh || null;
+  } catch (e) {
+    console.warn("[SMS_DEBUG] customer fetch failed:", e?.message || e);
+    return null;
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 /*                               CONFIG + TIERS                               */
@@ -1124,69 +1221,47 @@ const RADIUS_TIERS = [
   { miles: 50, durationMs: 5 * 60 * 1000 },
 ];
 
-/**
- * Helper: normalized provider id string
- */
 const pid = (p) => (typeof p === "string" ? p : p?._id?.toString?.() || "");
 
-/**
- * Helper: log result nicely from Promise.allSettled
- */
 function summarizeSettled(label, settled) {
   const summary = settled.reduce(
     (acc, r) => {
-      if (r.status === "fulfilled") acc.fulfilled += 1;
-      else {
-        acc.rejected += 1;
-        acc.errors.push(r.reason?.message || r.reason || "Unknown error");
-      }
+      if (r.status === "fulfilled") acc.fulfilled += 1; else { acc.rejected += 1; acc.errors.push(r.reason?.message || r.reason || "Unknown error"); }
       return acc;
     },
     { fulfilled: 0, rejected: 0, errors: [] }
   );
-  console.log(`
-📊 ${label} — fulfilled=${summary.fulfilled}, rejected=${summary.rejected}`);
-  if (summary.errors.length) {
-    for (const [i, err] of summary.errors.entries()) {
-      console.warn(`   └─ (${i + 1}) ${err}`);
-    }
-  }
+  console.log(`\n📊 ${label} — fulfilled=${summary.fulfilled}, rejected=${summary.rejected}`);
+  if (summary.errors.length) summary.errors.forEach((e, i) => console.warn(`   └─ (${i + 1}) ${e}`));
   return summary;
 }
 
-/**
- * Helper: send in correct order per provider (Socket -> Push -> SMS)
- * Ensures we log each step and never block the overall phase.
- */
+/* -------------------------------------------------------------------------- */
+/*                     ORDERED DISPATCH (socket → push → SMS)                  */
+/* -------------------------------------------------------------------------- */
 async function sendOrderedInvites({ io, provider, payload, jobIdStr, isTeaser, job }) {
   const providerId = pid(provider);
   const cohort = isTeaser ? "profit_sharing" : "hybrid";
   const inviteKind = isTeaser ? "teaser" : "full";
 
-  // 1) In‑app (socket) — fire and log
+  // socket first
   try {
     io.to(providerId).emit("jobInvitation", payload);
-    console.log(
-      `📨 socket → provider=${providerId} cohort=${cohort} kind=${inviteKind} job=${jobIdStr} clickable=${payload.clickable}`
-    );
+    console.log(`📨 socket → provider=${providerId} cohort=${cohort} kind=${inviteKind} job=${jobIdStr} clickable=${payload.clickable}`);
   } catch (e) {
-    console.warn(
-      `⚠️ socket emit failed → provider=${providerId} cohort=${cohort} kind=${inviteKind} job=${jobIdStr}:`,
-      e?.message || e
-    );
+    console.warn(`⚠️ socket emit failed → provider=${providerId} job=${jobIdStr}:`, e?.message || e);
   }
 
   const tasks = [];
 
-  // 2) In-app DB/log channel
   try {
     if (isTeaser) tasks.push(sendTeaserInvite(provider, { ...job.toObject?.() ?? job, address: "[Hidden]" }));
     else tasks.push(sendInAppInvite(provider, job));
   } catch (e) {
-    console.warn(`⚠️ in-app invite function error → provider=${providerId}:`, e?.message || e);
+    console.warn(`⚠️ in-app invite func error → provider=${providerId}:`, e?.message || e);
   }
 
-  // 3) Push notification (if token)
+  // push
   if (typeof provider.expoPushToken === "string" && provider.expoPushToken.trim()) {
     tasks.push(
       sendPushNotification({
@@ -1194,69 +1269,59 @@ async function sendOrderedInvites({ io, provider, payload, jobIdStr, isTeaser, j
         title: "🚨 New Emergency Job",
         body: isTeaser ? "Tap to view teaser." : "Tap to accept now!",
         data: { jobId: jobIdStr, type: "jobInvite", clickable: !!payload.clickable },
-      }).then(() =>
-        console.log(
-          `📲 push ok → provider=${providerId} cohort=${cohort} kind=${inviteKind} job=${jobIdStr}`
-        )
-      ).catch((e) =>
-        console.warn(
-          `📵 push failed → provider=${providerId} cohort=${cohort} kind=${inviteKind} job=${jobIdStr}:`,
-          e?.message || e
-        )
-      )
+      }).then(() => console.log(`📲 push ok → provider=${providerId} cohort=${cohort} kind=${inviteKind} job=${jobIdStr}`))
+        .catch((e) => console.warn(`📵 push failed → provider=${providerId} job=${jobIdStr}:`, e?.message || e))
     );
   } else {
     console.log(`ℹ️ no push token → provider=${providerId}`);
   }
 
-  // 4) SMS (if phone)
-  if (provider.phone) {
+  // sms
+  const ph = getPhoneWithKey(provider);
+  if (ph.value) {
     const smsText = isTeaser
       ? `BlinqFix Teaser: Emergency job ID ${jobIdStr}. Open app to learn more.`
       : `📢 BlinqFix Alert: New job ID ${jobIdStr} available! Tap to accept.`;
 
     tasks.push(
-      sendSMS(provider.phone, smsText)
-        .then((r) => {
-          console.log(
-            `📟 sms ok → provider=${providerId} phone=${provider.phone} cohort=${cohort} kind=${inviteKind} job=${jobIdStr}`
-          );
-          return r;
-        })
-        .catch((e) => {
-          console.warn(
-            `📴 sms failed → provider=${providerId} phone=${provider.phone} job=${jobIdStr}:`,
-            e?.message || e
-          );
-          throw e;
-        })
+      sendSMS(ph.value, smsText)
+        .then(() => console.log(`📟 sms ok → provider=${providerId} phoneKey=${ph.key} phone=${maskPhone(ph.value)} cohort=${cohort} kind=${inviteKind} job=${jobIdStr}`))
+        .catch((e) => console.warn(`📴 sms failed → provider=${providerId} phoneKey=${ph.key} phone=${maskPhone(ph.value)} job=${jobIdStr}:`, e?.message || e))
     );
   } else {
     console.log(`ℹ️ no phone on file → provider=${providerId}`);
   }
 
-  // Do not let one failure block others — settle all
   const settled = await Promise.allSettled(tasks);
   summarizeSettled(`provider=${providerId} (${cohort}/${inviteKind})`, settled);
 }
 
-/**
- * Helper: SMS updates to the customer per phase.
- * Sends once per phase using job.customerNotifiedPhases to prevent spam.
- */
+/* -------------------------------------------------------------------------- */
+/*                 CUSTOMER NOTIFY (one SMS per phase, with fallback)          */
+/* -------------------------------------------------------------------------- */
 async function notifyCustomerForPhase({ job, customer, phase, hybridCount, profitCount, tierMiles, expiresAt }) {
   try {
-    if (!customer?.phone) {
+    job.customerNotifiedPhases = Array.from(new Set([...(job.customerNotifiedPhases || []).map(String)]));
+    const already = new Set(job.customerNotifiedPhases);
+    if (already.has(String(phase))) {
+      console.log(`ℹ️ Customer already notified for phase ${phase}.`);
+      return;
+    }
+
+    const custDoc = await resolveCustomerDoc(job, customer);
+    const ph = getPhoneWithKey(custDoc);
+    if (!ph.value) {
       console.log("ℹ️ Customer has no phone on file — skipping customer SMS.");
       return;
     }
 
-    // initialize bookkeeping
-    job.customerNotifiedPhases = Array.from(new Set([...(job.customerNotifiedPhases || []).map(String)]));
-    const already = new Set(job.customerNotifiedPhases);
-
-    if (already.has(String(phase))) {
-      console.log(`ℹ️ Customer already notified for phase ${phase}.`);
+    // Optional: honor opt-in flags if present
+    if (custDoc?.optInSms === false) {
+      console.log("ℹ️ Customer opted out of SMS — skipping.");
+      return;
+    }
+    if (custDoc?.smsPreferences && custDoc.smsPreferences.jobUpdates === false) {
+      console.log("ℹ️ Customer disabled jobUpdates SMS — skipping.");
       return;
     }
 
@@ -1264,12 +1329,11 @@ async function notifyCustomerForPhase({ job, customer, phase, hybridCount, profi
     const base = phase === 1
       ? `BlinqFix: We’re notifying nearby pros now for your ${job.serviceType} request.`
       : `BlinqFix: Expanding search to ${tierMiles} miles for faster response.`;
-
     const details = ` Invites sent: ${hybridCount} direct + ${profitCount} teaser. Window ~${etaMin} min.`;
     const msg = `${base}${details}`;
 
-    await sendSMS(customer.phone, msg);
-    console.log(`👤 customer sms ok → phase=${phase}, phone=${customer.phone}`);
+    await sendSMS(ph.value, msg);
+    console.log(`👤 customer sms ok → phase=${phase} phoneKey=${ph.key} phone=${maskPhone(ph.value)}`);
 
     job.customerNotifiedPhases.push(String(phase));
     await job.save();
@@ -1278,12 +1342,14 @@ async function notifyCustomerForPhase({ job, customer, phase, hybridCount, profi
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                MAIN FLOW                                   */
+/* -------------------------------------------------------------------------- */
 export async function invitePhaseOne(job, customer, io, phase = 1) {
   const startedAt = Date.now();
   try {
     const jobIdStr = job?._id?.toString?.() || "unknown";
-    console.log(`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`📣 invitePhaseOne: Phase ${phase} for job ${jobIdStr}`);
 
     if (!job || job.status === "accepted" || job.acceptedProvider) {
@@ -1300,43 +1366,29 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
     const tier = RADIUS_TIERS[Math.min(phase - 1, RADIUS_TIERS.length - 1)];
     const expiresAt = new Date(Date.now() + tier.durationMs);
 
-    // Exclude providers who cancelled or were already invited in prior phases
     const excludeIds = new Set((job.cancelledProviders || []).map((id) => id.toString()));
-
     const invitedAlready = new Set((job.invitedProviders || []).map((id) => id.toString()));
 
-    // PHASE SELECTION -------------------------------------------------------
     let allProviders = [];
     if (phase === 1) {
-      console.log(
-        `🔍 Phase 1 query → type=${job.serviceType} zipcode=${job.serviceZipcode} exclude=${excludeIds.size}`
-      );
+      console.log(`🔍 Phase 1 query → type=${job.serviceType} zipcode=${job.serviceZipcode} exclude=${excludeIds.size}`);
       allProviders = await Users.find({
         role: "serviceProvider",
         isActive: true,
         serviceType: job.serviceType,
         serviceZipcode: job.serviceZipcode,
         _id: { $nin: Array.from(excludeIds) },
-      }).lean();
+      }).select("_id name expoPushToken phone phoneNumber mobile contactPhone location serviceType serviceZipcode").lean();
     } else {
       const maxMeters = tier.miles * MILES_TO_METERS;
-      console.log(
-        `🔍 Phase ${phase} radius query → type=${job.serviceType} radius=${tier.miles}mi (${maxMeters.toFixed(
-          0
-        )}m) exclude=${excludeIds.size}`
-      );
+      console.log(`🔍 Phase ${phase} radius query → type=${job.serviceType} radius=${tier.miles}mi (${maxMeters.toFixed(0)}m) exclude=${excludeIds.size}`);
       allProviders = await Users.find({
         role: "serviceProvider",
         isActive: true,
         serviceType: job.serviceType,
-        location: {
-          $nearSphere: {
-            $geometry: location, // Expect GeoJSON { type: 'Point', coordinates:[lng,lat] }
-            $maxDistance: maxMeters,
-          },
-        },
+        location: { $nearSphere: { $geometry: location, $maxDistance: maxMeters } },
         _id: { $nin: Array.from(excludeIds) },
-      }).lean();
+      }).select("_id name expoPushToken phone phoneNumber mobile contactPhone location serviceType serviceZipcode").lean();
     }
 
     console.log(`👥 matched providers: ${allProviders.length}`);
@@ -1344,99 +1396,53 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
     const hybrid = getEligibleProviders(allProviders, "hybrid", job.serviceZipcode) || [];
     const profit = getEligibleProviders(allProviders, "profit_sharing", job.serviceZipcode) || [];
 
-    console.log(
-      `📦 cohorts → hybrid=${hybrid.length}, profit_sharing=${profit.length}, alreadyInvited=${invitedAlready.size}`
-    );
+    const withPhoneCounts = {
+      hybrid: hybrid.filter((p) => !!getPhoneWithKey(p).value).length,
+      profit: profit.filter((p) => !!getPhoneWithKey(p).value).length,
+    };
+    console.log(`📞 phone-ready → hybrid=${withPhoneCounts.hybrid}/${hybrid.length}, profit=${withPhoneCounts.profit}/${profit.length}`);
 
-    // Record invited providers for this phase (dedupe against previous)
-    const newlyInvited = [...hybrid, ...profit]
-      .map((p) => pid(p))
-      .filter((id) => id && !invitedAlready.has(id));
-
+    const newlyInvited = [...hybrid, ...profit].map((p) => pid(p)).filter((id) => id && !invitedAlready.has(id));
     job.invitedProviders = Array.from(new Set([...(job.invitedProviders || []).map(String), ...newlyInvited]));
     job.invitationPhase = phase;
     job.invitationExpiresAt = expiresAt;
     await job.save();
-
     console.log(`🧾 saved job invitations → phase=${phase}, newlyInvited=${newlyInvited.length}`);
 
-    // 🔔 Notify the customer for this phase (once per phase)
-    await notifyCustomerForPhase({
-      job,
-      customer,
-      phase,
-      hybridCount: hybrid.length,
-      profitCount: profit.length,
-      tierMiles: tier.miles,
-      expiresAt,
-    });
+    await notifyCustomerForPhase({ job, customer, phase, hybridCount: hybrid.length, profitCount: profit.length, tierMiles: tier.miles, expiresAt });
 
-    // Dispatch (order: socket → push → sms) --------------------------------
     const perProviderPromises = [];
-
-    // PROFIT_SHARING → teaser only (never clickable)
     for (const p of profit) {
       const providerId = pid(p);
       if (!providerId || excludeIds.has(providerId) || invitedAlready.has(providerId)) {
         console.log(`⏭️ skip profit provider=${providerId} (excluded or already invited)`);
         continue;
       }
-
-      const teaserPayload = {
-        jobId: jobIdStr,
-        invitationExpiresAt: expiresAt,
-        clickable: false, // teaser never clickable
-        buttonsActive: false,
-        cohort: "profit_sharing",
-        inviteKind: "teaser",
-      };
-
-      perProviderPromises.push(
-        sendOrderedInvites({ io, provider: p, payload: teaserPayload, jobIdStr, isTeaser: true, job })
-      );
+      const teaserPayload = { jobId: jobIdStr, invitationExpiresAt: expiresAt, clickable: false, buttonsActive: false, cohort: "profit_sharing", inviteKind: "teaser" };
+      perProviderPromises.push(sendOrderedInvites({ io, provider: p, payload: teaserPayload, jobIdStr, isTeaser: true, job }));
     }
 
-    // HYBRID → full invite (clickable)
     for (const p of hybrid) {
       const providerId = pid(p);
       if (!providerId || excludeIds.has(providerId) || invitedAlready.has(providerId)) {
         console.log(`⏭️ skip hybrid provider=${providerId} (excluded or already invited)`);
         continue;
       }
-
-      const payload = {
-        jobId: jobIdStr,
-        invitationExpiresAt: expiresAt,
-        clickable: true,
-        buttonsActive: true,
-        cohort: "hybrid",
-        inviteKind: "full",
-      };
-
-      perProviderPromises.push(
-        sendOrderedInvites({ io, provider: p, payload, jobIdStr, isTeaser: false, job })
-      );
+      const payload = { jobId: jobIdStr, invitationExpiresAt: expiresAt, clickable: true, buttonsActive: true, cohort: "hybrid", inviteKind: "full" };
+      perProviderPromises.push(sendOrderedInvites({ io, provider: p, payload, jobIdStr, isTeaser: false, job }));
     }
 
     const settled = await Promise.allSettled(perProviderPromises);
     summarizeSettled(`phase ${phase} per‑provider dispatch`, settled);
-
     console.log(`✅ Phase ${phase} invites dispatched in ${Date.now() - startedAt}ms.`);
 
-    // Next phase scheduling --------------------------------------------------
     if (phase < 5) {
-      console.log(`⏳ Scheduling Phase ${phase + 1} in ${tier.durationMs / 1000}s`);
+      console.log(`⏳ Scheduling Phase ${phase + 1} in ${Math.round(tier.durationMs / 1000)}s`);
       setTimeout(async () => {
         try {
           const latest = await mongoose.model("Job").findById(job._id);
-          if (!latest) {
-            console.warn(`⚠️ Job not found when scheduling next phase: ${jobIdStr}`);
-            return;
-          }
-          if (latest.status === "accepted" || latest.acceptedProvider) {
-            console.log("🛑 Job already accepted. Ending invites.");
-            return;
-          }
+          if (!latest) return console.warn(`⚠️ Job not found when scheduling next phase: ${jobIdStr}`);
+          if (latest.status === "accepted" || latest.acceptedProvider) return console.log("🛑 Job already accepted. Ending invites.");
           await invitePhaseOne(latest, customer, io, phase + 1);
         } catch (e) {
           console.error("❌ Error in scheduled next phase:", e?.message || e);
@@ -1444,18 +1450,14 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
       }, tier.durationMs);
     }
   } catch (err) {
-    console.error("❌ Error in invitePhaseOne:", err?.message || err);
+    console.error("❌ Error in invitePhaseOne!:", err?.message || err);
   }
 }
 
 /* -------------------------------------------------------------------------- */
-/*                               QUICK CHECKLIST                              */
+/*                                 CHECKLIST                                  */
 /* -------------------------------------------------------------------------- */
-// 1) Ensure Users collection has a 2dsphere index on `location`. Example:
-//    db.Users.createIndex({ location: "2dsphere" })
-// 2) Ensure providers join their socket room by _id.toString(). Example on connect:
-//    socket.join(user._id.toString())
-// 3) Ensure sendSMS() rejects with an Error on failures and logs Twilio SID on success.
-// 4) Ensure sendPushNotification() returns a promise and rejects on errors.
-// 5) Verify getEligibleProviders(allProviders, tier, zipcode) returns provider objects with {_id, phone, expoPushToken}.
-// 6) NEW: Job model should include optional `customerNotifiedPhases: [String]` for deduping customer SMS.
+// • Ensure provider Users have a phone field populated (phone/phoneNumber/mobile/etc.).
+// • Prefer storing `job.customerPhone` at job creation time for deterministic customer SMS.
+// • sendSMS() normalizes to E.164 and logs Twilio REST errors with code/moreInfo if any.
+// • Use Twilio status webhook to observe delivered/undelivered + ErrorCode.
