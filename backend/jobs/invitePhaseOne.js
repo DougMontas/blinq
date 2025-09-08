@@ -2233,7 +2233,7 @@
 // // });
 
 
-
+//latest working 
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
@@ -2266,14 +2266,32 @@ const SUBSCRIPTION_LINK = process.env.SUBSCRIPTION_URL || "https://blinqfix.app/
 /* ========================================================================== */
 const shortId = (id) => String(id || "").slice(-6).toUpperCase();
 
+// const smsTemplates = {
+//   providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) =>
+//     `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Accept: ${APP_LINK}`,
+
+//   providerProfitTeaser: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
+//     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
+//     const link = `${SUBSCRIPTION_LINK}${SUBSCRIPTION_LINK.includes("?") ? "&" : "?"}${q}`;
+//     return `BlinqFix Teaser: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
+//   },
+
+//   customerInitial: ({ serviceType, zipcode }) =>
+//     `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${APP_LINK}`,
+//   customerAccepted: ({ providerName, etaMin, jobId }) =>
+//     `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m. Track: ${APP_LINK}`,
+//   customerCompleted: ({ jobId }) =>
+//     `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks! Receipt: ${APP_LINK}`,
+// };
+
 const smsTemplates = {
   providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) =>
     `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Accept: ${APP_LINK}`,
 
-  providerProfitTeaser: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
+  providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
     const link = `${SUBSCRIPTION_LINK}${SUBSCRIPTION_LINK.includes("?") ? "&" : "?"}${q}`;
-    return `BlinqFix Teaser: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
   },
 
   customerInitial: ({ serviceType, zipcode }) =>
@@ -2283,6 +2301,12 @@ const smsTemplates = {
   customerCompleted: ({ jobId }) =>
     `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks! Receipt: ${APP_LINK}`,
 };
+
+// In sendOrderedInvites, update the SMS selection:
+const body = actual === "profit_sharing"
+  ? smsTemplates.providerProfitInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode })
+  : smsTemplates.providerHybridInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode });
+
 
 /* ========================================================================== */
 /*                                HELPERS                                     */
