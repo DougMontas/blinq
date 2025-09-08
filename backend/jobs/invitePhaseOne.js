@@ -2931,4 +2931,17 @@ export async function smsOnJobCompleted({ job, customer, provider }) {
     const jobIdStr = job?._id?.toString?.() || "unknown";
     const custDoc = await resolveCustomerDoc(job, customer);
     const { value: phone } = getPhoneWithKey(custDoc);
-    const normalized = normalize
+    const normalized = normalize(phone);
+    if (!phone) return console.log("ℹ️ customer has no phone — skip completed SMS");
+    if (custDoc?.optInSms === false) return console.log("ℹ️ customer opted out — skip completed SMS");
+
+    const eventSmsNumbers = new Set();
+    if (DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized)) return;
+
+    const body = smsTemplates.customerCompleted({ jobId: jobIdStr });
+
+    await sendSMS(phone, body);
+    if (normalized) eventSmsNumbers.add(normalized);
+    console.log(`👤 customer sms ok → completed phone=${maskPhone(phone)}`);
+  } catch (e) { console.warn("⚠️ customer sms failed (completed):", e?.message || e); }
+}
