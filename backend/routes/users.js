@@ -6120,7 +6120,7 @@
 
 // export default router;
 
-
+//working latest
 import express from "express";
 import mongoose from "mongoose";
 import crypto from "crypto";
@@ -6283,6 +6283,37 @@ router.get("/me/summary", auth, async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
+
+//update user customer
+
+router.put("/update", auth, async (req, res) => {
+  try {
+  const { name, email, address, zipcode, phoneNumber } = req.body;
+  
+  
+  const updates = {};
+  if (name) updates.name = name;
+  if (email) updates.email = String(email).toLowerCase();
+  if (address) updates.address = address;
+  if (phoneNumber) updates.phoneNumber = String(phoneNumber);
+  if (zipcode) updates.zipcode = Array.isArray(zipcode) ? zipcode : [zipcode];
+  
+  
+  const user = await Users.findByIdAndUpdate(req.user.id, updates, {
+  new: true,
+  lean: true,
+  });
+  
+  
+  if (!user) return res.status(404).json({ msg: "User not found" });
+  
+  
+  res.json({ msg: "Profile updated successfully", user });
+  } catch (err) {
+  console.error("PUT /users/update error:", err);
+  res.status(500).json({ msg: "Server error updating profile" });
+  }
+  });
 
 // GET /api/users/active-providers
 router.get("/active-providers", async (req, res) => {
