@@ -2707,10 +2707,10 @@ const smsTemplates = {
     return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
   },
 
-  customerInitial: ({ serviceType, zipcode }) => {
-    const link = buildSmartLink("/home");
-    return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${link}`;
-  },
+  // customerInitial: ({ serviceType, zipcode }) => {
+  //   const link = buildSmartLink("/home");
+  //   return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${link}`;
+  // },
 
   customerAccepted: ({ providerName, etaMin, jobId }) => {
     const link = buildSmartLink(`/job/${jobId}`);
