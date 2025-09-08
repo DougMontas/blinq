@@ -2672,24 +2672,34 @@ import mongoose from "mongoose";
 /* ========================================================================== */
 /*                         VERSION + GLOBAL BEHAVIOR                          */
 /* ========================================================================== */
-const INVITE_PATCH_VERSION = "invite-v3.7 (hybrid/profit SMS cleanup)";
+const INVITE_PATCH_VERSION = "invite-v3.9 (built-in smart links)";
 console.log("🔧 INVITE PATCH:", INVITE_PATCH_VERSION);
 
 const SEND_PROVIDER_SMS_PHASES = new Set([1]);
 const DEDUPE_SMS_PER_EVENT = true;
 const ALLOW_CUSTOMER_SMS_IF_PHONE_MATCHES_PROVIDER = false;
 
-const APP_LINK = process.env.APP_STORE_URL || process.env.APP_DOWNLOAD_URL || "https://blinqfix.app/download";
-const SUBSCRIPTION_LINK = process.env.SUBSCRIPTION_URL || "https://blinqfix.app/upgrade";
+// Built-in universal links
+const APP_LINK = "https://blinqfix.app/download";
+const SUBSCRIPTION_LINK = "https://blinqfix.app/upgrade";
+const UNIVERSAL_LINK = "https://blinqfix.app/open";
+const IOS_STORE_LINK = "https://apps.apple.com/app/idYOUR_APP_ID";
+const ANDROID_STORE_LINK = "https://play.google.com/store/apps/details?id=your.package.name";
 
 /* ========================================================================== */
 /*                                  TEMPLATES                                 */
 /* ========================================================================== */
 const shortId = (id) => String(id || "").slice(-6).toUpperCase();
 
+function buildSmartLink(path = "") {
+  return `${UNIVERSAL_LINK}?redirect=${encodeURIComponent(path)}&fallback=${encodeURIComponent(APP_LINK)}`;
+}
+
 const smsTemplates = {
-  providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) =>
-    `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Accept: ${APP_LINK}`,
+  providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
+    const link = buildSmartLink(`/job/${jobId}`);
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Accept: ${link}`;
+  },
 
   providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
@@ -2697,12 +2707,20 @@ const smsTemplates = {
     return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
   },
 
-  customerInitial: ({ serviceType, zipcode }) =>
-    `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${APP_LINK}`,
-  customerAccepted: ({ providerName, etaMin, jobId }) =>
-    `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m. Track: ${APP_LINK}`,
-  customerCompleted: ({ jobId }) =>
-    `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks! Receipt: ${APP_LINK}`,
+  customerInitial: ({ serviceType, zipcode }) => {
+    const link = buildSmartLink("/home");
+    return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${link}`;
+  },
+
+  customerAccepted: ({ providerName, etaMin, jobId }) => {
+    const link = buildSmartLink(`/job/${jobId}`);
+    return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m. Track: ${link}`;
+  },
+
+  customerCompleted: ({ jobId }) => {
+    const link = buildSmartLink(`/job/${jobId}`);
+    return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks! Receipt: ${link}`;
+  },
 };
 
 /* ========================================================================== */
@@ -2907,23 +2925,27 @@ async function notifyCustomerInitial({ job, customer, zipcode, serviceType, even
   } catch {}
 }
 
-/* ========================================================================== */
-/* LIFECYCLE SMS HELPERS                                                      */
-/* ========================================================================== */
+//* ========================================================================== */
+// /*                          LIFECYCLE SMS HELPERS                             */
+// /* ========================================================================== */
 export async function smsOnJobAccepted({ job, customer, provider, etaMinutes }) {
   try {
     const jobIdStr = job?._id?.toString?.() || "unknown";
     const custDoc = await resolveCustomerDoc(job, customer);
     const { value: phone } = getPhoneWithKey(custDoc);
     const normalized = normalize(phone);
-    if (!phone) return;
-    if (custDoc?.optInSms === false) return;
+    if (!phone) return console.log("ℹ️ customer has no phone — skip accepted SMS");
+    if (custDoc?.optInSms === false) return console.log("ℹ️ customer opted out — skip accepted SMS");
+
     const eventSmsNumbers = new Set();
     if (DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized)) return;
+
     const body = smsTemplates.customerAccepted({ providerName: provider?.name || "Your Pro", etaMin: Math.max(1, Math.round(etaMinutes || 0)) || 10, jobId: jobIdStr });
+
     await sendSMS(phone, body);
     if (normalized) eventSmsNumbers.add(normalized);
-  } catch {}
+    console.log(`👤 customer sms ok → accepted phone=${maskPhone(phone)}`);
+  } catch (e) { console.warn("⚠️ customer sms failed (accepted):", e?.message || e); }
 }
 
 export async function smsOnJobCompleted({ job, customer, provider }) {
