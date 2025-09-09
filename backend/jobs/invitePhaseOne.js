@@ -2968,8 +2968,6 @@
 //   } catch (e) { console.warn("⚠️ customer sms failed (completed):", e?.message || e); }
 // }
 
-
-
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
@@ -2981,13 +2979,14 @@ import mongoose from "mongoose";
 /* ========================================================================== */
 /*                         VERSION + GLOBAL BEHAVIOR                          */
 /* ========================================================================== */
-const INVITE_PATCH_VERSION = "invite-v4.1 (debug comments enabled)";
+const INVITE_PATCH_VERSION = "invite-v4.3 (full lifecycle helpers included)";
 console.log("🔧 INVITE PATCH:", INVITE_PATCH_VERSION);
 
 const SEND_PROVIDER_SMS_PHASES = new Set([1]);
 const DEDUPE_SMS_PER_EVENT = true;
 const ALLOW_CUSTOMER_SMS_IF_PHONE_MATCHES_PROVIDER = false;
 
+// Built-in universal links
 const APP_LINK = "https://blinqfix.app/download";
 const SUBSCRIPTION_LINK = "https://blinqfix.app/upgrade";
 const UNIVERSAL_LINK = "https://blinqfix.app/open";
@@ -3004,30 +3003,67 @@ function buildSmartLink(path = "") {
 const smsTemplates = {
   providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `📢 [HYBRID SMS] BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Go to Blinqfix App:`;
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Accept: ${link}`;
   },
 
   providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
     const link = `${SUBSCRIPTION_LINK}${SUBSCRIPTION_LINK.includes("?") ? "&" : "?"}${q}`;
-    return `📢 [PROFIT SMS] BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept:`;
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
   },
 
   // customerInitial: ({ serviceType, zipcode }) => {
   //   const link = buildSmartLink("/home");
-  //   return `[CUSTOMER SMS] BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${link}`;
+  //   return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${link}`;
   // },
 
   customerAccepted: ({ providerName, etaMin, jobId }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `[CUSTOMER SMS] BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m.`;
+    return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m. ${link}`;
   },
 
   customerCompleted: ({ jobId }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `[CUSTOMER SMS] BlinqFix: Job ${shortId(jobId)} marked complete. Thanks!`;
+    return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks! ${link}`;
   },
 };
+
+/* ========================================================================== */
+/*                                HELPERS                                     */
+/* ========================================================================== */
+const PHONE_KEYS = ["phone", "phoneNumber", "mobile", "mobileNumber", "contactPhone", "phone_number", "tel", "telephone"];
+
+function maskPhone(p) { if (!p) return "-"; const d = String(p).replace(/\D/g, ""); return d.length < 4 ? "***" : `***${d.slice(-4)}`; }
+function getPhoneWithKey(obj) {
+  if (!obj || typeof obj !== "object") return { value: null, key: null };
+  for (const k of PHONE_KEYS) { const v = obj?.[k]; if (typeof v === "string" && v.trim()) return { value: v.trim(), key: k }; }
+  if (obj?.contact?.phone) return { value: String(obj.contact.phone).trim(), key: "contact.phone" };
+  if (obj?.profile?.phone) return { value: String(obj.profile.phone).trim(), key: "profile.phone" };
+  return { value: null, key: null };
+}
+function normalize(n) { if (!n) return null; const s = String(n).trim(); if (s.startsWith("+")) return s.replace(/\s/g, ""); const d = s.replace(/\D/g, ""); if (!d) return null; if (d.length === 10) return "+1" + d; if (d.length === 11 && d.startsWith("1")) return "+" + d; return "+" + d; }
+function toIdString(v) { if (!v) return null; if (typeof v === "string") return v; if (typeof v === "object") { if (v._id) return String(v._id); if (typeof v.toString === "function") return String(v.toString()); } return null; }
+function extractCustomerId(job, customer) {
+  const ids = []; const add = (src, val) => { const id = toIdString(val); if (id) ids.push({ src, id }); };
+  add("arg.customer._id", customer?._id); add("job.customer", job?.customer); add("job.customerId", job?.customerId);
+  add("job.createdBy", job?.createdBy); add("job.owner", job?.owner); add("job.ownerId", job?.ownerId);
+  add("job.user", job?.user); add("job.userId", job?.userId); add("job.requester", job?.requester);
+  add("job.requesterId", job?.requesterId); add("job.customerUserId", job?.customerUserId);
+  return ids.length ? ids[0] : null;
+}
+async function resolveCustomerDoc(job, customer) {
+  const direct = getPhoneWithKey(customer); if (direct.value) return customer;
+  const jobLevelPhone = job?.customerPhone || job?.customer_phone || job?.contactPhone; if (jobLevelPhone) return { _id: null, phone: jobLevelPhone, name: job?.customerName };
+  const cand = extractCustomerId(job, customer); if (!cand) return null;
+  try { const fresh = await Users.findById(cand.id).select("name phone phoneNumber mobile contactPhone optInSms smsPreferences").lean(); return fresh || null; } catch { return null; }
+}
+function splitName(fullName) { if (!fullName || typeof fullName !== "string") return { first: "Customer", lastInitial: "" }; const parts = fullName.trim().split(/\s+/); const first = parts[0] || "Customer"; const lastInitial = parts.length > 1 ? (parts[parts.length - 1][0] || "").toUpperCase() + "." : ""; return { first, lastInitial }; }
+function getProviderCohort(provider) {
+  const raw = (provider?.billingTier || provider?.cohort || provider?.plan || "").toString().toLowerCase();
+  if (["hybrid"].includes(raw)) return "hybrid";
+  if (["profit_sharing", "profit-sharing", "profit", "profitshare"].includes(raw)) return "profit_sharing";
+  return null;
+}
 
 /* ========================================================================== */
 /* PROVIDER DISPATCH                                                          */
@@ -3035,7 +3071,7 @@ const smsTemplates = {
 async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobIdStr, job, eventSmsNumbers, context }) {
   const providerId = provider?._id?.toString?.() || "";
   const declared = requestedTeaser ? "profit_sharing" : "hybrid";
-  const actual = (provider?.billingTier || "").toLowerCase() === "profit_sharing" ? "profit_sharing" : "hybrid";
+  const actual = getProviderCohort(provider) || declared;
   const inviteKind = actual === "profit_sharing" ? (requestedTeaser ? "teaser" : "full") : "full";
 
   try {
@@ -3046,7 +3082,6 @@ async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobI
       cohort: actual,
       inviteKind,
     });
-    console.log(`📨 [SOCKET] Stage=${context.phase} provider=${providerId} cohort=${actual} inviteKind=${inviteKind}`);
   } catch {}
 
   const tasks = [];
@@ -3059,7 +3094,7 @@ async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobI
     tasks.push(sendPushNotification({
       to: provider.expoPushToken,
       title: "🚨 New Emergency Job",
-      body: actual === "profit_sharing" && requestedTeaser ? `[PUSH][Stage ${context.phase}] Upgrade to accept this job.` : `[PUSH][Stage ${context.phase}] Tap to accept now!`,
+      body: actual === "profit_sharing" && requestedTeaser ? "Upgrade to accept this job." : "Tap to accept now!",
       data: { jobId: jobIdStr, type: "jobInvite", clickable: actual !== "profit_sharing" || !requestedTeaser },
     }));
   }
@@ -3072,7 +3107,8 @@ async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobI
       const body = actual === "profit_sharing" && requestedTeaser
         ? smsTemplates.providerProfitInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode })
         : smsTemplates.providerHybridInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode });
-      tasks.push(sendSMS(ph.value, `[SMS][Stage ${context.phase}] ${body}`));
+      tasks.push(sendSMS(ph.value, body));
+      if (normalized) eventSmsNumbers.add(normalized);
     }
   }
   await Promise.allSettled(tasks);
@@ -3179,8 +3215,27 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
 }
 
 /* ========================================================================== */
-/* LIFECYCLE SMS HELPERS                                                      */
+/* CUSTOMER SMS                                                               */
 /* ========================================================================== */
+async function notifyCustomerInitial({ job, customer, zipcode, serviceType, eventSmsNumbers, providerPhonesNormalized }) {
+  try {
+    const custDoc = await resolveCustomerDoc(job, customer);
+    const ph = getPhoneWithKey(custDoc);
+    const normalized = normalize(ph.value);
+    if (!ph.value) return;
+    if (custDoc?.optInSms === false) return;
+    if (custDoc?.smsPreferences && custDoc.smsPreferences.jobUpdates === false) return;
+    if (!ALLOW_CUSTOMER_SMS_IF_PHONE_MATCHES_PROVIDER && normalized && providerPhonesNormalized.has(normalized)) return;
+    if (DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized)) return;
+    const body = smsTemplates.customerInitial({ serviceType, zipcode });
+    await sendSMS(ph.value, body);
+    if (normalized) eventSmsNumbers.add(normalized);
+  } catch {}
+}
+
+//* ========================================================================== */
+// /*                          LIFECYCLE SMS HELPERS                             */
+// /* ========================================================================== */
 export async function smsOnJobAccepted({ job, customer, provider, etaMinutes }) {
   try {
     const jobIdStr = job?._id?.toString?.() || "unknown";
@@ -3194,6 +3249,26 @@ export async function smsOnJobAccepted({ job, customer, provider, etaMinutes }) 
     if (DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized)) return;
 
     const body = smsTemplates.customerAccepted({ providerName: provider?.name || "Your Pro", etaMin: Math.max(1, Math.round(etaMinutes || 0)) || 10, jobId: jobIdStr });
+
+    await sendSMS(phone, body);
+    if (normalized) eventSmsNumbers.add(normalized);
+    console.log(`👤 customer sms ok → accepted phone=${maskPhone(phone)}`);
+  } catch (e) { console.warn("⚠️ customer sms failed (accepted):", e?.message || e); }
+}
+
+export async function smsOnJobCompleted({ job, customer, provider }) {
+  try {
+    const jobIdStr = job?._id?.toString?.() || "unknown";
+    const custDoc = await resolveCustomerDoc(job, customer);
+    const { value: phone } = getPhoneWithKey(custDoc);
+    const normalized = normalize(phone);
+    if (!phone) return console.log("ℹ️ customer has no phone — skip completed SMS");
+    if (custDoc?.optInSms === false) return console.log("ℹ️ customer opted out — skip completed SMS");
+
+    const eventSmsNumbers = new Set();
+    if (DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized)) return;
+
+    const body = smsTemplates.customerCompleted({ jobId: jobIdStr });
 
     await sendSMS(phone, body);
     if (normalized) eventSmsNumbers.add(normalized);
