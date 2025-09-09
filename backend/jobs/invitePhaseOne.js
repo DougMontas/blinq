@@ -3099,19 +3099,34 @@ async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobI
     }));
   }
 
-  const ph = getPhoneWithKey(provider);
-  const normalized = normalize(ph.value);
-  if (ph.value && context.phaseAllowedForProviderSMS) {
-    if (!(DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized))) {
-      const { customerFirst, customerLastInitial, zipcode } = context;
-      const body = actual === "profit_sharing" && requestedTeaser
-        ? smsTemplates.providerProfitInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode })
-        : smsTemplates.providerHybridInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode });
-      tasks.push(sendSMS(ph.value, body));
-      if (normalized) eventSmsNumbers.add(normalized);
-    }
+//   const ph = getPhoneWithKey(provider);
+//   const normalized = normalize(ph.value);
+//   if (ph.value && context.phaseAllowedForProviderSMS) {
+//     if (!(DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized))) {
+//       const { customerFirst, customerLastInitial, zipcode } = context;
+//       const body = actual === "profit_sharing" && requestedTeaser
+//         ? smsTemplates.providerProfitInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode })
+//         : smsTemplates.providerHybridInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode });
+//       tasks.push(sendSMS(ph.value, body));
+//       if (normalized) eventSmsNumbers.add(normalized);
+//     }
+//   }
+//   await Promise.allSettled(tasks);
+// }
+
+const ph = getPhoneWithKey(provider);
+const normalized = normalize(ph.value);
+if (ph.value) {
+  if (!(DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized))) {
+    const { customerFirst, customerLastInitial, zipcode } = context;
+    const body = actual === "profit_sharing" && requestedTeaser
+      ? smsTemplates.providerProfitInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode })
+      : smsTemplates.providerHybridInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode });
+
+    // Always send SMS with push
+    tasks.push(sendSMS(ph.value, body));
+    if (normalized) eventSmsNumbers.add(normalized);
   }
-  await Promise.allSettled(tasks);
 }
 
 /* ========================================================================== */
