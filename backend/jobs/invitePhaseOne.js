@@ -2698,13 +2698,13 @@ function buildSmartLink(path = "") {
 const smsTemplates = {
   providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Accept: ${link}`;
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Open the App => `
   },
 
   providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
     const link = `${SUBSCRIPTION_LINK}${SUBSCRIPTION_LINK.includes("?") ? "&" : "?"}${q}`;
-    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept:`;
   },
 
   // customerInitial: ({ serviceType, zipcode }) => {
@@ -2714,12 +2714,12 @@ const smsTemplates = {
 
   customerAccepted: ({ providerName, etaMin, jobId }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m. Track: ${link}`;
+    return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m.`;
   },
 
   customerCompleted: ({ jobId }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks! Receipt: ${link}`;
+    return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks!`;
   },
 };
 
