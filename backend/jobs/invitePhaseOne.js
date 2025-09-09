@@ -3128,6 +3128,7 @@ if (ph.value) {
     if (normalized) eventSmsNumbers.add(normalized);
   }
 }
+}
 
 /* ========================================================================== */
 /* MAIN INVITE FLOW                                                           */
