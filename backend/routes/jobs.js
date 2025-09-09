@@ -1162,6 +1162,44 @@ router.get("/:jobId/security-code", auth, async (req, res) => {
   }
 });
 
+//pending jobs
+router.get("/pending", auth, async (req, res) => {
+  try {
+  const { serviceType, serviceZipcode } = req.query;
+  if (!serviceType || !serviceZipcode) {
+  return res.status(400).json({ msg: "Missing serviceType or serviceZipcode" });
+  }
+  
+  
+  const now = new Date();
+  
+  
+  const jobs = await Job.find({
+  serviceType,
+  serviceZipcode,
+  status: "pending",
+  invitationExpiresAt: { $gt: now },
+  acceptedProvider: { $exists: false },
+  isCancelled: { $ne: true },
+  })
+  .select(
+  "_id serviceType serviceZipcode address serviceCity estimatedTotal invitationExpiresAt clickable buttonsActive"
+  )
+  .lean();
+  
+  
+  if (!jobs.length) {
+  return res.status(404).json({ msg: "No pending jobs found" });
+  }
+  
+  
+  res.json(jobs);
+  } catch (err) {
+  console.error("GET /jobs/pending error:", err);
+  res.status(500).json({ msg: "Server error fetching pending jobs" });
+  }
+  });
+
 // ──────────────────────────────────────────────────────────────
 // POST /api/jobs/:jobId/security-code/confirm   { code: "123456" }
 // Only the acceptedProvider can confirm arrival with the code
