@@ -2273,7 +2273,7 @@
 // //   providerProfitTeaser: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
 // //     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
 // //     const link = `${SUBSCRIPTION_LINK}${SUBSCRIPTION_LINK.includes("?") ? "&" : "?"}${q}`;
-// //     return `BlinqFix Teaser: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
+// //     return `BlinqFix Teaser: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to a`;
 // //   },
 
 // //   customerInitial: ({ serviceType, zipcode }) =>
@@ -2291,7 +2291,7 @@
 //   providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
 //     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
 //     const link = `${SUBSCRIPTION_LINK}${SUBSCRIPTION_LINK.includes("?") ? "&" : "?"}${q}`;
-//     return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
+//     return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to a`;
 //   },
 
 //   customerInitial: ({ serviceType, zipcode }) =>
@@ -2709,7 +2709,7 @@
 
 //   // customerInitial: ({ serviceType, zipcode }) => {
 //   //   const link = buildSmartLink("/home");
-//   //   return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${link}`;
+//   //   return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track i`;
 //   // },
 
 //   customerAccepted: ({ providerName, etaMin, jobId }) => {
@@ -3003,28 +3003,28 @@ function buildSmartLink(path = "") {
 const smsTemplates = {
   providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Accept: ${link}`;
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Blinqfix App to Accept:`;
   },
 
   providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
     const link = `${SUBSCRIPTION_LINK}${SUBSCRIPTION_LINK.includes("?") ? "&" : "?"}${q}`;
-    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Upgrade to accept: ${link}`;
+    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Blinqfix App to Upgrade and Accept:`;
   },
 
   // customerInitial: ({ serviceType, zipcode }) => {
   //   const link = buildSmartLink("/home");
-  //   return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track in app: ${link}`;
+  //   return `BlinqFix: Notifying nearby ${serviceType} pros in ${zipcode}. Track i`;
   // },
 
   customerAccepted: ({ providerName, etaMin, jobId }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m. ${link}`;
+    return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m.`;
   },
 
   customerCompleted: ({ jobId }) => {
     const link = buildSmartLink(`/job/${jobId}`);
-    return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks! ${link}`;
+    return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks!`;
   },
 };
 
