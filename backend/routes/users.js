@@ -6624,30 +6624,96 @@ router.post("/save-session", auth, async (req, res) => {
 });
 
 // DELETE /api/users/delete (soft delete)
+// router.delete("/delete", auth, async (req, res) => {
+//   try {
+//     const userId = req.user._id || req.user.id;
+//     const { reason } = req.body;
+//     const updatedUser = await Users.findByIdAndUpdate(
+//       userId,
+//       {
+//         isDeleted: true,
+//         isActive: false,
+//         deleteReason: reason || "",
+//         deletedAt: new Date(),
+//       },
+//       { new: true }
+//     );
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ msg: "User not found" });
+//     }
+
+//     res.json({ msg: "Account successfully marked as deleted" });
+//   } catch (err) {
+//     console.error("❌ Delete user error", err);
+//     res.status(500).json({ msg: "Server error" });
+//   }
+// });
+
+// --- helpers ---------------------------------------------------------------
+const sanitizeLocalPart = (local) => String(local || "").replace(/[^a-zA-Z0-9._-]/g, "");
+
+
+async function buildDeletedEmail(originalEmail, userId) {
+try {
+const email = String(originalEmail || "").trim();
+const at = email.indexOf("@");
+const domain = at > 0 ? email.slice(at + 1) : "example.invalid";
+const local = at > 0 ? email.slice(0, at) : `user${String(userId).slice(-6)}`;
+
+
+const base = `deleted_${sanitizeLocalPart(local)}`;
+let candidate = `${base}@${domain}`; // preferred: deleted_email@gmail.com
+
+
+// If someone actually owns candidate already, ensure uniqueness.
+const exists = await Users.exists({ email: candidate });
+if (!exists) return candidate;
+
+
+// Fall back to a unique alias with short suffix (keeps domain the same)
+const shortId = String(userId).slice(-6);
+const ts = Date.now().toString(36);
+candidate = `${base}__del_${shortId}_${ts}@${domain}`;
+return candidate;
+} catch {
+return `deleted_${String(userId).slice(-6)}@example.invalid`;
+}
+}
+
+
+// DELETE /api/users/delete (soft delete + email rename)
 router.delete("/delete", auth, async (req, res) => {
-  try {
-    const userId = req.user._id || req.user.id;
-    const { reason } = req.body;
-    const updatedUser = await Users.findByIdAndUpdate(
-      userId,
-      {
-        isDeleted: true,
-        isActive: false,
-        deleteReason: reason || "",
-        deletedAt: new Date(),
-      },
-      { new: true }
-    );
+try {
+const userId = req.user._id || req.user.id;
+const { reason } = req.body || {};
 
-    if (!updatedUser) {
-      return res.status(404).json({ msg: "User not found" });
-    }
 
-    res.json({ msg: "Account successfully marked as deleted" });
-  } catch (err) {
-    console.error("❌ Delete user error", err);
-    res.status(500).json({ msg: "Server error" });
-  }
+// Load current user to get existing email & flags
+const user = await Users.findById(userId).select("email isDeleted");
+if (!user) return res.status(404).json({ msg: "User not found" });
+
+
+// Don’t double‑rename if already deleted and already prefixed
+const alreadyPrefixed = user.email && /^deleted_/i.test(user.email);
+const newEmail = !alreadyPrefixed ? await buildDeletedEmail(user.email, userId) : user.email;
+
+
+const update = {
+isDeleted: true,
+isActive: false,
+deleteReason: reason || "",
+deletedAt: new Date(),
+// Email changes (free the original for future sign‑up)
+...(alreadyPrefixed ? {} : { email: newEmail, emailDeletedOriginal: user.email, emailDeletedAt: new Date() }),
+// Optional: ensure login stops working immediately if you rely on verified flag
+emailVerified: false,
+};
+
+
+await Users.findByIdAndUpdate(userId, update, { new: false });
+
+
 });
 
 /* ---------------- FIXED: SMS preferences routes ----------------
