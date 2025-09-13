@@ -426,6 +426,8 @@ export default {
         "applinks:blinqfix.app"
       ],
       infoPlist: {
+        NSUserTrackingUsageDescription:
+        "BlinqFix uses your device’s identifier only to measure distance for job alerts and to track arrival at customer location. We do not sell personal data.",
         NSCameraUsageDescription:
           "We need access to your camera to let providers upload arrival/completion photos.",
         NSLocationWhenInUseUsageDescription:
