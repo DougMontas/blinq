@@ -384,7 +384,7 @@ export default function SecurityCodeCard({ jobId, role = "customer", style, onCo
 
           {role === "provider" && !confirmedAt && (
             <View style={themed.confirmRow}>
-              <TextInput
+              {/* <TextInput
                 value={input}
                 onChangeText={(t) => setInput(String(t).replace(/\D/g, "").slice(0, 6))}
                 placeholder="Enter 6-digit code"
@@ -393,13 +393,13 @@ export default function SecurityCodeCard({ jobId, role = "customer", style, onCo
                 keyboardType={Platform.select({ ios: "number-pad", android: "numeric", default: "numeric" })}
                 maxLength={6}
                 returnKeyType="done"
-              />
-              <TouchableOpacity style={[themed.primaryBtn, confirming && { opacity: 0.8 }]}
+              /> */}
+              {/* <TouchableOpacity style={[themed.primaryBtn, confirming && { opacity: 0.8 }]}
                 onPress={handleConfirm}
                 disabled={confirming}
                 accessibilityRole="button">
                 <Text style={themed.primaryBtnText}>{confirming ? "Confirming…" : "Confirm Arrival"}</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           )}
 
