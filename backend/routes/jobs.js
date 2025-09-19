@@ -15,7 +15,10 @@ import { invitePhaseTwo } from "../jobs/invitePhaseTwo.js";
 import cron from "node-cron";
 import { chargeTravelFee, issueRefund } from "../utils/refunds.js"; // add these helpers if needed
 import nodemailer from "nodemailer";
+import twilio from "twilio";
 
+
+const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
 const router = express.Router();
 const storage = multer.memoryStorage();
 
@@ -633,22 +636,58 @@ router.put("/:jobId/finalize", auth, async (req, res) => {
   }
 });
 
+// router.put("/:jobId/complete/provider", auth, async (req, res) => {
+//   const job = await Job.findById(req.params.jobId);
+//   if (!job) return res.status(404).json({ msg: "Job not found." });
+
+//   job.providerCompleted = true;
+//   job.status = "provider_completed";
+//   job.completedAt = new Date();
+
+//   await job.save();
+
+//   // notify the customer in real‐time if you like
+//   req.io.to(job.customer.toString()).emit("providerCompleted", {
+//     jobId: job._id.toString(),
+//   });
+
+//   return res.json(job);
+// });
+
 router.put("/:jobId/complete/provider", auth, async (req, res) => {
-  const job = await Job.findById(req.params.jobId);
-  if (!job) return res.status(404).json({ msg: "Job not found." });
+  try {
+    const job = await Job.findById(req.params.jobId).populate("customer", "name phoneNumber");
+    if (!job) return res.status(404).json({ msg: "Job not found." });
 
-  job.providerCompleted = true;
-  job.status = "provider_completed";
-  job.completedAt = new Date();
+    job.providerCompleted = true;
+    job.status = "provider_completed";
+    job.completedAt = new Date();
+    await job.save();
 
-  await job.save();
+    // 🔔 Real-time update via socket
+    req.io.to(job.customer.toString()).emit("providerCompleted", {
+      jobId: job._id.toString(),
+    });
 
-  // notify the customer in real‐time if you like
-  req.io.to(job.customer.toString()).emit("providerCompleted", {
-    jobId: job._id.toString(),
-  });
+    // 📲 Send SMS to customer
+    if (job.customer?.phoneNumber) {
+      try {
+        await twilioClient.messages.create({
+          to: job.customer.phoneNumber,
+          from: process.env.TWILIO_FROM,
+          body: `Hi ${job.customer.name || "there"}, your job "${job.details?.issue || job.serviceType}" has been marked complete by your BlinqFix professional.`,
+        });
+        console.log("✅ SMS sent to", job.customer.phoneNumber);
+      } catch (smsErr) {
+        console.error("❌ Failed to send SMS:", smsErr.message);
+      }
+    }
 
-  return res.json(job);
+    res.json(job);
+  } catch (err) {
+    console.error("PUT /api/jobs/:jobId/complete/provider error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
 });
 
 router.put("/:jobId/complete/customer", auth, async (req, res) => {
