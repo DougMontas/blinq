@@ -17,73 +17,97 @@ export default function HomeCustomer() {
   const navigation = useNavigation();
 
   return (
-      <ScreenWrapper>
-        <BackButton/>
-    <ScrollView contentContainerStyle={styles.container}>
-      <Animatable.View animation="fadeInDown" style={styles.header}>
-        <Image
-          source={require("../assets/blinqfix_logo-new.jpeg")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.title}>Instant On-Demand Emergency Repairs</Text>
-        <Text style={styles.subtitle}>Book certified pros instantly.</Text>
-      </Animatable.View>
+    <ScreenWrapper>
+      <BackButton />
+      <ScrollView contentContainerStyle={styles.container}>
+        <Animatable.View animation="fadeInDown" style={styles.header}>
+          <Image
+            source={require("../assets/blinqfix_logo-new.jpeg")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>Instant On-Demand Emergency Repairs</Text>
+          <Text style={styles.subtitle}>Book certified pros instantly.</Text>
+        </Animatable.View>
 
-      <Animatable.View animation="fadeInUp" delay={200} style={styles.content}>
-        <Text style={styles.bulletTitle}>Why Choose BlinqFix?</Text>
-        <View style={styles.bulletItem}>
-          <Text style={styles.bullet}>{"\u2022"}</Text>
-          <Text style={styles.bulletText}>Certified & Vetted Service Pros</Text>
-        </View>
-        <View style={styles.bulletItem}>
-          <Text style={styles.bullet}>{"\u2022"}</Text>
-          <Text style={styles.bulletText}>Upfront Pricing, No Surprises</Text>
-        </View>
-        <View style={styles.bulletItem}>
-          <Text style={styles.bullet}>{"\u2022"}</Text>
-          <Text style={styles.bulletText}>Live GPS Tracking of Arrival</Text>
-        </View>
-        <View style={styles.bulletItem}>
-          <Text style={styles.bullet}>{"\u2022"}</Text>
-          <Text style={styles.bulletText}>24/7 Availability for Emergencies</Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>What Customers Are Saying:</Text>
-        <View style={styles.testimonialBox}>
-          <Text style={styles.testimonial}>
-            "I had a burst pipe at 2 AM and BlinqFix had a pro at my door in 15 minutes. Incredible service!"
-          </Text>
-          <Text style={styles.testimonialAuthor}>- Maria G., Tampa</Text>
-        </View>
-        <View style={styles.testimonialBox}>
-          <Text style={styles.testimonial}>
-            "The price was fair, the app was easy to use, and the technician was professional."
-          </Text>
-          <Text style={styles.testimonialAuthor}>- John M., Miami</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("Registration")}
+        <Animatable.View
+          animation="fadeInUp"
+          delay={200}
+          style={styles.content}
         >
-          <Text style={styles.buttonText}>Create an Account</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+          <Text style={styles.bulletTitle}>Why Choose BlinqFix?</Text>
+          <View style={styles.bulletItem}>
+            <Text style={styles.bullet}>{"\u2022"}</Text>
+            <Text style={styles.bulletText}>
+              Certified & Vetted Service Pros
+            </Text>
+          </View>
+          <View style={styles.bulletItem}>
+            <Text style={styles.bullet}>{"\u2022"}</Text>
+            <Text style={styles.bulletText}>Upfront Pricing, No Surprises</Text>
+          </View>
+          <View style={styles.bulletItem}>
+            <Text style={styles.bullet}>{"\u2022"}</Text>
+            <Text style={styles.bulletText}>Live GPS Tracking of Arrival</Text>
+          </View>
+          <View style={styles.bulletItem}>
+            <Text style={styles.bullet}>{"\u2022"}</Text>
+            <Text style={styles.bulletText}>
+              24/7 Availability for Emergencies
+            </Text>
+          </View>
+
+          <Text style={styles.sectionTitle}>What Customers Are Saying:</Text>
+          <View style={styles.testimonialBox}>
+            <Text style={styles.testimonial}>
+              "I had a burst pipe at 2 AM and BlinqFix had a pro at my door in
+              15 minutes. Incredible service!"
+            </Text>
+            <Text style={styles.testimonialAuthor}>- Maria G., Tampa</Text>
+          </View>
+          <View style={styles.testimonialBox}>
+            <Text style={styles.testimonial}>
+              "The price was fair, the app was easy to use, and the technician
+              was professional."
+            </Text>
+            <Text style={styles.testimonialAuthor}>- John M., Miami</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate("Registration")}
+          >
+            <Text style={styles.buttonText}>Create an Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => navigation.navigate("Login")}
           >
             <Text style={styles.secondaryButtonText}>Login</Text>
           </TouchableOpacity>
-      
 
-        <View style={styles.linksRow}>
-          <Text style={styles.link} onPress={() => navigation.navigate("PrivacyPolicy")}>Privacy Policy</Text>
-          <Text style={styles.link} onPress={() => navigation.navigate("CustomerFAQScreen")}>FAQs</Text>
-          <Text style={styles.link} onPress={() => navigation.navigate("TermsAndConditions")}>Terms</Text>
-        </View>
-      </Animatable.View>
-    </ScrollView>
+          <View style={styles.linksRow}>
+            <Text
+              style={styles.link}
+              onPress={() => navigation.navigate("PrivacyPolicy")}
+            >
+              Privacy Policy
+            </Text>
+            <Text
+              style={styles.link}
+              onPress={() => navigation.navigate("CustomerFAQScreen")}
+            >
+              FAQs
+            </Text>
+            <Text
+              style={styles.link}
+              onPress={() => navigation.navigate("TermsAndConditions")}
+            >
+              Terms
+            </Text>
+          </View>
+        </Animatable.View>
+      </ScrollView>
     </ScreenWrapper>
   );
 }
@@ -124,7 +148,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "600",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
     color: "#1976d2",
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 1, height: 2 },
@@ -136,12 +160,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     textAlign: "center",
     marginBottom: 8,
-    
   },
   bullet: {
     fontSize: 20,
     marginRight: 8,
-   
   },
   bulletText: {
     fontSize: 16,
@@ -200,7 +222,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 20,
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
     color: "#1976d2",
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 1, height: 2 },

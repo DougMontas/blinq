@@ -476,7 +476,7 @@
 //                   <DollarSign color="#22c55e" size={24} />
 //                   <Text style={styles.summaryTitle}>Payment Summary</Text>
 //                 </View>
-                
+
 //                 <View style={styles.totalContainer}>
 //                   <Text style={styles.totalLabel}>Total Amount</Text>
 //                   <Text style={styles.totalAmount}>${job.estimatedTotal.toFixed(2)}</Text>
@@ -509,11 +509,11 @@
 //                     <AlertTriangle color="#fb923c" size={24} />
 //                     <Text style={styles.additionalTitle}>Additional Services</Text>
 //                   </View>
-                  
+
 //                   <Text style={styles.additionalAmount}>
 //                     ${job.additionalCharge.toFixed(2)}
 //                   </Text>
-                  
+
 //                   {job.additionalChargeReason && (
 //                     <Text style={styles.additionalReason}>
 //                       {job.additionalChargeReason}
@@ -568,12 +568,12 @@
 // }
 
 // const styles = StyleSheet.create({
-//   container: { 
-//     flex: 1 
+//   container: {
+//     flex: 1
 //   },
-//   scrollContent: { 
+//   scrollContent: {
 //     padding: 20,
-//     paddingBottom: 40, 
+//     paddingBottom: 40,
 //     marginTop:40,
 //   },
 //   errorContainer: {
@@ -1109,7 +1109,7 @@
 //         return Alert.alert("Payment Failed", error.message || "Unknown error occurred.");
 //       }
 //       console.log("🧾 [PaymentScreen] presentPaymentSheet → success ✅");
-  
+
 //       // Mark paid (non-blocking)
 //       try {
 //         await api.put(`/jobs/complete-payment/${effectiveJobId}`);
@@ -1117,21 +1117,21 @@
 //       } catch (e) {
 //         console.warn("complete-payment warning", e?.response?.data || e?.message || e);
 //       }
-  
+
 //       // Persist for safety
 //       try {
 //         await AsyncStorage.setItem("activeJobId", String(effectiveJobId));
 //         await AsyncStorage.setItem("postPaymentJobId", String(effectiveJobId)); // 👈 sentinel
 //         console.log("🧾 [PaymentScreen] Persisted activeJobId after payment:", effectiveJobId);
 //       } catch {}
-  
+
 //       // Hard reset to the status screen
 //       console.log("🧾 [PaymentScreen] RESET → CustomerJobStatus with jobId:", effectiveJobId);
 //       navigation.reset({
 //         index: 0,
 //         routes: [{ name: "CustomerJobStatus", params: { jobId: effectiveJobId, from: "payment" } }],
 //       });
-  
+
 //       // Fallback (in case root nav re-renders right after reset)
 //       setTimeout(() => {
 //         const s = navigation.getState?.();
@@ -1147,7 +1147,6 @@
 //       Alert.alert("Error", "Failed to complete payment.");
 //     }
 //   };
-  
 
 //   const estimatedTotal = Number(job?.estimatedTotal ?? 0);
 //   const additionalCharge = Number(job?.additionalCharge ?? 0);
@@ -1367,7 +1366,6 @@
 //   payButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 //   footerText: { color: "#94a3b8", fontSize: 12, textAlign: "center", lineHeight: 16 },
 // });
-
 
 // import React, { useEffect, useMemo, useState } from "react";
 // import {
@@ -1939,8 +1937,7 @@
 //   footerText: { color: "#94a3b8", fontSize: 12, textAlign: "center", lineHeight: 16 },
 // });
 
-
-//test version
+//working
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -1953,7 +1950,11 @@ import {
   SafeAreaView,
 } from "react-native";
 import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
-import { CommonActions, useNavigation, useRoute } from "@react-navigation/native";
+import {
+  CommonActions,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   CreditCard,
@@ -2031,15 +2032,24 @@ export default function PaymentScreen() {
   const pk = getPublishableKey();
   const stripeAccountId = route?.params?.stripeAccountId || undefined;
 
-  L("Stripe publishable key present:", Boolean(pk), "acct:", stripeAccountId || "(platform)");
+  L(
+    "Stripe publishable key present:",
+    Boolean(pk),
+    "acct:",
+    stripeAccountId || "(platform)"
+  );
 
   if (!pk) {
     return (
-      <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+      <LinearGradient
+        colors={["#0f172a", "#1e3a8a", "#312e81"]}
+        style={styles.container}
+      >
         <View style={styles.errorContainer}>
           <AlertTriangle color="#f87171" size={48} />
           <Text style={styles.errorText}>
-            Stripe publishable key is missing. Please configure it in app config.
+            Stripe publishable key is missing. Please configure it in app
+            config.
           </Text>
         </View>
       </LinearGradient>
@@ -2063,7 +2073,12 @@ function PaymentScreenInner() {
     L("Mounted. route.name:", route?.name, "params:", route?.params);
     try {
       const s = navigation?.getState?.();
-      L("Nav current route:", s?.routes?.[s?.index || 0]?.name, "params:", s?.routes?.[s?.index || 0]?.params);
+      L(
+        "Nav current route:",
+        s?.routes?.[s?.index || 0]?.name,
+        "params:",
+        s?.routes?.[s?.index || 0]?.params
+      );
     } catch (e) {
       L("Nav state read error:", e?.message || e);
     }
@@ -2153,12 +2168,21 @@ function PaymentScreenInner() {
         const { data: jobData } = await api.get(`/jobs/${effectiveJobId}`);
         if (cancelled) return;
         setJob(jobData);
-        L("GET /jobs ok. status:", jobData?.status, "estimatedTotal:", jobData?.estimatedTotal);
+        L(
+          "GET /jobs ok. status:",
+          jobData?.status,
+          "estimatedTotal:",
+          jobData?.estimatedTotal
+        );
 
-        const customerName = `${jobData?.customer?.name || jobData?.firstName || ""} ${
-          jobData?.customer?.lastName || jobData?.lastName || ""
-        }`.trim();
-        const customerEmail = jobData?.customer?.email || jobData?.email || jobData?.customerEmail || "";
+        const customerName = `${
+          jobData?.customer?.name || jobData?.firstName || ""
+        } ${jobData?.customer?.lastName || jobData?.lastName || ""}`.trim();
+        const customerEmail =
+          jobData?.customer?.email ||
+          jobData?.email ||
+          jobData?.customerEmail ||
+          "";
 
         const { data: raw1 } = await api.post("/payments/payment-sheet", {
           jobId: effectiveJobId,
@@ -2168,7 +2192,11 @@ function PaymentScreenInner() {
         if (cancelled) return;
 
         const p1 = normalizeSheetParams(raw1);
-        L("Sheet params (1st):", { customer: p1.customer, hasEK: !!p1.ephemeralKey, hasPI: !!p1.paymentIntentClientSecret });
+        L("Sheet params (1st):", {
+          customer: p1.customer,
+          hasEK: !!p1.ephemeralKey,
+          hasPI: !!p1.paymentIntentClientSecret,
+        });
 
         if (!isValidSheetParams(p1)) {
           L("⛔ Invalid sheet params:", raw1);
@@ -2193,9 +2221,16 @@ function PaymentScreenInner() {
             customerEmail,
           });
           const p2 = normalizeSheetParams(raw2);
-          L("Sheet params (retry):", { customer: p2.customer, hasEK: !!p2.ephemeralKey, hasPI: !!p2.paymentIntentClientSecret });
+          L("Sheet params (retry):", {
+            customer: p2.customer,
+            hasEK: !!p2.ephemeralKey,
+            hasPI: !!p2.paymentIntentClientSecret,
+          });
           if (!isValidSheetParams(p2)) {
-            Alert.alert("Stripe Error", "Could not initialize payment sheet (invalid retry).");
+            Alert.alert(
+              "Stripe Error",
+              "Could not initialize payment sheet (invalid retry)."
+            );
             return;
           }
           const { error: initErr2 } = await initPaymentSheet({
@@ -2207,7 +2242,10 @@ function PaymentScreenInner() {
           });
           if (initErr2) {
             L("initPaymentSheet error (2nd):", JSON.stringify(initErr2));
-            Alert.alert("Stripe Error", initErr2.message || "Could not initialize payment sheet.");
+            Alert.alert(
+              "Stripe Error",
+              initErr2.message || "Could not initialize payment sheet."
+            );
             return;
           }
         }
@@ -2215,7 +2253,10 @@ function PaymentScreenInner() {
         L("Payment sheet ready ✅");
         setPaymentReady(true);
       } catch (err) {
-        L("preparePayment exception:", err?.response?.data || err?.message || err);
+        L(
+          "preparePayment exception:",
+          err?.response?.data || err?.message || err
+        );
         Alert.alert("Stripe Error", "Could not initialize payment sheet.");
       } finally {
         if (!cancelled) setLoadingSheet(false);
@@ -2230,7 +2271,10 @@ function PaymentScreenInner() {
 
   const handlePay = async () => {
     if (!paymentReady) {
-      return Alert.alert("Payment not ready", "Please wait while we prepare your payment.");
+      return Alert.alert(
+        "Payment not ready",
+        "Please wait while we prepare your payment."
+      );
     }
 
     try {
@@ -2238,7 +2282,10 @@ function PaymentScreenInner() {
       const { error } = await presentPaymentSheet();
       if (error) {
         L("presentPaymentSheet → error:", error?.message || error);
-        return Alert.alert("Payment Failed", error.message || "Unknown error occurred.");
+        return Alert.alert(
+          "Payment Failed",
+          error.message || "Unknown error occurred."
+        );
       }
       L("presentPaymentSheet → success ✅");
 
@@ -2266,7 +2313,12 @@ function PaymentScreenInner() {
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: "CustomerJobStatus", params: { jobId: String(effectiveJobId), from: "payment" } }],
+          routes: [
+            {
+              name: "CustomerJobStatus",
+              params: { jobId: String(effectiveJobId), from: "payment" },
+            },
+          ],
         })
       );
 
@@ -2284,7 +2336,10 @@ function PaymentScreenInner() {
         }
       }, 120);
     } catch (err) {
-      L("presentPaymentSheet fatal:", err?.response?.data || err?.message || err);
+      L(
+        "presentPaymentSheet fatal:",
+        err?.response?.data || err?.message || err
+      );
       Alert.alert("Error", "Failed to complete payment.");
     }
   };
@@ -2293,13 +2348,23 @@ function PaymentScreenInner() {
   const additionalCharge = Number(job?.additionalCharge ?? 0);
   const totalToday = Number((estimatedTotal + additionalCharge).toFixed(2));
   useEffect(() => {
-    L("Render amounts → totalToday:", totalToday, "estimatedTotal:", estimatedTotal, "additionalCharge:", additionalCharge);
+    L(
+      "Render amounts → totalToday:",
+      totalToday,
+      "estimatedTotal:",
+      estimatedTotal,
+      "additionalCharge:",
+      additionalCharge
+    );
   }, [totalToday, estimatedTotal, additionalCharge]);
 
   /* UI states */
   if (resolvingJobId) {
     return (
-      <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+      <LinearGradient
+        colors={["#0f172a", "#1e3a8a", "#312e81"]}
+        style={styles.container}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.loadingText}>Preparing your payment…</Text>
@@ -2310,10 +2375,15 @@ function PaymentScreenInner() {
 
   if (!effectiveJobId) {
     return (
-      <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+      <LinearGradient
+        colors={["#0f172a", "#1e3a8a", "#312e81"]}
+        style={styles.container}
+      >
         <View style={styles.errorContainer}>
           <AlertTriangle color="#f87171" size={48} />
-          <Text style={styles.errorText}>Missing job reference. Please start again.</Text>
+          <Text style={styles.errorText}>
+            Missing job reference. Please start again.
+          </Text>
         </View>
       </LinearGradient>
     );
@@ -2321,7 +2391,10 @@ function PaymentScreenInner() {
 
   if (loadingSheet || !job) {
     return (
-      <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+      <LinearGradient
+        colors={["#0f172a", "#1e3a8a", "#312e81"]}
+        style={styles.container}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.loadingText}>Preparing your payment…</Text>
@@ -2331,15 +2404,22 @@ function PaymentScreenInner() {
   }
 
   const description =
-    job?.coveredDescription || getCoveredDescription(job?.service || job?.details?.issue || "");
+    job?.coveredDescription ||
+    getCoveredDescription(job?.service || job?.details?.issue || "");
 
   return (
-    <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+    <LinearGradient
+      colors={["#0f172a", "#1e3a8a", "#312e81"]}
+      style={styles.container}
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
               <ArrowLeft color="#fff" size={24} />
             </TouchableOpacity>
             <View style={styles.headerCenter}>
@@ -2354,7 +2434,10 @@ function PaymentScreenInner() {
 
           {/* Summary */}
           <View style={styles.summaryCard}>
-            <LinearGradient colors={["rgba(255,255,255,0.05)", "rgba(255,255,255,0.02)"]} style={styles.summaryGradient}>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.05)", "rgba(255,255,255,0.02)"]}
+              style={styles.summaryGradient}
+            >
               <View style={styles.cardHeader}>
                 <DollarSign color="#22c55e" size={24} />
                 <Text style={styles.summaryTitle}>Payment Summary</Text>
@@ -2367,8 +2450,12 @@ function PaymentScreenInner() {
 
               {additionalCharge > 0 && (
                 <View style={styles.additionalChargeContainer}>
-                  <Text style={styles.additionalChargeLabel}>Includes Additional Charge</Text>
-                  <Text style={styles.additionalChargeAmount}>+${additionalCharge.toFixed(2)}</Text>
+                  <Text style={styles.additionalChargeLabel}>
+                    Includes Additional Charge
+                  </Text>
+                  <Text style={styles.additionalChargeAmount}>
+                    +${additionalCharge.toFixed(2)}
+                  </Text>
                 </View>
               )}
 
@@ -2393,18 +2480,25 @@ function PaymentScreenInner() {
             </View>
             <View style={styles.securityItem}>
               <CheckCircle color="#c084fc" size={16} />
-              <Text style={styles.securityText}>100% satisfaction guaranteed</Text>
+              <Text style={styles.securityText}>
+                100% satisfaction guaranteed
+              </Text>
             </View>
           </View>
 
           {/* Pay Button */}
           <TouchableOpacity
-            style={[styles.payButton, !paymentReady && styles.payButtonDisabled]}
+            style={[
+              styles.payButton,
+              !paymentReady && styles.payButtonDisabled,
+            ]}
             onPress={handlePay}
             disabled={!paymentReady}
           >
             <LinearGradient
-              colors={paymentReady ? ["#22c55e", "#16a34a"] : ["#6b7280", "#4b5563"]}
+              colors={
+                paymentReady ? ["#22c55e", "#16a34a"] : ["#6b7280", "#4b5563"]
+              }
               style={styles.payButtonGradient}
             >
               <CreditCard color="#fff" size={20} />
@@ -2415,7 +2509,8 @@ function PaymentScreenInner() {
           </TouchableOpacity>
 
           <Text style={styles.footerText}>
-            By proceeding, you agree to BlinqFix&apos;s terms of service and privacy policy.
+            By proceeding, you agree to BlinqFix&apos;s terms of service and
+            privacy policy.
           </Text>
         </ScrollView>
       </SafeAreaView>
@@ -2427,36 +2522,123 @@ function PaymentScreenInner() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 40, marginTop: 40 },
-  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
-  errorText: { color: "#f87171", fontSize: 18, textAlign: "center", marginTop: 16 },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  errorText: {
+    color: "#f87171",
+    fontSize: 18,
+    textAlign: "center",
+    marginTop: 16,
+  },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   loadingText: { color: "#fff", fontSize: 16, marginTop: 16 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 10, paddingBottom: 20 },
-  backButton: { backgroundColor: "rgba(255,255,255,0.1)", padding: 10, borderRadius: 99, width: 44, height: 44, justifyContent: "center", alignItems: "center" },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  backButton: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    padding: 10,
+    borderRadius: 99,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   headerCenter: { alignItems: "center", flex: 1 },
-  headerBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 8 },
-  headerBadgeText: { color: "#fff", marginLeft: 6, fontSize: 12, fontWeight: "500" },
+  headerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
+  headerBadgeText: {
+    color: "#fff",
+    marginLeft: 6,
+    fontSize: 12,
+    fontWeight: "500",
+  },
   headerTitle: { fontSize: 24, fontWeight: "bold", color: "#fff" },
   summaryCard: { marginBottom: 20, borderRadius: 16, overflow: "hidden" },
   summaryGradient: { padding: 24 },
   cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  summaryTitle: { fontSize: 20, fontWeight: "bold", color: "#fff", marginLeft: 12 },
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    marginLeft: 12,
+  },
   totalContainer: { alignItems: "center", marginBottom: 16 },
   totalLabel: { fontSize: 16, color: "#e0e7ff", marginBottom: 8 },
   totalAmount: { fontSize: 36, fontWeight: "900", color: "#22c55e" },
-  additionalChargeContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  additionalChargeContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   additionalChargeLabel: { fontSize: 16, color: "#e0e7ff" },
-  additionalChargeAmount: { fontSize: 18, fontWeight: "bold", color: "#fb923c" },
-  divider: { height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginVertical: 20 },
-  coveredSection: { backgroundColor: "rgba(255,255,255,0.05)", padding: 16, borderRadius: 12 },
-  coveredTitle: { fontSize: 16, fontWeight: "bold", color: "#fff", marginBottom: 8 },
+  additionalChargeAmount: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fb923c",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    marginVertical: 20,
+  },
+  coveredSection: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 16,
+    borderRadius: 12,
+  },
+  coveredTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 8,
+  },
   coveredDescription: { fontSize: 14, color: "#e0e7ff", lineHeight: 20 },
-  securitySection: { flexDirection: "column", justifyContent: "space-around", marginBottom: 32, paddingVertical: 16, marginLeft: 100 },
-  securityItem: { flexDirection: "row", alignItems: "center", marginBottom: 20, gap: 6 },
+  securitySection: {
+    flexDirection: "column",
+    justifyContent: "space-around",
+    marginBottom: 32,
+    paddingVertical: 16,
+    marginLeft: 100,
+  },
+  securityItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 6,
+  },
   securityText: { color: "#e0e7ff", fontSize: 12, fontWeight: "500" },
   payButton: { borderRadius: 16, overflow: "hidden", marginBottom: 20 },
   payButtonDisabled: { opacity: 0.6 },
-  payButtonGradient: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 18, paddingHorizontal: 24, gap: 12 },
+  payButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    gap: 12,
+  },
   payButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  footerText: { color: "#94a3b8", fontSize: 12, textAlign: "center", lineHeight: 16 },
+  footerText: {
+    color: "#94a3b8",
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 16,
+  },
 });

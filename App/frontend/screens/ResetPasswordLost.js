@@ -1,136 +1,3 @@
-// import React, { useState } from "react";
-// import {
-//   View,
-//   Text,
-//   TextInput,
-//   StyleSheet,
-//   TouchableOpacity,
-//   Alert,
-//   ActivityIndicator,
-// } from "react-native";
-// import { useRoute, useNavigation } from "@react-navigation/native";
-// import api from "../api/client";
-// import BackButton from "../components/BackButton";
-
-// export default function ResetPasswordLost() {
-//   const route = useRoute();
-//   const navigation = useNavigation();
-//   const token = route.params?.token;
-
-//   const [newPassword, setNewPassword] = useState("");
-//   const [confirmPassword, setConfirmPassword] = useState("");
-//   const [loading, setLoading] = useState(false);
-
-//   const handleResetPassword = async () => {
-//     if (!newPassword || !confirmPassword) {
-//       return Alert.alert("Error", "All fields are required.");
-//     }
-
-//     if (newPassword !== confirmPassword) {
-//       return Alert.alert("Error", "Passwords do not match.");
-//     }
-
-//     if (newPassword.length < 6) {
-//       return Alert.alert("Error", "Password must be at least 6 characters.");
-//     }
-
-//     if (!token) {
-//       return Alert.alert("Error", "Missing or invalid token.");
-//     }
-
-//     try {
-//       setLoading(true);
-//       const res = await api.post(
-//         `/auth/reset-password/${encodeURIComponent(token)}`,
-//         {
-//           password: newPassword,
-//         }
-//       );
-
-//       Alert.alert("Success", res.data.msg || "Password reset successful", [
-//         {
-//           text: "OK",
-//           onPress: () => navigation.navigate("Login"),
-//         },
-//       ]);
-//     } catch (err) {
-//       console.error("Reset password error:", err.response?.data || err.message);
-//       Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       <BackButton />
-//       <Text style={styles.title}>Reset Password</Text>
-//       <TextInput
-//         style={styles.input}
-//         placeholder="New Password"
-//         secureTextEntry
-//         value={newPassword}
-//         onChangeText={setNewPassword}
-//       />
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Confirm New Password"
-//         secureTextEntry
-//         value={confirmPassword}
-//         onChangeText={setConfirmPassword}
-//       />
-//       <TouchableOpacity
-//         style={styles.button}
-//         onPress={handleResetPassword}
-//         disabled={loading}
-//       >
-//         {loading ? (
-//           <ActivityIndicator color="#fff" />
-//         ) : (
-//           <Text style={styles.buttonText}>Reset Password</Text>
-//         )}
-//       </TouchableOpacity>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     padding: 24,
-//     flex: 1,
-//     justifyContent: "center",
-//     backgroundColor: "#fff",
-//   },
-//   title: {
-//     fontSize: 24,
-//     fontWeight: "bold",
-//     textAlign: "center",
-//     marginBottom: 24,
-//     textShadowColor: "rgba(0,0,0,0.5)",
-//     textShadowOffset: { width: 1, height: 2 },
-//     textShadowRadius: 2,
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: "#ccc",
-//     borderRadius: 6,
-//     padding: 12,
-//     marginBottom: 12,
-//   },
-//   button: {
-//     backgroundColor: "#1976d2",
-//     paddingVertical: 14,
-//     borderRadius: 6,
-//     alignItems: "center",
-//   },
-//   buttonText: {
-//     color: "#fff",
-//     fontWeight: "bold",
-//     fontSize: 16,
-//   },
-// });
-
-
 import React, { useState } from "react";
 import {
   View,
@@ -210,16 +77,22 @@ export default function ResetPasswordLost() {
   };
 
   const getPasswordStrength = (password) => {
-    if (password.length < 6) return { strength: 'weak', color: '#ef4444', text: 'Weak' };
-    if (password.length < 8) return { strength: 'medium', color: '#f59e0b', text: 'Medium' };
-    return { strength: 'strong', color: '#22c55e', text: 'Strong' };
+    if (password.length < 6)
+      return { strength: "weak", color: "#ef4444", text: "Weak" };
+    if (password.length < 8)
+      return { strength: "medium", color: "#f59e0b", text: "Medium" };
+    return { strength: "strong", color: "#22c55e", text: "Strong" };
   };
 
   const passwordStrength = getPasswordStrength(newPassword);
-  const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
+  const passwordsMatch =
+    newPassword && confirmPassword && newPassword === confirmPassword;
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e3a8a', '#312e81']} style={styles.container}>
+    <LinearGradient
+      colors={["#0f172a", "#1e3a8a", "#312e81"]}
+      style={styles.container}
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -227,7 +100,10 @@ export default function ResetPasswordLost() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
               <ArrowLeft color="#fff" size={24} />
             </TouchableOpacity>
             <View style={styles.headerCenter}>
@@ -245,7 +121,7 @@ export default function ResetPasswordLost() {
             {/* Info Card */}
             <View style={styles.infoCard}>
               <LinearGradient
-                colors={['rgba(34, 197, 94, 0.15)', 'rgba(16, 185, 129, 0.05)']}
+                colors={["rgba(34, 197, 94, 0.15)", "rgba(16, 185, 129, 0.05)"]}
                 style={styles.infoGradient}
               >
                 <View style={styles.infoHeader}>
@@ -253,8 +129,8 @@ export default function ResetPasswordLost() {
                   <Text style={styles.infoTitle}>Create New Password</Text>
                 </View>
                 <Text style={styles.infoText}>
-                  Choose a strong password that you haven't used before. 
-                  It should be at least 6 characters long.
+                  Choose a strong password that you haven't used before. It
+                  should be at least 6 characters long.
                 </Text>
               </LinearGradient>
             </View>
@@ -273,22 +149,41 @@ export default function ResetPasswordLost() {
                     value={newPassword}
                     onChangeText={setNewPassword}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setShowNewPassword(!showNewPassword)}
                     style={styles.eyeIcon}
                   >
-                    {showNewPassword ? 
-                      <EyeOff color="#94a3b8" size={20} /> : 
+                    {showNewPassword ? (
+                      <EyeOff color="#94a3b8" size={20} />
+                    ) : (
                       <Eye color="#94a3b8" size={20} />
-                    }
+                    )}
                   </TouchableOpacity>
                 </View>
-                
+
                 {/* Password Strength Indicator */}
                 {newPassword.length > 0 && (
                   <View style={styles.strengthContainer}>
-                    <View style={[styles.strengthBar, { backgroundColor: passwordStrength.color, width: newPassword.length < 6 ? '33%' : newPassword.length < 8 ? '66%' : '100%' }]} />
-                    <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+                    <View
+                      style={[
+                        styles.strengthBar,
+                        {
+                          backgroundColor: passwordStrength.color,
+                          width:
+                            newPassword.length < 6
+                              ? "33%"
+                              : newPassword.length < 8
+                              ? "66%"
+                              : "100%",
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.strengthText,
+                        { color: passwordStrength.color },
+                      ]}
+                    >
                       {passwordStrength.text}
                     </Text>
                   </View>
@@ -307,26 +202,34 @@ export default function ResetPasswordLost() {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                     style={styles.eyeIcon}
                   >
-                    {showConfirmPassword ? 
-                      <EyeOff color="#94a3b8" size={20} /> : 
+                    {showConfirmPassword ? (
+                      <EyeOff color="#94a3b8" size={20} />
+                    ) : (
                       <Eye color="#94a3b8" size={20} />
-                    }
+                    )}
                   </TouchableOpacity>
                 </View>
 
                 {/* Password Match Indicator */}
                 {confirmPassword.length > 0 && (
                   <View style={styles.matchContainer}>
-                    <CheckCircle 
-                      color={passwordsMatch ? "#22c55e" : "#ef4444"} 
-                      size={16} 
+                    <CheckCircle
+                      color={passwordsMatch ? "#22c55e" : "#ef4444"}
+                      size={16}
                     />
-                    <Text style={[styles.matchText, { color: passwordsMatch ? "#22c55e" : "#ef4444" }]}>
-                      {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+                    <Text
+                      style={[
+                        styles.matchText,
+                        { color: passwordsMatch ? "#22c55e" : "#ef4444" },
+                      ]}
+                    >
+                      {passwordsMatch
+                        ? "Passwords match"
+                        : "Passwords do not match"}
                     </Text>
                   </View>
                 )}
@@ -334,12 +237,17 @@ export default function ResetPasswordLost() {
 
               {/* Reset Button */}
               <TouchableOpacity
-                style={[styles.resetButton, loading && styles.resetButtonDisabled]}
+                style={[
+                  styles.resetButton,
+                  loading && styles.resetButtonDisabled,
+                ]}
                 onPress={handleResetPassword}
                 disabled={loading}
               >
                 <LinearGradient
-                  colors={loading ? ['#6b7280', '#4b5563'] : ['#22c55e', '#16a34a']}
+                  colors={
+                    loading ? ["#6b7280", "#4b5563"] : ["#22c55e", "#16a34a"]
+                  }
                   style={styles.resetButtonGradient}
                 >
                   {loading ? (
@@ -377,88 +285,88 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
   },
   backButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     padding: 10,
     borderRadius: 99,
     width: 44,
     height: 44,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerCenter: {
-    alignItems: 'center',
-    flex: 1
+    alignItems: "center",
+    flex: 1,
   },
   headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    marginBottom: 8
+    marginBottom: 8,
   },
   headerBadgeText: {
-    color: '#fff',
+    color: "#fff",
     marginLeft: 6,
     fontSize: 12,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff'
+    fontWeight: "bold",
+    color: "#fff",
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    justifyContent: 'center'
+    justifyContent: "center",
   },
   infoCard: {
     marginBottom: 32,
     borderRadius: 16,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   infoGradient: {
-    padding: 20
+    padding: 20,
   },
   infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
   },
   infoTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 12
+    fontWeight: "bold",
+    color: "#fff",
+    marginLeft: 12,
   },
   infoText: {
     fontSize: 14,
-    color: '#e0e7ff',
-    lineHeight: 20
+    color: "#e0e7ff",
+    lineHeight: 20,
   },
   formContainer: {
-    gap: 20
+    gap: 20,
   },
   inputContainer: {
-    gap: 8
+    gap: 8,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: "rgba(255,255,255,0.2)",
   },
   inputIcon: {
     paddingHorizontal: 16,
@@ -467,72 +375,72 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#fff',
+    color: "#fff",
   },
   eyeIcon: {
-    paddingHorizontal: 16
+    paddingHorizontal: 16,
   },
   strengthContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    paddingHorizontal: 4
+    paddingHorizontal: 4,
   },
   strengthBar: {
     height: 4,
     borderRadius: 2,
-    flex: 1
+    flex: 1,
   },
   strengthText: {
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   matchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    paddingHorizontal: 4
+    paddingHorizontal: 4,
   },
   matchText: {
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   resetButton: {
     borderRadius: 16,
-    overflow: 'hidden',
-    marginTop: 12
+    overflow: "hidden",
+    marginTop: 12,
   },
   resetButtonDisabled: {
-    opacity: 0.6
+    opacity: 0.6,
   },
   resetButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 18,
     paddingHorizontal: 24,
-    gap: 12
+    gap: 12,
   },
   resetButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   securitySection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 24,
     marginTop: 32,
-    paddingVertical: 16
+    paddingVertical: 16,
   },
   securityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   securityText: {
-    color: '#e0e7ff',
+    color: "#e0e7ff",
     fontSize: 12,
-    fontWeight: '500'
-  }
+    fontWeight: "500",
+  },
 });

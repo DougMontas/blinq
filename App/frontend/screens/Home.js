@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import * as Animatable from "react-native-animatable";
 
@@ -22,7 +16,6 @@ export default function Home() {
         />
         <Text style={styles.title}>Welcome to BlinqFix</Text>
         <Text style={styles.subtitle}>Instant on-demand emergency repairs</Text>
-        
       </Animatable.View>
 
       <Animatable.View animation="fadeInUp" delay={300} style={styles.options}>
@@ -47,7 +40,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   container: {
-    flex:1,
+    flex: 1,
     padding: 24,
     backgroundColor: "#fff",
     justifyContent: "center",

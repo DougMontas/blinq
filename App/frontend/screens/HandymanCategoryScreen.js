@@ -1,239 +1,3 @@
-// import React, { useEffect, useState } from "react";
-// import {
-//   ScrollView,
-//   View,
-//   Text,
-//   Image,
-//   TouchableOpacity,
-//   StyleSheet,
-//   ActivityIndicator,
-//   Dimensions,
-//   Alert,
-// } from "react-native";
-// import { useNavigation } from "@react-navigation/native";
-// import { LinearGradient } from "expo-linear-gradient";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
-// import api from "../api/client";
-// import socket from "../components/socket";
-// import LogoutButton from "../components/LogoutButton";
-// import BackButton from "../components/BackButton";
-
-// const SUBCATEGORIES = [
-//   {
-//     label: "Drywall Repair",
-//     img: "https://th.bing.com/th/id/OIP.OFn-yBhr0crvKmLPd7ZP-gHaE7?w=260&h=180&c=7&r=0&o=5&dpr=2&pid=1.7",
-//   },
-//   {
-//     label: "Furniture Assembly",
-//     img: require("../assets/coming_soon.jpeg"),
-//   },
-//   {
-//     label: "Mounting & Hanging",
-//     img: "https://images.unsplash.com/photo-1570129477492-45c003edd2be",
-//   },
-//   {
-//     label: "Minor Plumbing",
-//     img: "https://images.unsplash.com/photo-1562440499-64e2123f2cf2",
-//   },
-//   {
-//     label: "Minor Electrical",
-//     img: "https://images.unsplash.com/photo-1581091215367-59cf0a0b16f9",
-//   },
-//   {
-//     label: "Appliance Installation",
-//     img: "https://images.unsplash.com/photo-1590595901608-2b5e6e7dc9ff",
-//   },
-// ];
-
-// const { width } = Dimensions.get("window");
-// const LOGO_SIZE = width * 0.7;
-
-// export default function HandymanCategoryScreen() {
-//   const navigation = useNavigation();
-//   const [user, setUser] = useState(null);
-//   const [activeJob, setActiveJob] = useState(null);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     (async () => {
-//       try {
-//         const [{ data: me }, { data: job }] = await Promise.all([
-//           api.get("/users/me"),
-//           api.get("/jobs/homeowner/active"),
-//         ]);
-//         setUser(me);
-//         setActiveJob(job);
-//       } catch (err) {
-//         console.error(err);
-//         await AsyncStorage.removeItem("token");
-//         navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-//       } finally {
-//         setLoading(false);
-//       }
-//     })();
-//   }, []);
-
-//   useEffect(() => {
-//     if (user) {
-//       Alert.alert("Tip", "Select the handyman task you need help with.");
-//     }
-//   }, [user]);
-
-//   useEffect(() => {
-//     if (!user?.id) return;
-//     socket.emit("joinUserRoom", { userId: user.id });
-//     socket.on("jobAccepted", ({ jobId }) => {
-//       navigation.replace("CustomerJobStatus", { jobId });
-//     });
-//     return () => socket.off("jobAccepted");
-//   }, [user, navigation]);
-
-//   const firstName = user?.name?.split(" ")[0] || "Customer";
-//   const handleSelect = (subcategory) => {
-//     navigation.navigate("EmergencyForm", {
-//       category: "Handyman",
-//       subcategory,
-//     });
-//   };
-
-//   if (loading) {
-//     return (
-//       <View style={styles.centered}>
-//         <ActivityIndicator size="large" color="#1976d2" />
-//       </View>
-//     );
-//   }
-
-//   return (
-//     <ScrollView contentContainerStyle={styles.container}>
-//       <BackButton />
-//       <LogoutButton />
-
-//       <View style={styles.logoWrap}>
-//         <Image
-//           source={require("../assets/blinqfix_logo-new.jpeg")}
-//           style={styles.logo}
-//           resizeMode="contain"
-//         />
-//         <Text style={styles.sectionTitle}>Choose a Handyman Specialist</Text>
-//       </View>
-
-//       <LinearGradient
-//         colors={["#1976d2", "#2f80ed"]}
-//         style={styles.hero}
-//         start={{ x: 0, y: 0 }}
-//         end={{ x: 1, y: 1 }}
-//       >
-//         <Text style={styles.heroText}>
-//           Hi {firstName},
-//           <Text style={styles.heroSub}>
-//             {" "}
-//             what kind of handyman work do you need?
-//           </Text>
-//         </Text>
-//         <TouchableOpacity style={styles.ctaBtn}>
-//           <Text style={styles.ctaText}>
-//             If this is a life-threatening emergency, call 911!
-//           </Text>
-//         </TouchableOpacity>
-//       </LinearGradient>
-
-//       <View style={styles.cardsWrap}>
-//         {SUBCATEGORIES.map(({ label, img }) => {
-//           const isEnabled = label === "Drywall Repair";
-//           return (
-//             <TouchableOpacity
-//               key={label}
-//               style={[styles.card, !isEnabled && styles.disabledCard]}
-//               onPress={() =>
-//                 isEnabled
-//                   ? handleSelect(label)
-//                   : Alert.alert("Coming Soon", `${label} is not yet available.`)
-//               }
-//             >
-//               <Image
-//                 source={typeof img === "string" ? { uri: img } : img}
-//                 style={[styles.cardImg, !isEnabled && { opacity: 0.4 }]}
-//               />
-//               <View style={styles.cardBody}>
-//                 <Text style={styles.cardLabel}>
-//                   {label}
-//                   {!isEnabled && " (Coming Soon)"}
-//                 </Text>
-//               </View>
-//             </TouchableOpacity>
-//           );
-//         })}
-//       </View>
-
-//       <View style={{ height: 40 }} />
-//     </ScrollView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: { backgroundColor: "#fff", paddingBottom: 24, marginTop: 40 },
-//   centered: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//     backgroundColor: "#fff",
-//   },
-//   logoWrap: { alignItems: "center", marginBottom: 10 },
-//   logo: { width: LOGO_SIZE, height: LOGO_SIZE },
-//   hero: {
-//     padding: 20,
-//     marginBottom: 16,
-//     borderRadius: 12,
-//     marginHorizontal: 12,
-//     alignItems: "center",
-//   },
-//   heroText: {
-//     color: "#fff",
-//     fontSize: 20,
-//     fontWeight: "bold",
-//     textAlign: "center",
-//   },
-//   heroSub: { fontWeight: "400" },
-//   ctaBtn: {
-//     marginTop: 14,
-//     backgroundColor: "#fff",
-//     borderRadius: 6,
-//     paddingVertical: 8,
-//     paddingHorizontal: 12,
-//   },
-//   ctaText: {
-//     color: "red",
-//     fontWeight: "600",
-//     fontStyle: "italic",
-//     textAlign: "center",
-//   },
-//   sectionTitle: {
-//     fontSize: 22,
-//     fontWeight: "700",
-//     textAlign: "center",
-//     marginTop: 12,
-//   },
-//   cardsWrap: {
-//     flexDirection: "row",
-//     flexWrap: "wrap",
-//     justifyContent: "center",
-//     paddingHorizontal: 8,
-//   },
-//   card: {
-//     width: 160,
-//     margin: 8,
-//     backgroundColor: "#f9f9f9",
-//     borderRadius: 10,
-//     overflow: "hidden",
-//     elevation: 3,
-//   },
-//   cardImg: { width: "100%", height: 100 },
-//   cardBody: { alignItems: "center", paddingVertical: 10 },
-//   cardLabel: { fontSize: 16, fontWeight: "600", textAlign: "center" },
-//   disabledCard: { opacity: 0.6 },
-// });
-
 import React, { useEffect, useState } from "react";
 import {
   ScrollView,
@@ -269,7 +33,7 @@ const SUBCATEGORIES = [
     img: "https://th.bing.com/th/id/OIP.OFn-yBhr0crvKmLPd7ZP-gHaE7?w=260&h=180&c=7&r=0&o=5&dpr=2&pid=1.7",
   },
   {
-    label: "Furniture Assembly", 
+    label: "Furniture Assembly",
     img: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop",
   },
   {
@@ -334,7 +98,7 @@ export default function HandymanCategoryScreen() {
   }, [user, navigation]);
 
   const firstName = user?.name?.split(" ")[0] || "Customer";
-  
+
   const handleSelect = (subcategory) => {
     navigation.navigate("EmergencyForm", {
       category: "Handyman",
@@ -349,7 +113,10 @@ export default function HandymanCategoryScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={['#0f172a', '#1e3a8a', '#312e81']} style={styles.centered}>
+      <LinearGradient
+        colors={["#0f172a", "#1e3a8a", "#312e81"]}
+        style={styles.centered}
+      >
         <ActivityIndicator size="large" color="#fff" />
         <Text style={styles.loadingText}>Loading handyman services...</Text>
       </LinearGradient>
@@ -357,12 +124,18 @@ export default function HandymanCategoryScreen() {
   }
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e3a8a', '#312e81']} style={styles.container}>
+    <LinearGradient
+      colors={["#0f172a", "#1e3a8a", "#312e81"]}
+      style={styles.container}
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
               <ArrowLeft color="#fff" size={24} />
             </TouchableOpacity>
             <View style={styles.headerCenter}>
@@ -372,7 +145,10 @@ export default function HandymanCategoryScreen() {
               </View>
               <Text style={styles.headerTitle}>Choose Your Service</Text>
             </View>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.logoutButton}
+            >
               <LogOut color="#f87171" size={24} />
             </TouchableOpacity>
           </View>
@@ -380,7 +156,7 @@ export default function HandymanCategoryScreen() {
           {/* Hero Section */}
           <View style={styles.heroCard}>
             <LinearGradient
-              colors={['rgba(34, 197, 94, 0.2)', 'rgba(16, 185, 129, 0.1)']}
+              colors={["rgba(34, 197, 94, 0.2)", "rgba(16, 185, 129, 0.1)"]}
               style={styles.heroGradient}
             >
               <View style={styles.heroHeader}>
@@ -389,7 +165,9 @@ export default function HandymanCategoryScreen() {
                 </View>
                 <View style={styles.heroInfo}>
                   <Text style={styles.heroGreeting}>Hi {firstName}!</Text>
-                  <Text style={styles.heroSubtext}>What kind of handyman work do you need?</Text>
+                  <Text style={styles.heroSubtext}>
+                    What kind of handyman work do you need?
+                  </Text>
                 </View>
               </View>
             </LinearGradient>
@@ -398,7 +176,7 @@ export default function HandymanCategoryScreen() {
           {/* Emergency Warning */}
           <View style={styles.warningCard}>
             <LinearGradient
-              colors={['rgba(251, 146, 60, 0.15)', 'rgba(234, 88, 12, 0.05)']}
+              colors={["rgba(251, 146, 60, 0.15)", "rgba(234, 88, 12, 0.05)"]}
               style={styles.warningGradient}
             >
               <AlertTriangle color="#fb923c" size={20} />
@@ -444,7 +222,10 @@ export default function HandymanCategoryScreen() {
                   onPress={() =>
                     isEnabled
                       ? handleSelect(label)
-                      : Alert.alert("Coming Soon", `${label} is not yet available.`)
+                      : Alert.alert(
+                          "Coming Soon",
+                          `${label} is not yet available.`
+                        )
                   }
                   activeOpacity={0.8}
                 >
@@ -467,7 +248,12 @@ export default function HandymanCategoryScreen() {
                     )}
                   </View>
                   <View style={styles.cardContent}>
-                    <Text style={[styles.cardTitle, !isEnabled && styles.disabledCardTitle]}>
+                    <Text
+                      style={[
+                        styles.cardTitle,
+                        !isEnabled && styles.disabledCardTitle,
+                      ]}
+                    >
                       {label}
                     </Text>
                     {isEnabled && <ChevronRight color="#60a5fa" size={16} />}
@@ -497,152 +283,152 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     marginTop: 16,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingTop: 10,
     paddingBottom: 20,
   },
   backButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     padding: 10,
     borderRadius: 99,
     width: 44,
     height: 44,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerCenter: {
-    alignItems: 'center',
-    flex: 1
+    alignItems: "center",
+    flex: 1,
   },
   headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    marginBottom: 8
+    marginBottom: 8,
   },
   headerBadgeText: {
-    color: '#fff',
+    color: "#fff",
     marginLeft: 6,
     fontSize: 12,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff'
+    fontWeight: "bold",
+    color: "#fff",
   },
   logoutButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     padding: 10,
     borderRadius: 99,
     width: 44,
     height: 44,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   heroCard: {
     marginBottom: 20,
     borderRadius: 16,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   heroGradient: {
-    padding: 20
+    padding: 20,
   },
   heroHeader: {
-    flexDirection: 'row',
-    alignItems: 'center'
+    flexDirection: "row",
+    alignItems: "center",
   },
   profileIcon: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
     padding: 12,
     borderRadius: 16,
-    marginRight: 16
+    marginRight: 16,
   },
   heroInfo: {
-    flex: 1
+    flex: 1,
   },
   heroGreeting: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 4,
   },
   heroSubtext: {
     fontSize: 16,
-    color: '#e0e7ff',
-    lineHeight: 22
+    color: "#e0e7ff",
+    lineHeight: 22,
   },
   warningCard: {
     marginBottom: 20,
     borderRadius: 12,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   warningGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
-    gap: 12
+    gap: 12,
   },
   warningText: {
     flex: 1,
-    color: '#fb923c',
+    color: "#fb923c",
     fontSize: 14,
-    fontWeight: '600',
-    fontStyle: 'italic'
+    fontWeight: "600",
+    fontStyle: "italic",
   },
   activeJobCard: {
     marginBottom: 20,
     borderRadius: 16,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   activeJobGradient: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
   },
   activeJobLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   liveIndicator: {
     width: 12,
     height: 12,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   liveDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#60a5fa'
+    backgroundColor: "#60a5fa",
   },
   activeJobTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   activeJobSubtitle: {
-    color: '#e0e7ff',
-    fontSize: 14
+    color: "#e0e7ff",
+    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 20,
-    textAlign: 'center'
+    textAlign: "center",
   },
   cardsContainer: {
     flexDirection: "row",
@@ -651,71 +437,71 @@ const styles = StyleSheet.create({
   },
   card: {
     width: (width - 60) / 2,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: "rgba(255,255,255,0.1)",
     marginBottom: 20,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   disabledCard: {
-    opacity: 0.6
+    opacity: 0.6,
   },
   cardImageContainer: {
-    position: 'relative'
+    position: "relative",
   },
   cardImage: {
     width: "100%",
     height: 120,
-    resizeMode: 'cover'
+    resizeMode: "cover",
   },
   availableBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.9)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(34, 197, 94, 0.9)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    gap: 4
+    gap: 4,
   },
   availableText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 10,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   comingSoonBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(251, 146, 60, 0.9)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(251, 146, 60, 0.9)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    gap: 4
+    gap: 4,
   },
   comingSoonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 10,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   cardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: '#fff',
-    flex: 1
+    color: "#fff",
+    flex: 1,
   },
   disabledCardTitle: {
-    color: '#94a3b8'
-  }
+    color: "#94a3b8",
+  },
 });

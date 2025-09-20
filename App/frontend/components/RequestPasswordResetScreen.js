@@ -1,227 +1,3 @@
-// // screens/RequestPasswordResetScreen.js
-
-// import React, { useState } from "react";
-// import {
-//   View,
-//   Text,
-//   TextInput,
-//   StyleSheet,
-//   TouchableOpacity,
-//   Alert,
-//   ActivityIndicator,
-// } from "react-native";
-// import { useNavigation } from "@react-navigation/native";
-// import api from "../api/client";
-// import BackButton from "./BackButton";
-
-// export default function RequestPasswordResetScreen() {
-//   const [email, setEmail] = useState("");
-//   const [loading, setLoading] = useState(false);
-//   const navigation = useNavigation();
-
-//   //     if (!email.includes("@") || email.length < 6) {
-//   //       return Alert.alert("Invalid Email", "Please enter a valid email address.");
-//   //     }
-
-//   //     try {
-//   //       setLoading(true);
-//   //       await api.post("/request-password-reset", { email });
-//   //       Alert.alert(
-//   //         "Email Sent",
-//   //         "Check your email for a link to reset your password."
-//   //       );
-//   //     } catch (err) {
-//   //       console.error("Reset Request Error:", err.response?.data || err.message);
-//   //       Alert.alert(
-//   //         "Error",
-//   //         err.response?.data?.msg || "Could not process request."
-//   //       );
-//   //     } finally {
-//   //       setLoading(false);
-//   //     }
-//   //   };
-
-//   // const handleRequestReset = async () => {
-//   //     const cleanedEmail = email.trim();
-
-//   //     if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
-//   //       return Alert.alert("Invalid Email", "Please enter a valid email address.");
-//   //     }
-
-//   //     try {
-//   //       setLoading(true);
-//   //       await api.post("/authRoutes/request-password-reset", { email: cleanedEmail });
-
-//   //       Alert.alert(
-//   //         "Email Sent",
-//   //         "Check your email for a link to reset your password."
-//   //       );
-//   //     } catch (err) {
-//   //       console.error("Reset Request Error:", err.response?.data || err.message);
-//   //       Alert.alert(
-//   //         "Error",
-//   //         err.response?.data?.msg || "Could not process request."
-//   //       );
-//   //     } finally {
-//   //       setLoading(false);
-//   //     }
-//   //   };
-
-//   // const handleRequestReset = async () => {
-//   //     const cleanedEmail = email.trim().toLowerCase();
-
-//   //     if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
-//   //       return Alert.alert("Invalid Email", "Please enter a valid email address.");
-//   //     }
-
-//   //     console.log("[Request Reset] Starting request for:", cleanedEmail);
-
-//   //     try {
-//   //       setLoading(true);
-
-//   //       const response = await api.post("/auth/request-password-reset", {
-//   //         email: cleanedEmail,
-//   //       });
-
-//   //       console.log("[Request Reset] Response:", response.data);
-
-//   //       Alert.alert(
-//   //         "Email Sent",
-//   //         "Check your email for a link to reset your password.",
-//   //         [
-//   //           {
-//   //             text: "OK",
-//   //             onPress: () => {
-//   //               // ✅ Optional: send user back to Login screen
-//   //               navigation.replace("ResetPasswordScreen");
-//   //             },
-//   //           },
-//   //         ]
-//   //       );
-//   //     } catch (err) {
-//   //       console.log("[Request Reset] Error full object:", err);
-//   //       console.log("[Request Reset] Error response:", err.response?.data);
-//   //       console.log("[Request Reset] Error message:", err.message);
-
-//   //       Alert.alert(
-//   //         "Error",
-//   //         err.response?.data?.msg || "Could not process request."
-//   //       );
-//   //     } finally {
-//   //       setLoading(false);
-//   //     }
-//   //   };
-//   const handleRequestReset = async () => {
-//     const cleanedEmail = email.trim().toLowerCase();
-
-//     if (!cleanedEmail.includes("@") || cleanedEmail.length < 6) {
-//       return Alert.alert(
-//         "Invalid Email",
-//         "Please enter a valid email address."
-//       );
-//     }
-
-//     try {
-//       setLoading(true);
-//       const response = await api.post("/auth/request-password-reset", {
-//         email: cleanedEmail,
-//       });
-
-//       console.log("[✅ Email Sent Response]:", response.data);
-
-//       Alert.alert("Email Sent", "Check your inbox to reset your password.", [
-//         {
-//           text: "OK",
-//           onPress: () => navigation.navigate("Login"),
-//         },
-//       ]);
-//     } catch (err) {
-//       console.error(
-//         "[❌ Request Reset Error]:",
-//         err.response?.data || err.message
-//       );
-//       Alert.alert("Error", err.response?.data?.msg || "Something went wrong.");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <View style={styles.container}>
-//       <BackButton />
-//       <Text style={styles.title}>Forgot Your Password?</Text>
-//       <Text style={styles.instructions}>
-//         Enter the email associated with your account. We'll send you a link to
-//         reset your password.
-//       </Text>
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Enter your email address"
-//         value={email}
-//         autoCapitalize="none"
-//         keyboardType="email-address"
-//         onChangeText={setEmail}
-//       />
-//       <TouchableOpacity
-//         style={[styles.button, loading && styles.buttonDisabled]}
-//         onPress={handleRequestReset}
-//         disabled={loading}
-//       >
-//         {loading ? (
-//           <ActivityIndicator color="#fff" />
-//         ) : (
-//           <Text style={styles.buttonText}>Send Reset Link</Text>
-//         )}
-//       </TouchableOpacity>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     padding: 24,
-//     flex: 1,
-//     justifyContent: "center",
-//     backgroundColor: "#fff",
-//   },
-//   title: {
-//     fontSize: 24,
-//     fontWeight: "bold",
-//     textAlign: "center",
-//     marginBottom: 12,
-//     textShadowColor: "rgba(0,0,0,0.5)",
-//     textShadowOffset: { width: 1, height: 2 },
-//     textShadowRadius: 2,
-//   },
-//   instructions: {
-//     fontSize: 15,
-//     textAlign: "center",
-//     marginBottom: 24,
-//     color: "#555",
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: "#ccc",
-//     borderRadius: 6,
-//     padding: 12,
-//     marginBottom: 16,
-//   },
-//   button: {
-//     backgroundColor: "#1976d2",
-//     paddingVertical: 14,
-//     borderRadius: 6,
-//     alignItems: "center",
-//   },
-//   buttonDisabled: {
-//     backgroundColor: "#aaa",
-//   },
-//   buttonText: {
-//     color: "#fff",
-//     fontWeight: "bold",
-//     fontSize: 16,
-//   },
-// });
-
 import React, { useState } from "react";
 import {
   View,
@@ -263,7 +39,7 @@ export default function ResetPasswordLost() {
         email: cleanedEmail,
       });
 
-      console.log("[✅ Email Sent Response]:", response.data);
+      // console.log("[✅ Email Sent Response]:", response.data);
 
       Alert.alert("Email Sent", "Check your inbox to reset your password.", [
         {
@@ -283,16 +59,22 @@ export default function ResetPasswordLost() {
   };
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e3a8a', '#312e81']} style={styles.container}>
+    <LinearGradient
+      colors={["#0f172a", "#1e3a8a", "#312e81"]}
+      style={styles.container}
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={styles.backButton}
+              >
                 <ArrowLeft color="#fff" size={24} />
               </TouchableOpacity>
             </View>
@@ -304,7 +86,8 @@ export default function ResetPasswordLost() {
 
               <Text style={styles.title}>Forgot Your Password?</Text>
               <Text style={styles.instructions}>
-                No problem. Enter the email associated with your account and we'll send a secure link to reset your password.
+                No problem. Enter the email associated with your account and
+                we'll send a secure link to reset your password.
               </Text>
 
               {/* Input Form */}
@@ -328,7 +111,7 @@ export default function ResetPasswordLost() {
                 disabled={loading}
               >
                 <LinearGradient
-                  colors={['#22c55e', '#16a34a']}
+                  colors={["#22c55e", "#16a34a"]}
                   style={styles.buttonGradient}
                 >
                   {loading ? (
@@ -343,7 +126,9 @@ export default function ResetPasswordLost() {
             {/* Trust Indicator */}
             <View style={styles.trustIndicator}>
               <Shield color="#22c55e" size={16} />
-              <Text style={styles.trustText}>Your security is our priority</Text>
+              <Text style={styles.trustText}>
+                Your security is our priority
+              </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -358,41 +143,41 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 20,
   },
   header: {
-    position: 'absolute',
+    position: "absolute",
     top: 50,
     left: 20,
     zIndex: 1,
   },
   backButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     padding: 10,
     borderRadius: 99,
     width: 44,
     height: 44,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   contentContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   iconContainer: {
-    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+    backgroundColor: "rgba(96, 165, 250, 0.1)",
     padding: 20,
     borderRadius: 99,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.2)',
+    borderColor: "rgba(96, 165, 250, 0.2)",
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 12,
-    color: '#fff',
+    color: "#fff",
   },
   instructions: {
     fontSize: 16,
@@ -400,16 +185,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     color: "#e0e7ff",
     lineHeight: 24,
-    maxWidth: '90%',
+    maxWidth: "90%",
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    width: '100%',
+    borderColor: "rgba(255,255,255,0.2)",
+    width: "100%",
     marginBottom: 24,
   },
   inputIcon: {
@@ -419,13 +204,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#fff',
+    color: "#fff",
   },
   button: {
-    width: '100%',
+    width: "100%",
     borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
@@ -436,7 +221,7 @@ const styles = StyleSheet.create({
   },
   buttonGradient: {
     paddingVertical: 18,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonText: {
     color: "#fff",
@@ -444,16 +229,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   trustIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 40,
     paddingBottom: 20,
     gap: 8,
   },
   trustText: {
-    color: '#22c55e',
+    color: "#22c55e",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

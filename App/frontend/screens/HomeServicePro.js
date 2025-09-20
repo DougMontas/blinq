@@ -17,7 +17,7 @@ export default function HomeServicePro() {
 
   return (
     <ScreenWrapper>
-        <BackButton/>
+      <BackButton />
       <ScrollView contentContainerStyle={styles.container}>
         <Animatable.View animation="fadeInDown" style={styles.header}>
           <Image
@@ -39,11 +39,15 @@ export default function HomeServicePro() {
         >
           <Text style={styles.sectionTitle}>Why Join BlinqFix?</Text>
           <View style={styles.featureBox}>
-            <Text style={styles.bullet}>{"\u2022"} Instant job alerts in your area</Text>
-            <Text style={styles.bullet}>{"\u2022"} Keep more of what you earn</Text>
+            <Text style={styles.bullet}>
+              {"\u2022"} Instant job alerts in your area
+            </Text>
+            <Text style={styles.bullet}>
+              {"\u2022"} Keep more of what you earn
+            </Text>
             <Text style={styles.bullet}>{"\u2022"} Set your own schedule</Text>
             <Text style={styles.bullet}>
-            {"\u2022"} Two billing options: Free or Priority
+              {"\u2022"} Two billing options: Free or Priority
             </Text>
           </View>
 
@@ -84,10 +88,25 @@ export default function HomeServicePro() {
           </TouchableOpacity>
 
           <View style={styles.linksRow}>
-          <Text style={styles.link} onPress={() => navigation.navigate("PrivacyPolicy")}>Privacy Policy</Text>
-          <Text style={styles.link} onPress={() => navigation.navigate("CustomerFAQScreen")}>FAQs</Text>
-          <Text style={styles.link} onPress={() => navigation.navigate("TermsAndConditions")}>Terms</Text>
-        </View>
+            <Text
+              style={styles.link}
+              onPress={() => navigation.navigate("PrivacyPolicy")}
+            >
+              Privacy Policy
+            </Text>
+            <Text
+              style={styles.link}
+              onPress={() => navigation.navigate("CustomerFAQScreen")}
+            >
+              FAQs
+            </Text>
+            <Text
+              style={styles.link}
+              onPress={() => navigation.navigate("TermsAndConditions")}
+            >
+              Terms
+            </Text>
+          </View>
         </Animatable.View>
       </ScrollView>
     </ScreenWrapper>
@@ -130,7 +149,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "600",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
     color: "#1976d2",
     textShadowColor: "rgba(0,0,0,0.5)",
     textShadowOffset: { width: 1, height: 2 },
@@ -193,12 +212,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-evenly",
     marginTop: 20,
-    marginRight:0,
+    marginRight: 0,
   },
   link: {
     color: "#1976d2",
     textDecorationLine: "none",
     fontSize: 14,
-    marginRight:50,
+    marginRight: 50,
   },
 });
