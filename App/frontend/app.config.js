@@ -84,7 +84,7 @@ export default {
     plugins: [
       [
         "expo-notifications",
-        "expo-audio",
+       
         
         {
           sounds: [
@@ -95,6 +95,8 @@ export default {
       ],
       "expo-location",
       "expo-image-picker",
+      "expo-audio",
+      "expo-fonts,"
     ],
 
     extra: {
