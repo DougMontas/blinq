@@ -4782,7 +4782,7 @@ export default function EmergencyForm() {
                         selectedService === svc && styles.optionTextSelected,
                       ]}
                     >
-                      {svc}
+                      {/* {svc} //test payment */}
                     </Text>
                     {selectedService === svc && <CheckCircle color="#22c55e" size={20} />}
                   </HoverableCard>
