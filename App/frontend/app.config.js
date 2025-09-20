@@ -84,7 +84,7 @@ export default {
     plugins: [
       [
         "expo-notifications",
-        "expo-audio"
+        "expo-audio",
         
         {
           sounds: [
