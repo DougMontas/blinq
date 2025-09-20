@@ -14,12 +14,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   timeout: 120000,
 });
 
-console.log("🔐 Stripe key in use:", stripe._apiKey?.slice(0, 10));
-console.log(
-  "🧾 Stripe Secret Key in use:",
-  process.env.STRIPE_SECRET_KEY?.slice(0, 8)
-);
-console.log("stripe ::::: ", stripe);
+// console.log("🔐 Stripe key in use:", stripe._apiKey?.slice(0, 10));
+// console.log(
+//   "🧾 Stripe Secret Key in use:",
+//   process.env.STRIPE_SECRET_KEY?.slice(0, 8)
+// );
+// console.log("stripe ::::: ", stripe);
 
 export async function createJobPaymentIntent({
   amountUsd,

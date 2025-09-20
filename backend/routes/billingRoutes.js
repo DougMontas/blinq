@@ -230,7 +230,7 @@ router.post("/create-payment-sheet", auth, async (req, res) => {
       });
       user.stripeCustomerId = customer.id;
       await user.save();
-      console.log("✅ Stripe customer created:", customer.id);
+      // console.log("✅ Stripe customer created:", customer.id);
     } else {
       console.log("🔁 Using existing Stripe customer:", user.stripeCustomerId);
     }
@@ -248,7 +248,7 @@ router.post("/create-payment-sheet", auth, async (req, res) => {
       metadata: { userId: user._id.toString() },
     });
 
-    console.log("🧾 PaymentIntent created:", paymentIntent.id);
+    // console.log("🧾 PaymentIntent created:", paymentIntent.id);
 
     res.json({
       paymentIntent: paymentIntent.id,
