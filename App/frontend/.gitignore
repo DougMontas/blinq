@@ -10,6 +10,7 @@
 /build
 /andriod
 /ios
+.expo/
 
 # misc
 .DS_Store
