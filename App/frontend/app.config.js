@@ -22,7 +22,7 @@ export default {
 
     ios: {
       bundleIdentifier: "com.doug30.blinqfix.app",
-      buildNumber: "178",
+      buildNumber: "180",
       supportsTablet: true,
       associatedDomains: [
         "applinks:blinqfix.app"
