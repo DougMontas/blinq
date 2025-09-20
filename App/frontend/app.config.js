@@ -96,7 +96,6 @@ export default {
       "expo-location",
       "expo-image-picker",
       "expo-audio",
-      "expo-fonts,"
     ],
 
     extra: {
