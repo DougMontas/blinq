@@ -84,6 +84,7 @@ export default {
     plugins: [
       [
         "expo-notifications",
+        "expo-font",
         {
           sounds: [
             "./assets/notification.mp3",

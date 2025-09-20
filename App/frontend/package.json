@@ -70,7 +70,8 @@
     "react-native-svg": "15.11.2",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "expo-font": "~13.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
