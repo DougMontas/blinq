@@ -6,7 +6,7 @@ export default {
     name: "BlinqFix",
     slug: "blinqfix",
     scheme: "blinqfix",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "portrait",
     icon: "./assets/driver_marker.png",
     userInterfaceStyle: "light",
@@ -22,7 +22,7 @@ export default {
 
     ios: {
       bundleIdentifier: "com.doug30.blinqfix.app",
-      buildNumber: "180",
+      buildNumber: "181",
       supportsTablet: true,
       associatedDomains: [
         "applinks:blinqfix.app"
