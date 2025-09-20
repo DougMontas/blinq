@@ -698,6 +698,8 @@ import sendEmail from "../utils/sendEmail.js";
 import { auth } from "../middlewares/auth.js";
 import mongoose from "mongoose";
 import Stripe from "stripe";
+import "dotenv/config";
+
 
 const router = express.Router();
 const baseUrl = process.env.FRONTEND_BASE_URL;
