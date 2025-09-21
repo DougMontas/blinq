@@ -89,7 +89,6 @@ export default {
         {
           sounds: [
             "./assets/notification.mp3",
-            "./assets/notification.wav",
           ],
         },
       ],
