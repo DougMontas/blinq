@@ -3292,6 +3292,244 @@
 //   } catch (e) { console.warn("⚠️ customer sms failed (completed):", e?.message || e); }
 // }
 
+
+ //lastest
+
+// import { getEligibleProviders } from "../utils/providerFilters.js";
+// import sendInAppInvite from "../invites/sendInAppInvite.js";
+// import sendTeaserInvite from "../invites/sendTeaserInvite.js";
+// import sendSMS from "../utils/sendSMS.js";
+// import sendPushNotification from "../utils/sendPushNotification.js";
+// import Users from "../models/Users.js";
+// import mongoose from "mongoose";
+
+// /* ========================================================================== */
+// /*                         VERSION + GLOBAL BEHAVIOR                          */
+// /* ========================================================================== */
+// const INVITE_PATCH_VERSION = "invite-v5.0 (zipcode first, radius fallback)";
+// console.log("🔧 INVITE PATCH:", INVITE_PATCH_VERSION);
+
+// const SEND_PROVIDER_SMS_PHASES = new Set([1]);
+// const DEDUPE_SMS_PER_EVENT = true;
+// const ALLOW_CUSTOMER_SMS_IF_PHONE_MATCHES_PROVIDER = false;
+
+// // Built-in universal links
+// const APP_LINK = "https://blinqfix.app/download";
+// const SUBSCRIPTION_LINK = "https://blinqfix.app/upgrade";
+// const UNIVERSAL_LINK = "https://blinqfix.app/open";
+
+// /* ========================================================================== */
+// /*                                  TEMPLATES                                 */
+// /* ========================================================================== */
+// const shortId = (id) => String(id || "").slice(-6).toUpperCase();
+
+// function buildSmartLink(path = "") {
+//   return `${UNIVERSAL_LINK}?redirect=${encodeURIComponent(path)}&fallback=${encodeURIComponent(APP_LINK)}`;
+// }
+
+// const smsTemplates = {
+//   providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
+//     return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Blinqfix App to Accept:`;
+//   },
+
+//   providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
+//     const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
+//     return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Blinqfix App to Upgrade and Accept:`;
+//   },
+
+//   customerAccepted: ({ providerName, etaMin, jobId }) => {
+//     return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m.`;
+//   },
+
+//   customerCompleted: ({ jobId }) => {
+//     return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks!`;
+//   },
+// };
+
+// /* ========================================================================== */
+// /*                                HELPERS                                     */
+// /* ========================================================================== */
+// const PHONE_KEYS = ["phone", "phoneNumber", "mobile", "mobileNumber", "contactPhone", "phone_number", "tel", "telephone"];
+// function maskPhone(p) { if (!p) return "-"; const d = String(p).replace(/\D/g, ""); return d.length < 4 ? "***" : `***${d.slice(-4)}`; }
+// function getPhoneWithKey(obj) {
+//   if (!obj || typeof obj !== "object") return { value: null, key: null };
+//   for (const k of PHONE_KEYS) { const v = obj?.[k]; if (typeof v === "string" && v.trim()) return { value: v.trim(), key: k }; }
+//   if (obj?.contact?.phone) return { value: String(obj.contact.phone).trim(), key: "contact.phone" };
+//   if (obj?.profile?.phone) return { value: String(obj.profile.phone).trim(), key: "profile.phone" };
+//   return { value: null, key: null };
+// }
+// function normalize(n) { if (!n) return null; const s = String(n).trim(); if (s.startsWith("+")) return s.replace(/\s/g, ""); const d = s.replace(/\D/g, ""); if (!d) return null; if (d.length === 10) return "+1" + d; if (d.length === 11 && d.startsWith("1")) return "+" + d; return "+" + d; }
+// function splitName(fullName) { if (!fullName || typeof fullName !== "string") return { first: "Customer", lastInitial: "" }; const parts = fullName.trim().split(/\s+/); const first = parts[0] || "Customer"; const lastInitial = parts.length > 1 ? (parts[parts.length - 1][0] || "").toUpperCase() + "." : ""; return { first, lastInitial }; }
+// function getProviderCohort(provider) {
+//   const raw = (provider?.billingTier || provider?.cohort || provider?.plan || "").toString().toLowerCase();
+//   if (["hybrid"].includes(raw)) return "hybrid";
+//   if (["profit_sharing", "profit-sharing", "profit", "profitshare"].includes(raw)) return "profit_sharing";
+//   return null;
+// }
+
+// /* ========================================================================== */
+// /* PROVIDER DISPATCH                                                          */
+// /* ========================================================================== */
+// async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobIdStr, job, eventSmsNumbers, context }) {
+//   const providerId = provider?._id?.toString?.() || "";
+//   const declared = requestedTeaser ? "profit_sharing" : "hybrid";
+//   const actual = getProviderCohort(provider) || declared;
+//   const inviteKind = actual === "profit_sharing" ? (requestedTeaser ? "teaser" : "full") : "full";
+
+//   try {
+//     io.to(providerId).emit("jobInvitation", {
+//       ...payload,
+//       clickable: actual !== "profit_sharing" || !requestedTeaser,
+//       buttonsActive: actual !== "profit_sharing" || !requestedTeaser,
+//       cohort: actual,
+//       inviteKind,
+//     });
+//   } catch {}
+
+//   const tasks = [];
+//   try {
+//     if (actual === "profit_sharing" && requestedTeaser) tasks.push(sendTeaserInvite(provider, { ...job.toObject?.() ?? job, address: "[Hidden]" }));
+//     else tasks.push(sendInAppInvite(provider, job));
+//   } catch {}
+
+//   if (typeof provider.expoPushToken === "string" && provider.expoPushToken.trim()) {
+//     tasks.push(sendPushNotification({
+//       to: provider.expoPushToken,
+//       title: "🚨 New Emergency Job",
+//       body: actual === "profit_sharing" && requestedTeaser ? "Upgrade to accept this job." : "Tap to accept now!",
+//       data: { jobId: jobIdStr, type: "jobInvite", clickable: actual !== "profit_sharing" || !requestedTeaser },
+//     }));
+//   }
+
+//   const ph = getPhoneWithKey(provider);
+//   const normalized = normalize(ph.value);
+//   if (ph.value) {
+//     if (!(DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized))) {
+//       const { customerFirst, customerLastInitial, zipcode } = context;
+//       const body = actual === "profit_sharing" && requestedTeaser
+//         ? smsTemplates.providerProfitInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode })
+//         : smsTemplates.providerHybridInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode });
+//       tasks.push(sendSMS(ph.value, body));
+//       if (normalized) eventSmsNumbers.add(normalized);
+//     }
+//   }
+
+//   await Promise.allSettled(tasks);
+// }
+
+// /* ========================================================================== */
+// /* MAIN INVITE FLOW                                                           */
+// /* ========================================================================== */
+// export async function invitePhaseOne(job, customer, io, phase = 1) {
+//   const RADIUS_TIERS = [
+//     { miles: 5, durationMs: 5 * 60 * 1000 },
+//     { miles: 15, durationMs: 5 * 60 * 1000 },
+//     { miles: 30, durationMs: 5 * 60 * 1000 },
+//     { miles: 50, durationMs: 5 * 60 * 1000 },
+//   ];
+
+//   try {
+//     const jobIdStr = job?._id?.toString?.() || "unknown";
+//     const zipcode = job?.serviceZipcode || "";
+//     const customerName = customer?.name || job?.customerName || "Customer";
+//     const { first: customerFirst, lastInitial: customerLastInitial } = splitName(customerName);
+
+//     if (!job || job.status === "accepted" || job.acceptedProvider) return;
+//     const location = job.location;
+//     if (!location?.coordinates || location.coordinates.length !== 2) return;
+
+//     // --------------------------
+//     // 📌 Phase 1: ZIPCODE ONLY
+//     // --------------------------
+//     if (phase === 1) {
+//       const providers = await Users.find({
+//         role: "serviceProvider",
+//         isActive: true,
+//         serviceType: job.serviceType,
+//         serviceZipcode: zipcode, // zipcode match only
+//         _id: { $nin: (job.cancelledProviders || []).map((id) => id.toString()) },
+//       }).lean();
+
+//       if (providers.length > 0) {
+//         await dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io });
+
+//         // ⏱ wait 5 minutes, then radius phase
+//         setTimeout(async () => {
+//           const latest = await mongoose.model("Job").findById(job._id);
+//           if (!latest || latest.status === "accepted" || latest.acceptedProvider) return;
+//           await invitePhaseOne(latest, customer, io, 2);
+//         }, 5 * 60 * 1000);
+
+//         return;
+//       } else {
+//         console.log("ℹ️ No zipcode providers, skipping to radius invites immediately.");
+//         await invitePhaseOne(job, customer, io, 2); // jump straight to radius
+//         return;
+//       }
+//     }
+
+//     // --------------------------
+//     // 📌 Phase 2+: RADIUS TIERS
+//     // --------------------------
+//     const tier = RADIUS_TIERS[Math.min(phase - 2, RADIUS_TIERS.length - 1)]; // phase 2 = radius[0]
+//     const maxMeters = tier.miles * 1609.34;
+
+//     const providers = await Users.find({
+//       role: "serviceProvider",
+//       isActive: true,
+//       serviceType: job.serviceType,
+//       location: { $nearSphere: { $geometry: location, $maxDistance: maxMeters } },
+//       _id: { $nin: (job.cancelledProviders || []).map((id) => id.toString()) },
+//     }).lean();
+
+//     if (providers.length > 0) {
+//       await dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io });
+//     }
+
+//     if (phase - 1 < RADIUS_TIERS.length) {
+//       setTimeout(async () => {
+//         const latest = await mongoose.model("Job").findById(job._id);
+//         if (!latest || latest.status === "accepted" || latest.acceptedProvider) return;
+//         await invitePhaseOne(latest, customer, io, phase + 1);
+//       }, tier.durationMs);
+//     }
+//   } catch (err) {
+//     console.error("❌ invitePhaseOne error:", err);
+//   }
+// }
+
+// /* ========================================================================== */
+// /* SHARED DISPATCH HELPERS                                                    */
+// /* ========================================================================== */
+// async function dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io }) {
+//   const hybrid = getEligibleProviders(providers, "hybrid", zipcode) || [];
+//   const profit = getEligibleProviders(providers, "profit_sharing", zipcode) || [];
+
+//   const hybridIds = new Set(hybrid.map((p) => p?._id?.toString?.()).filter(Boolean));
+//   const profitOnly = profit.filter((p) => !hybridIds.has(p?._id?.toString?.()));
+
+//   const context = { customerFirst, customerLastInitial, zipcode };
+//   const eventSmsNumbers = new Set();
+
+//   const promises = [];
+//   for (const p of profitOnly) {
+//     const payload = { jobId: jobIdStr };
+//     promises.push(sendOrderedInvites({ io, provider: p, payload, requestedTeaser: true, jobIdStr, job, eventSmsNumbers, context }));
+//   }
+//   for (const p of hybrid) {
+//     const payload = { jobId: jobIdStr };
+//     promises.push(sendOrderedInvites({ io, provider: p, payload, requestedTeaser: false, jobIdStr, job, eventSmsNumbers, context }));
+//   }
+
+//   await Promise.allSettled(promises);
+
+//   job.invitedProviders = Array.from(new Set([...(job.invitedProviders || []).map(String), ...providers.map((p) => String(p._id))]));
+//   job.invitationPhase = job.invitationPhase ? job.invitationPhase + 1 : 1;
+//   job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+//   await job.save();
+// }
+
+
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
@@ -3299,20 +3537,15 @@ import sendSMS from "../utils/sendSMS.js";
 import sendPushNotification from "../utils/sendPushNotification.js";
 import Users from "../models/Users.js";
 import mongoose from "mongoose";
+import nodemailer from "nodemailer";
 
 /* ========================================================================== */
 /*                         VERSION + GLOBAL BEHAVIOR                          */
 /* ========================================================================== */
-const INVITE_PATCH_VERSION = "invite-v5.0 (zipcode first, radius fallback)";
+const INVITE_PATCH_VERSION = "invite-v5.1 (zipcode, radius, final broadcast)";
 console.log("🔧 INVITE PATCH:", INVITE_PATCH_VERSION);
 
-const SEND_PROVIDER_SMS_PHASES = new Set([1]);
-const DEDUPE_SMS_PER_EVENT = true;
-const ALLOW_CUSTOMER_SMS_IF_PHONE_MATCHES_PROVIDER = false;
-
-// Built-in universal links
 const APP_LINK = "https://blinqfix.app/download";
-const SUBSCRIPTION_LINK = "https://blinqfix.app/upgrade";
 const UNIVERSAL_LINK = "https://blinqfix.app/open";
 
 /* ========================================================================== */
@@ -3320,43 +3553,24 @@ const UNIVERSAL_LINK = "https://blinqfix.app/open";
 /* ========================================================================== */
 const shortId = (id) => String(id || "").slice(-6).toUpperCase();
 
-function buildSmartLink(path = "") {
-  return `${UNIVERSAL_LINK}?redirect=${encodeURIComponent(path)}&fallback=${encodeURIComponent(APP_LINK)}`;
+function splitName(fullName) {
+  if (!fullName || typeof fullName !== "string") return { first: "Customer", lastInitial: "" };
+  const parts = fullName.trim().split(/\s+/);
+  const first = parts[0] || "Customer";
+  const lastInitial = parts.length > 1 ? (parts[parts.length - 1][0] || "").toUpperCase() + "." : "";
+  return { first, lastInitial };
 }
 
 const smsTemplates = {
-  providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
-    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Blinqfix App to Accept:`;
-  },
-
-  providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) => {
-    const q = `job=${encodeURIComponent(jobId)}&src=sms&cohort=profit_sharing`;
-    return `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Blinqfix App to Upgrade and Accept:`;
-  },
-
-  customerAccepted: ({ providerName, etaMin, jobId }) => {
-    return `BlinqFix: ${providerName} accepted job ${shortId(jobId)}. ETA ~${etaMin}m.`;
-  },
-
-  customerCompleted: ({ jobId }) => {
-    return `BlinqFix: Job ${shortId(jobId)} marked complete. Thanks!`;
-  },
+  providerHybridInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) =>
+    `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode} needs help now. Job ${shortId(jobId)} — Blinqfix App to Accept:`,
+  providerProfitInvite: ({ jobId, customerFirst, customerLastInitial, zipcode }) =>
+    `📢 BlinqFix: ${customerFirst}${customerLastInitial ? " " + customerLastInitial : ""} in ${zipcode}. Job ${shortId(jobId)} — Blinqfix App to Upgrade and Accept:`,
 };
 
 /* ========================================================================== */
-/*                                HELPERS                                     */
+/* HELPERS                                                                    */
 /* ========================================================================== */
-const PHONE_KEYS = ["phone", "phoneNumber", "mobile", "mobileNumber", "contactPhone", "phone_number", "tel", "telephone"];
-function maskPhone(p) { if (!p) return "-"; const d = String(p).replace(/\D/g, ""); return d.length < 4 ? "***" : `***${d.slice(-4)}`; }
-function getPhoneWithKey(obj) {
-  if (!obj || typeof obj !== "object") return { value: null, key: null };
-  for (const k of PHONE_KEYS) { const v = obj?.[k]; if (typeof v === "string" && v.trim()) return { value: v.trim(), key: k }; }
-  if (obj?.contact?.phone) return { value: String(obj.contact.phone).trim(), key: "contact.phone" };
-  if (obj?.profile?.phone) return { value: String(obj.profile.phone).trim(), key: "profile.phone" };
-  return { value: null, key: null };
-}
-function normalize(n) { if (!n) return null; const s = String(n).trim(); if (s.startsWith("+")) return s.replace(/\s/g, ""); const d = s.replace(/\D/g, ""); if (!d) return null; if (d.length === 10) return "+1" + d; if (d.length === 11 && d.startsWith("1")) return "+" + d; return "+" + d; }
-function splitName(fullName) { if (!fullName || typeof fullName !== "string") return { first: "Customer", lastInitial: "" }; const parts = fullName.trim().split(/\s+/); const first = parts[0] || "Customer"; const lastInitial = parts.length > 1 ? (parts[parts.length - 1][0] || "").toUpperCase() + "." : ""; return { first, lastInitial }; }
 function getProviderCohort(provider) {
   const raw = (provider?.billingTier || provider?.cohort || provider?.plan || "").toString().toLowerCase();
   if (["hybrid"].includes(raw)) return "hybrid";
@@ -3364,20 +3578,44 @@ function getProviderCohort(provider) {
   return null;
 }
 
+async function sendSupportEmail(job) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: "no-reply@blinqfix.com",
+      to: "support@blinqfix.com",
+      subject: `Unclaimed Job ${job._id}`,
+      text: `Job ${job._id} (${job.serviceType}) expired after all invite phases with no acceptance.`,
+    });
+
+    console.log("📧 Support notified about unclaimed job.");
+  } catch (err) {
+    console.error("❌ Failed to send support email:", err);
+  }
+}
+
 /* ========================================================================== */
 /* PROVIDER DISPATCH                                                          */
 /* ========================================================================== */
-async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobIdStr, job, eventSmsNumbers, context }) {
+async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobIdStr, job, context }) {
   const providerId = provider?._id?.toString?.() || "";
-  const declared = requestedTeaser ? "profit_sharing" : "hybrid";
-  const actual = getProviderCohort(provider) || declared;
+  const actual = getProviderCohort(provider);
   const inviteKind = actual === "profit_sharing" ? (requestedTeaser ? "teaser" : "full") : "full";
 
   try {
     io.to(providerId).emit("jobInvitation", {
       ...payload,
-      clickable: actual !== "profit_sharing" || !requestedTeaser,
-      buttonsActive: actual !== "profit_sharing" || !requestedTeaser,
+      clickable: inviteKind === "full",
+      buttonsActive: inviteKind === "full",
       cohort: actual,
       inviteKind,
     });
@@ -3385,30 +3623,31 @@ async function sendOrderedInvites({ io, provider, payload, requestedTeaser, jobI
 
   const tasks = [];
   try {
-    if (actual === "profit_sharing" && requestedTeaser) tasks.push(sendTeaserInvite(provider, { ...job.toObject?.() ?? job, address: "[Hidden]" }));
-    else tasks.push(sendInAppInvite(provider, job));
+    if (inviteKind === "teaser") {
+      tasks.push(sendTeaserInvite(provider, { ...job.toObject?.() ?? job, address: "[Hidden]" }));
+    } else {
+      tasks.push(sendInAppInvite(provider, job));
+    }
   } catch {}
 
   if (typeof provider.expoPushToken === "string" && provider.expoPushToken.trim()) {
-    tasks.push(sendPushNotification({
-      to: provider.expoPushToken,
-      title: "🚨 New Emergency Job",
-      body: actual === "profit_sharing" && requestedTeaser ? "Upgrade to accept this job." : "Tap to accept now!",
-      data: { jobId: jobIdStr, type: "jobInvite", clickable: actual !== "profit_sharing" || !requestedTeaser },
-    }));
+    tasks.push(
+      sendPushNotification({
+        to: provider.expoPushToken,
+        title: "🚨 New Emergency Job",
+        body: inviteKind === "teaser" ? "Upgrade to accept this job." : "Tap to accept now!",
+        data: { jobId: jobIdStr, type: "jobInvite", clickable: inviteKind === "full" },
+      })
+    );
   }
 
-  const ph = getPhoneWithKey(provider);
-  const normalized = normalize(ph.value);
-  if (ph.value) {
-    if (!(DEDUPE_SMS_PER_EVENT && normalized && eventSmsNumbers.has(normalized))) {
-      const { customerFirst, customerLastInitial, zipcode } = context;
-      const body = actual === "profit_sharing" && requestedTeaser
+  if (provider.phone) {
+    const { customerFirst, customerLastInitial, zipcode } = context;
+    const body =
+      inviteKind === "teaser"
         ? smsTemplates.providerProfitInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode })
         : smsTemplates.providerHybridInvite({ jobId: jobIdStr, customerFirst, customerLastInitial, zipcode });
-      tasks.push(sendSMS(ph.value, body));
-      if (normalized) eventSmsNumbers.add(normalized);
-    }
+    tasks.push(sendSMS(provider.phone, body));
   }
 
   await Promise.allSettled(tasks);
@@ -3424,6 +3663,7 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
     { miles: 30, durationMs: 5 * 60 * 1000 },
     { miles: 50, durationMs: 5 * 60 * 1000 },
   ];
+  const MAX_PHASE = RADIUS_TIERS.length;
 
   try {
     const jobIdStr = job?._id?.toString?.() || "unknown";
@@ -3443,52 +3683,76 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
         role: "serviceProvider",
         isActive: true,
         serviceType: job.serviceType,
-        serviceZipcode: zipcode, // zipcode match only
+        serviceZipcode: zipcode,
         _id: { $nin: (job.cancelledProviders || []).map((id) => id.toString()) },
       }).lean();
 
       if (providers.length > 0) {
-        await dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io });
-
-        // ⏱ wait 5 minutes, then radius phase
+        await dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io, requestedTeaser: true });
         setTimeout(async () => {
           const latest = await mongoose.model("Job").findById(job._id);
           if (!latest || latest.status === "accepted" || latest.acceptedProvider) return;
           await invitePhaseOne(latest, customer, io, 2);
         }, 5 * 60 * 1000);
-
         return;
       } else {
-        console.log("ℹ️ No zipcode providers, skipping to radius invites immediately.");
-        await invitePhaseOne(job, customer, io, 2); // jump straight to radius
+        await invitePhaseOne(job, customer, io, 2);
         return;
       }
     }
 
     // --------------------------
-    // 📌 Phase 2+: RADIUS TIERS
+    // 📌 Phases 2..N: RADIUS TIERS
     // --------------------------
-    const tier = RADIUS_TIERS[Math.min(phase - 2, RADIUS_TIERS.length - 1)]; // phase 2 = radius[0]
-    const maxMeters = tier.miles * 1609.34;
+    if (phase >= 2 && phase <= MAX_PHASE) {
+      const tier = RADIUS_TIERS[phase - 2];
+      const maxMeters = tier.miles * 1609.34;
 
-    const providers = await Users.find({
-      role: "serviceProvider",
-      isActive: true,
-      serviceType: job.serviceType,
-      location: { $nearSphere: { $geometry: location, $maxDistance: maxMeters } },
-      _id: { $nin: (job.cancelledProviders || []).map((id) => id.toString()) },
-    }).lean();
+      const providers = await Users.find({
+        role: "serviceProvider",
+        isActive: true,
+        serviceType: job.serviceType,
+        location: { $nearSphere: { $geometry: location, $maxDistance: maxMeters } },
+        _id: { $nin: (job.cancelledProviders || []).map((id) => id.toString()) },
+      }).lean();
 
-    if (providers.length > 0) {
-      await dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io });
+      if (providers.length > 0) {
+        await dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io, requestedTeaser: true });
+      }
+
+      if (phase < MAX_PHASE) {
+        setTimeout(async () => {
+          const latest = await mongoose.model("Job").findById(job._id);
+          if (!latest || latest.status === "accepted" || latest.acceptedProvider) return;
+          await invitePhaseOne(latest, customer, io, phase + 1);
+        }, tier.durationMs);
+        return;
+      }
     }
 
-    if (phase - 1 < RADIUS_TIERS.length) {
+    // --------------------------
+    // 📌 Final Broadcast Phase
+    // --------------------------
+    if (phase > MAX_PHASE) {
+      console.log("📢 Final broadcast phase: sending full invites to ALL providers (including profit_sharing)");
+      const providers = await Users.find({
+        role: "serviceProvider",
+        isActive: true,
+        serviceType: job.serviceType,
+        _id: { $nin: (job.cancelledProviders || []).map((id) => id.toString()) },
+      }).lean();
+
+      if (providers.length > 0) {
+        await dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io, requestedTeaser: false });
+      }
+
+      // Wait same duration as last tier before notifying support
+      const lastTier = RADIUS_TIERS[MAX_PHASE - 1];
       setTimeout(async () => {
         const latest = await mongoose.model("Job").findById(job._id);
         if (!latest || latest.status === "accepted" || latest.acceptedProvider) return;
-        await invitePhaseOne(latest, customer, io, phase + 1);
-      }, tier.durationMs);
+        await sendSupportEmail(latest);
+      }, lastTier.durationMs);
     }
   } catch (err) {
     console.error("❌ invitePhaseOne error:", err);
@@ -3498,30 +3762,26 @@ export async function invitePhaseOne(job, customer, io, phase = 1) {
 /* ========================================================================== */
 /* SHARED DISPATCH HELPERS                                                    */
 /* ========================================================================== */
-async function dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io }) {
+async function dispatchInvites({ providers, job, jobIdStr, zipcode, customerFirst, customerLastInitial, io, requestedTeaser }) {
   const hybrid = getEligibleProviders(providers, "hybrid", zipcode) || [];
   const profit = getEligibleProviders(providers, "profit_sharing", zipcode) || [];
 
-  const hybridIds = new Set(hybrid.map((p) => p?._id?.toString?.()).filter(Boolean));
-  const profitOnly = profit.filter((p) => !hybridIds.has(p?._id?.toString?.()));
-
   const context = { customerFirst, customerLastInitial, zipcode };
-  const eventSmsNumbers = new Set();
-
   const promises = [];
-  for (const p of profitOnly) {
+
+  for (const p of profit) {
     const payload = { jobId: jobIdStr };
-    promises.push(sendOrderedInvites({ io, provider: p, payload, requestedTeaser: true, jobIdStr, job, eventSmsNumbers, context }));
+    promises.push(sendOrderedInvites({ io, provider: p, payload, requestedTeaser, jobIdStr, job, context }));
   }
   for (const p of hybrid) {
     const payload = { jobId: jobIdStr };
-    promises.push(sendOrderedInvites({ io, provider: p, payload, requestedTeaser: false, jobIdStr, job, eventSmsNumbers, context }));
+    promises.push(sendOrderedInvites({ io, provider: p, payload, requestedTeaser: false, jobIdStr, job, context }));
   }
 
   await Promise.allSettled(promises);
 
   job.invitedProviders = Array.from(new Set([...(job.invitedProviders || []).map(String), ...providers.map((p) => String(p._id))]));
-  job.invitationPhase = job.invitationPhase ? job.invitationPhase + 1 : 1;
+  job.invitationPhase = requestedTeaser ? (job.invitationPhase || 0) + 1 : job.invitationPhase;
   job.invitationExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
   await job.save();
 }
