@@ -3530,6 +3530,8 @@
 // }
 
 
+//new need to test
+
 import { getEligibleProviders } from "../utils/providerFilters.js";
 import sendInAppInvite from "../invites/sendInAppInvite.js";
 import sendTeaserInvite from "../invites/sendTeaserInvite.js";
@@ -3545,7 +3547,7 @@ import nodemailer from "nodemailer";
 const INVITE_PATCH_VERSION = "invite-v5.1 (zipcode, radius, final broadcast)";
 console.log("🔧 INVITE PATCH:", INVITE_PATCH_VERSION);
 
-const APP_LINK = "https://blinqfix.app/download";
+const APP_LINK = "https://apps.apple.com/us/app/blinqfix-app/id6747390132";
 const UNIVERSAL_LINK = "https://blinqfix.app/open";
 
 /* ========================================================================== */
