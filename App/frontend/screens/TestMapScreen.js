@@ -20,7 +20,7 @@ export default function MapSmokeTest() {
         {String(ready)}
       </Text>
 
-      {/* Give the map an explicit, fixed height and no clipping parent */}
+     
       <View
         style={styles.mapBox}
         onLayout={(e) => {
@@ -40,7 +40,7 @@ export default function MapSmokeTest() {
           moveOnMarkerPress={false}
           toolbarEnabled={false}
         >
-          {/* OSM tile overlay: proves rendering works even if Google tiles/key are unhappy */}
+          
           <UrlTile
             urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maximumZ={19}

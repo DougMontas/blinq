@@ -20,7 +20,7 @@ const coveredDescriptions = {
     "Leak location, pipe sealing/replacement (up to 10 ft), pressure testing, valve checks",
   "Appliance Failure":
     "Basic part replacements (thermostat, igniter, valve), diagnosis, labor",
-  Cleaning:
+  "Cleaning":
     "Dusting, sweeping, vacuuming, mopping, kitchen wipe down, bathroom sanitation, trash removal, surface disinfection, bedroom and living room tidying",
   "Drywall Repair":
     "Patching and repair of damaged drywall, includes drywall material, joint compound, sanding supplies, paint supplies, and all necessary materials for finishing and cleanup.",

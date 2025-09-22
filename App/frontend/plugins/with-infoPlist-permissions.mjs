@@ -1,4 +1,4 @@
-import { withInfoPlist } from '@expo/config-plugins';
+import { withInfoPlist } from "@expo/config-plugins";
 
 export default function withInfoPlistPermissions(config) {
   console.log("✅ Injecting NSUsageDescription keys...");

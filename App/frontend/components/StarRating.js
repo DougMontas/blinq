@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
 export default function StarRating({ rating = 0, max = 5 }) {
-  const safeRating = Number(rating ?? 0); // ✅ Ensure rating is always a number
+  const safeRating = Number(rating ?? 0); 
   const fullStars = Math.floor(safeRating);
   const hasHalfStar =
     safeRating - fullStars >= 0.25 && safeRating - fullStars < 0.75;
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
   },
   star: {
     fontSize: 20,
-    color: "#FFD700", // or use gold: "#FFD700"
+    color: "#FFD700",
     marginRight: 2,
   },
   text: {

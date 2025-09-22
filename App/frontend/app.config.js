@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 
 export default {
@@ -24,12 +23,10 @@ export default {
       bundleIdentifier: "com.doug30.blinqfix.app",
       buildNumber: "181",
       supportsTablet: true,
-      associatedDomains: [
-        "applinks:blinqfix.app"
-      ],
+      associatedDomains: ["applinks:blinqfix.app"],
       infoPlist: {
         NSUserTrackingUsageDescription:
-        "BlinqFix uses your device’s identifier only to measure distance for job alerts and to track arrival at customer location. We do not sell personal data.",
+          "BlinqFix uses your device’s identifier only to measure distance for job alerts and to track arrival at customer location. We do not sell personal data.",
         NSCameraUsageDescription:
           "We need access to your camera to let providers upload arrival/completion photos.",
         NSLocationWhenInUseUsageDescription:
@@ -69,10 +66,10 @@ export default {
             { scheme: "https", host: "blinqfix.app", pathPrefix: "/open" },
             { scheme: "https", host: "blinqfix.app", pathPrefix: "/job" },
             { scheme: "https", host: "blinqfix.app", pathPrefix: "/home" },
-            { scheme: "https", host: "blinqfix.app", pathPrefix: "/upgrade" }
+            { scheme: "https", host: "blinqfix.app", pathPrefix: "/upgrade" },
           ],
-          category: ["BROWSABLE", "DEFAULT"]
-        }
+          category: ["BROWSABLE", "DEFAULT"],
+        },
       ],
       config: {
         googleMaps: {
@@ -84,12 +81,9 @@ export default {
     plugins: [
       [
         "expo-notifications",
-       
-        
+
         {
-          sounds: [
-            "./assets/notification.mp3",
-          ],
+          sounds: ["./assets/notification.mp3"],
         },
       ],
       "expo-location",

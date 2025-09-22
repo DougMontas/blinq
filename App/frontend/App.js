@@ -83,7 +83,8 @@ Notifications.setNotificationHandler({
 // Map role -> dashboard route
 function roleToDashboard(role) {
   const r = (role || "").toLowerCase();
-  if (r === "serviceprovider" || r === "provider") return "ServiceProviderDashboard";
+  if (r === "serviceprovider" || r === "provider")
+    return "ServiceProviderDashboard";
   if (r === "admin") return "AdminDashboard";
   return "CustomerDashboard";
 }
@@ -365,7 +366,10 @@ export default function App() {
               <Stack.Screen name="HomeCustomer" component={HomeCustomer} />
               <Stack.Screen name="HomeServicePro" component={HomeServicePro} />
 
-              <Stack.Screen name="Registration" component={RegistrationScreen} />
+              <Stack.Screen
+                name="Registration"
+                component={RegistrationScreen}
+              />
               <Stack.Screen
                 name="ResetPasswordScreen"
                 component={ResetPasswordScreen}
@@ -415,7 +419,10 @@ export default function App() {
                 component={ProviderJobStatus}
               />
               <Stack.Screen name="WebViewScreen" component={WebViewScreen} />
-              <Stack.Screen name="ProviderProfile" component={ProviderProfile} />
+              <Stack.Screen
+                name="ProviderProfile"
+                component={ProviderProfile}
+              />
               <Stack.Screen name="RateProvider" component={RateProvider} />
               <Stack.Screen
                 name="MyAccountCustomer"
@@ -435,7 +442,10 @@ export default function App() {
                 component={DeleteAccountScreen}
               />
               <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
-              <Stack.Screen name="MyAccountScreen" component={MyAccountScreen} />
+              <Stack.Screen
+                name="MyAccountScreen"
+                component={MyAccountScreen}
+              />
               <Stack.Screen
                 name="NotFound"
                 component={NotFoundScreen}
