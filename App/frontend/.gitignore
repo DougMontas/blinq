@@ -10,6 +10,9 @@
 /build
 /andriod
 /ios
+/keys/*.json
+App/frontend/keys/*.json
+
 
 .expo/
 .expo-shared/

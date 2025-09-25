@@ -2332,7 +2332,6 @@
 //   trustText: { color: "#e0e7ff", fontSize: 16, fontWeight: "500" },
 // });
 
-
 //working - Smart Pricing
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
