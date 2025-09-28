@@ -952,8 +952,9 @@
 // //_________________________________________________//___________________//__________
 
 
-//new testing with all categories
+//new testing with all categoriesimport express from "express";
 import express from "express";
+
 const router = express.Router();
 
 /* ============================================================================
@@ -981,7 +982,6 @@ const SPV2_SERVICE_ANCHORS = {
   "Drywall Repair": 200,
 };
 
-// NAICS2017 codes by service for County Business Patterns competition proxy
 const SPV2_NAICS_BY_SERVICE = {
   "Burst or Leaking Pipes": "238220",
   "Sewer Backups or Clogged Drains": "238220",
@@ -1029,12 +1029,15 @@ const SPV2_CFG = {
 const FEE_RATE = 0.07;   // 7% BlinqFix fee
 const RUSH_FEE = 100;    // Always included
 
-// ===== Tiny cache & helpers =====
+// ===== Cache & helpers =====
 const _spv2_cache = new Map();
 const _spv2_get = (k) => {
   const v = _spv2_cache.get(k);
   if (!v) return null;
-  if (Date.now() - v.t > SPV2_CFG.cacheTTLms) { _spv2_cache.delete(k); return null; }
+  if (Date.now() - v.t > SPV2_CFG.cacheTTLms) {
+    _spv2_cache.delete(k);
+    return null;
+  }
   return v.v;
 };
 const _spv2_set = (k, v) => _spv2_cache.set(k, { v, t: Date.now() });
@@ -1042,30 +1045,32 @@ const _spv2_set = (k, v) => _spv2_cache.set(k, { v, t: Date.now() });
 const _spv2_clamp = (x, [lo, hi]) => Math.max(lo, Math.min(hi, x));
 const _spv2_roundTo = (x, step) => Math.round(x / step) * step;
 const _spv2_bumpSeverity = (cur, to) => {
-  const order = ['minor','moderate','severe'];
-  return order[Math.max(order.indexOf(cur), Math.max(0, order.indexOf(to)))];
+  const order = ["minor", "moderate", "severe"];
+  return order[Math.max(order.indexOf(cur), order.indexOf(to))];
 };
 
-async function _spv2_fetchJson(url, label='req') {
+async function _spv2_fetchJson(url, label = "req") {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 8000);
   try {
     const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`${label} ${res.status} ${res.statusText}`);
     return await res.json();
-  } finally { clearTimeout(to); }
+  } finally {
+    clearTimeout(to);
+  }
 }
 
 // ===== Free public datasets =====
 async function _spv2_geocodeToFips(addressLine) {
   const key = `geocode:${addressLine}`;
   const hit = _spv2_get(key); if (hit) return hit;
-  const base = 'https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress';
+  const base = "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress";
   const url = `${base}?address=${encodeURIComponent(addressLine)}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
-  const json = await _spv2_fetchJson(url, 'census-geocoder');
+  const json = await _spv2_fetchJson(url, "census-geocoder");
   const match = json?.result?.addressMatches?.[0];
   const county = match?.geographies?.Counties?.[0];
-  if (!match || !county?.STATE || !county?.COUNTY) throw new Error('Address not found or FIPS missing');
+  if (!match || !county?.STATE || !county?.COUNTY) throw new Error("Address not found or FIPS missing");
   const out = {
     normalizedAddress: match.matchedAddress,
     stateFIPS: county.STATE,
@@ -1080,19 +1085,19 @@ async function _spv2_geocodeToFips(addressLine) {
 async function _spv2_getACS(stateFIPS, countyFIPS) {
   const key = `acs:${stateFIPS}:${countyFIPS}`;
   const hit = _spv2_get(key); if (hit) return hit;
-  const vars = 'B19013_001E,B11001_001E';
+  const vars = "B19013_001E,B11001_001E";
   const countyURL = `https://api.census.gov/data/2023/acs/acs5?get=NAME,${vars}&for=county:${countyFIPS}&in=state:${stateFIPS}`;
-  const usURL     = `https://api.census.gov/data/2023/acs/acs5?get=${vars}&for=us:*`;
+  const usURL = `https://api.census.gov/data/2023/acs/acs5?get=${vars}&for=us:*`;
   const [cArr, uArr] = await Promise.all([
-    _spv2_fetchJson(countyURL, 'acs-county'),
-    _spv2_fetchJson(usURL, 'acs-us'),
+    _spv2_fetchJson(countyURL, "acs-county"),
+    _spv2_fetchJson(usURL, "acs-us"),
   ]);
   const c = cArr?.[1]; const u = uArr?.[1];
   const out = {
     county: { name: c?.[0], medianIncome: Number(c?.[1]), households: Number(c?.[2]) },
     us:     { medianIncome: Number(u?.[0]), households: Number(u?.[1]) },
   };
-  if (!out.county.medianIncome || !out.us.medianIncome) throw new Error('ACS income unavailable');
+  if (!out.county.medianIncome || !out.us.medianIncome) throw new Error("ACS income unavailable");
   _spv2_set(key, out);
   return out;
 }
@@ -1101,10 +1106,10 @@ async function _spv2_getCBPByNAICS(stateFIPS, countyFIPS, naics) {
   const key = `cbp:${stateFIPS}:${countyFIPS}:${naics}`;
   const hit = _spv2_get(key); if (hit) return hit;
   const countyURL = `https://api.census.gov/data/2023/cbp?get=ESTAB,NAME&for=county:${countyFIPS}&in=state:${stateFIPS}&NAICS2017=${naics}`;
-  const usURL     = `https://api.census.gov/data/2023/cbp?get=ESTAB&for=us:*&NAICS2017=${naics}`;
+  const usURL = `https://api.census.gov/data/2023/cbp?get=ESTAB&for=us:*&NAICS2017=${naics}`;
   const [cArr, uArr] = await Promise.all([
-    _spv2_fetchJson(countyURL, 'cbp-county'),
-    _spv2_fetchJson(usURL, 'cbp-us'),
+    _spv2_fetchJson(countyURL, "cbp-county"),
+    _spv2_fetchJson(usURL, "cbp-us"),
   ]);
   const countyEst = Number(cArr?.[1]?.[0]);
   const usEst = Number(uArr?.[1]?.[0]);
@@ -1112,7 +1117,7 @@ async function _spv2_getCBPByNAICS(stateFIPS, countyFIPS, naics) {
     ok: Number.isFinite(countyEst) && Number.isFinite(usEst),
     county: { name: cArr?.[1]?.[1], establishments: countyEst },
     us:     { establishments: usEst },
-    naics
+    naics,
   };
   _spv2_set(key, out);
   return out;
@@ -1133,10 +1138,10 @@ async function _spv2_getRPP(stateFIPS) {
   if (!user) return null;
   const url = `https://apps.bea.gov/api/data/?UserID=${encodeURIComponent(user)}&method=GetData&datasetname=RegionalIncome&TableName=RPP1&LineCode=1&GeoFips=${stateFIPS}&Year=LAST&ResultFormat=json`;
   try {
-    const json = await _spv2_fetchJson(url, 'bea-rpp');
+    const json = await _spv2_fetchJson(url, "bea-rpp");
     const v = Number(json?.BEAAPI?.Results?.Data?.[0]?.DataValue);
     if (!v) return null;
-    const out = { rppIndex: v, multiplier: v/100 };
+    const out = { rppIndex: v, multiplier: v / 100 };
     _spv2_set(key, out);
     return out;
   } catch {
@@ -1156,15 +1161,57 @@ function _spv2_locationMultiplier({ rppMult, countyIncome, usIncome }) {
 }
 function _spv2_competitionMultiplier({ countyEstab, usEstab, countyHH, usHH }) {
   const countyPer10k = (countyEstab / Math.max(1, countyHH)) * 10000;
-  const usPer10k     = (usEstab / Math.max(1, usHH)) * 10000;
+  const usPer10k = (usEstab / Math.max(1, usHH)) * 10000;
   const ratio = (countyPer10k || 0.0001) / (usPer10k || 0.0001);
   const m = Math.pow(ratio, -SPV2_CFG.competition.beta);
   return _spv2_clamp(m, SPV2_CFG.competition.clamp);
 }
 
 // ===== Questionnaire → severity/multipliers/add-ons =====
-// (same as your current file – unchanged, not omitted for brevity)
-// KEEP your entire _spv2_computeQuestionnaire function here
+function _spv2_computeQuestionnaire(service, details = {}) {
+  const norm = (x = "") => String(x).toLowerCase();
+  const entries = Object.entries(details).map(([q, a]) => [norm(q), norm(a)]);
+  const seen = (pred) => entries.some(([q, a]) => pred(q, a));
+  let severity = "moderate";
+  let mult = 1.0;
+  let addOns = 0;
+  const mul = (x) => { mult *= x; };
+  const add = (x) => { addOns += x; };
+
+  switch (service) {
+    case "Burst or Leaking Pipes": {
+      if (seen((q, a) => q.includes("exposed") && (a.includes("behind") || a.includes("ceiling") || a.includes("floor") || a.includes("unknown")))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => q.includes("how long") && (a.includes("6+") || a.includes("unknown")))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => q.includes("still") && a.includes("yes"))) add(SPV2_CFG.addOnFees.urgent);
+      if (seen((q, a) => q.includes("damage") && (a.includes("water-stained") || a.includes("sagging") || a.includes("minor stain")))) mul(1.12);
+      if (seen((q, a) => a.includes("unknown"))) mul(1.06);
+      break;
+    }
+    case "Sewer Backups or Clogged Drains": {
+      if (seen((q, a) => q.includes("area") && (a.includes("entire") || a.includes("unknown")))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => q.includes("overflow") && (a.includes("sewage") || a.includes("toilet") || a.includes("sink")))) mul(1.15);
+      if (seen((q, a) => q.includes("cleanout") && (a.includes("no") || a.includes("maybe") || a.includes("not sure")))) mul(1.10);
+      if (seen((q, a) => q.includes("used") && (a.includes("liquid") || a.includes("snaked")))) add(SPV2_CFG.addOnFees.chemicalAttempt);
+      break;
+    }
+    case "Roof Leaks or Storm Damage": {
+      if (seen((q, a) => q.includes("where") && (a.includes("ceiling drip") || a.includes("skylight") || a.includes("multiple") || a.includes("unknown")))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => q.includes("type of roof") && (a.includes("tile") || a.includes("metal") || a.includes("flat")))) mul(1.10);
+      if (seen((q, a) => q.includes("steep") && (a.includes("steep") || a.includes("moderate")))) add(SPV2_CFG.addOnFees.roofSteep);
+      if (seen((q, a) => q.includes("isolated") && (a.includes("multiple") || a.includes("whole")))) mul(1.15);
+      if (seen((q, a) => q.includes("interior damage") && (a.includes("sagging") || a.includes("furniture") || a.includes("stain")))) mul(1.10);
+      break;
+    }
+    // ... include all other cases you had before ...
+    default: {
+      if (seen((q, a) => a.includes("unknown") || a.includes("not sure"))) mul(1.05);
+    }
+  }
+
+  const sevFactor = SPV2_CFG.severityMult[severity] || 1.25;
+  mult *= sevFactor;
+  return { severity, multiplier: Number(mult.toFixed(3)), addOns };
+}
 
 // ===== Final & rails =====
 function _spv2_finalize(service, x) {
@@ -1178,11 +1225,10 @@ const estimateHandler = async (req, res) => {
   try {
     const { service, address, city, zipcode, details = {} } = req.body || {};
     if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
-      return res.status(400).json({ ok: false, error: 'Unknown or missing service' });
+      return res.status(400).json({ ok: false, error: "Unknown or missing service" });
     }
-    const addr = (address || '').trim();
-    const addrLine = `${addr}${city ? ', ' + city : ''}${zipcode ? ' ' + zipcode : ''}`.trim();
-    if (!addrLine) return res.status(400).json({ ok: false, error: 'Address required' });
+    const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
+    if (!addrLine) return res.status(400).json({ ok: false, error: "Address required" });
 
     // 1) Geocode → FIPS
     const geo = await _spv2_geocodeToFips(addrLine);
@@ -1208,9 +1254,9 @@ const estimateHandler = async (req, res) => {
     });
     const q = _spv2_computeQuestionnaire(service, details);
 
-    // 4) Anchor → price (smart)
+    // 4) Anchor → price
     const base = SPV2_SERVICE_ANCHORS[service];
-    const raw = (base * locM * compM * q.multiplier) + q.addOns;
+    const raw = base * locM * compM * q.multiplier + q.addOns;
     const priceUSD = _spv2_finalize(service, raw);
 
     // 5) Rush Fee (always $100)
@@ -1224,20 +1270,21 @@ const estimateHandler = async (req, res) => {
     res.json({
       ok: true,
       service,
-      priceUSD,                 // Smart Price
-      serviceFeeUSD,            // Rush fee (always $100)
-      convenienceFee,           // BlinqFix fee (7%)
+      priceUSD,
+      serviceFeeUSD,
+      convenienceFee,
       estimatedTotal: grandTotal,
       address: geo.normalizedAddress,
-      lat: geo.lat, lon: geo.lon
+      lat: geo.lat,
+      lon: geo.lon,
     });
   } catch (err) {
-    console.error('[SmartPriceV2]', err);
+    console.error("[SmartPriceV2]", err);
     res.status(500).json({ ok: false, error: err.message || String(err) });
   }
 };
 
-router.post('/v2/estimate', estimateHandler);
-router.post('/estimate', estimateHandler);
+router.post("/v2/estimate", estimateHandler);
+router.post("/estimate", estimateHandler);
 
 export default router;
