@@ -1468,11 +1468,11 @@ const SERVICE_ALIASES = {
 };
 
 // Unified resolver
-export const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
+// export const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
 
 
-/** Helper to normalize any input service name */
-// const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
+// /** Helper to normalize any input service name */
+// // const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
 
 
 // ===== NAICS 2017 codes per service =====
