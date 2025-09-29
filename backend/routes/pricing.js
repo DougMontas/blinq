@@ -2210,9 +2210,6 @@ import { resolveService } from "../utils/serviceResolver.js";
 
 const router = express.Router();
 
-// --- helper to normalize services ---
-const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
-
 // ===== Unified handler =====
 const estimateHandler = async (req, res) => {
   try {
