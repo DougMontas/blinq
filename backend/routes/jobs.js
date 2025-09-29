@@ -112,6 +112,13 @@ router.post("/", auth, async (req, res) => {
       location, // <-- ✅ include location
     } = req.body;
 
+    let serviceType = category;
+    serviceType = resolveService(serviceType);
+
+    if (!SPV2_SERVICE_ANCHORS[serviceType]) {
+      return res.status(400).json({ msg: `Invalid service type: ${serviceType}` });
+    }
+
     if (!category || !address) {
       return res
         .status(400)
@@ -130,12 +137,34 @@ router.post("/", auth, async (req, res) => {
 
     console.log("🛠️ Incoming job req.body:", req.body);
 
+    // const job = await Job.create({
+    //   customer: req.user.id,
+    //   address,
+    //   serviceCity,
+    //   serviceZipcode,
+    //   serviceType: category,
+    //   details: {
+    //     issue: service,
+    //     ...details,
+    //   },
+    //   baseAmount,
+    //   adjustmentAmount,
+    //   rushFee,
+    //   estimatedTotal,
+    //   paymentStatus: "unpaid",
+    //   status: "pending",
+    //   invitedProviders: [],
+    //   invitationPhase: 0,
+    //   location, // ✅ Required for geospatial queries and validation
+    // });
+
+
     const job = await Job.create({
       customer: req.user.id,
       address,
       serviceCity,
       serviceZipcode,
-      serviceType: category,
+      serviceType, // <-- normalized
       details: {
         issue: service,
         ...details,
@@ -148,9 +177,9 @@ router.post("/", auth, async (req, res) => {
       status: "pending",
       invitedProviders: [],
       invitationPhase: 0,
-      location, // ✅ Required for geospatial queries and validation
+      location,
     });
-
+    
     return res.status(201).json(job);
   } catch (err) {
     console.error("POST /api/jobs error:", err);
