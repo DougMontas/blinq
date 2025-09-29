@@ -546,9 +546,6 @@
 
 // export default router;
 
-
-
-
 // // working latest backup
 // import express from "express";
 // const router = express.Router();
@@ -951,7 +948,6 @@
 // export default router;
 // //_________________________________________________//___________________//__________
 
-
 //new testing with all categoriesimport express from "express";
 // import express from "express";
 
@@ -1293,7 +1289,7 @@
 //_______________________________________________________________________
 //_______________________________________________________________________
 
-// //Added categories test >>> 
+// //Added categories test >>>
 
 // import express from "express";
 
@@ -1470,10 +1466,8 @@
 // // Unified resolver
 // // export const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
 
-
 // // /** Helper to normalize any input service name */
 // // // const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
-
 
 // // ===== NAICS 2017 codes per service =====
 // const SPV2_NAICS_BY_SERVICE = {
@@ -1685,7 +1679,6 @@
 //   cacheTTLms: 10 * 60 * 1000,
 // };
 
-
 // const FEE_RATE = 0.07;   // 7% BlinqFix fee
 // const RUSH_FEE = 100;    // Always included
 
@@ -1886,38 +1879,38 @@
 //   switch (service) {
 //     /* ─── Existing Cases ───────────────────────────────────── */
 //     case "Burst or Leaking Pipes": {
-//       if (seen((q, a) => q.includes("exposed") && (a.includes("behind") || a.includes("ceiling") || a.includes("floor") || a.includes("unknown")))) 
+//       if (seen((q, a) => q.includes("exposed") && (a.includes("behind") || a.includes("ceiling") || a.includes("floor") || a.includes("unknown"))))
 //         severity = _spv2_bumpSeverity(severity, "severe");
-//       if (seen((q, a) => q.includes("how long") && (a.includes("6+") || a.includes("unknown")))) 
+//       if (seen((q, a) => q.includes("how long") && (a.includes("6+") || a.includes("unknown"))))
 //         severity = _spv2_bumpSeverity(severity, "severe");
-//       if (seen((q, a) => q.includes("still") && a.includes("yes"))) 
+//       if (seen((q, a) => q.includes("still") && a.includes("yes")))
 //         add(SPV2_CFG.addOnFees.urgent);
-//       if (seen((q, a) => q.includes("damage") && (a.includes("water-stained") || a.includes("sagging") || a.includes("minor stain")))) 
+//       if (seen((q, a) => q.includes("damage") && (a.includes("water-stained") || a.includes("sagging") || a.includes("minor stain"))))
 //         mul(1.12);
 //       if (seen((q, a) => a.includes("unknown"))) mul(1.06);
 //       break;
 //     }
 //     case "Sewer Backups or Clogged Drains": {
-//       if (seen((q, a) => q.includes("area") && (a.includes("entire") || a.includes("unknown")))) 
+//       if (seen((q, a) => q.includes("area") && (a.includes("entire") || a.includes("unknown"))))
 //         severity = _spv2_bumpSeverity(severity, "severe");
-//       if (seen((q, a) => q.includes("overflow") && (a.includes("sewage") || a.includes("toilet") || a.includes("sink")))) 
+//       if (seen((q, a) => q.includes("overflow") && (a.includes("sewage") || a.includes("toilet") || a.includes("sink"))))
 //         mul(1.15);
-//       if (seen((q, a) => q.includes("cleanout") && (a.includes("no") || a.includes("maybe") || a.includes("not sure")))) 
+//       if (seen((q, a) => q.includes("cleanout") && (a.includes("no") || a.includes("maybe") || a.includes("not sure"))))
 //         mul(1.10);
-//       if (seen((q, a) => q.includes("used") && (a.includes("liquid") || a.includes("snaked")))) 
+//       if (seen((q, a) => q.includes("used") && (a.includes("liquid") || a.includes("snaked"))))
 //         add(SPV2_CFG.addOnFees.chemicalAttempt);
 //       break;
 //     }
 //     case "Roof Leaks or Storm Damage": {
-//       if (seen((q, a) => q.includes("where") && (a.includes("ceiling drip") || a.includes("skylight") || a.includes("multiple") || a.includes("unknown")))) 
+//       if (seen((q, a) => q.includes("where") && (a.includes("ceiling drip") || a.includes("skylight") || a.includes("multiple") || a.includes("unknown"))))
 //         severity = _spv2_bumpSeverity(severity, "severe");
-//       if (seen((q, a) => q.includes("type of roof") && (a.includes("tile") || a.includes("metal") || a.includes("flat")))) 
+//       if (seen((q, a) => q.includes("type of roof") && (a.includes("tile") || a.includes("metal") || a.includes("flat"))))
 //         mul(1.10);
-//       if (seen((q, a) => q.includes("steep") && (a.includes("steep") || a.includes("moderate")))) 
+//       if (seen((q, a) => q.includes("steep") && (a.includes("steep") || a.includes("moderate"))))
 //         add(SPV2_CFG.addOnFees.roofSteep);
-//       if (seen((q, a) => q.includes("isolated") && (a.includes("multiple") || a.includes("whole")))) 
+//       if (seen((q, a) => q.includes("isolated") && (a.includes("multiple") || a.includes("whole"))))
 //         mul(1.15);
-//       if (seen((q, a) => q.includes("interior damage") && (a.includes("sagging") || a.includes("furniture") || a.includes("stain")))) 
+//       if (seen((q, a) => q.includes("interior damage") && (a.includes("sagging") || a.includes("furniture") || a.includes("stain"))))
 //         mul(1.10);
 //       break;
 //     }
@@ -2096,7 +2089,6 @@
 //   return { severity, multiplier: Number(mult.toFixed(3)), addOns };
 // }
 
-
 // // ===== Final & rails =====
 // function _spv2_finalize(service, x) {
 //   const rails = SPV2_CFG.rails[service] || SPV2_CFG.rails.default;
@@ -2118,19 +2110,18 @@
 //   return foundKey || input;
 // }
 
-
 // // ===== Unified handler =====
 // const estimateHandler = async (req, res) => {
 //       try {
 //         let { service, address, city, zipcode, details = {} } = req.body || {};
-        
+
 //         // Normalize service name
 //         service = resolveService(service);
-    
+
 //         if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
 //           return res.status(400).json({ ok: false, error: "Unknown or missing service" });
 //         }
-    
+
 //         const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
 //         if (!addrLine) return res.status(400).json({ ok: false, error: "Address required" });
 //     // const { service, address, city, zipcode, details = {} } = req.body || {};
@@ -2199,7 +2190,6 @@
 
 // export default router;
 
-
 //version 3 testing
 // pricing.js
 import express from "express";
@@ -2239,7 +2229,7 @@ const SPV2_SERVICE_ANCHORS = {
   // New (mirrors BASE_PRICE)
   "Handyman (general fixes)": 175,
   "Cleaner / Housekeeper": 150,
-  "Locksmith": 225,
+  Locksmith: 225,
   "Landscaper / Lawn Care": 200,
   "Painter (interior/exterior)": 500,
   "Pest Control / Exterminator": 250,
@@ -2289,10 +2279,10 @@ const SERVICE_ALIASES = {
   HVAC: "HVAC System Failure",
   Electrician: "Select Electrical Issues Below",
   // Core categories → correct anchors
-"Plumbing": "Burst or Leaking Pipes",
-"Roofing": "Roof Leaks or Storm Damage",
-"HVAC": "HVAC System Failure",
-"Electrician": "Select Electrical Issues Below",
+  Plumbing: "Burst or Leaking Pipes",
+  Roofing: "Roof Leaks or Storm Damage",
+  HVAC: "HVAC System Failure",
+  Electrician: "Select Electrical Issues Below",
 
   /* ─── Electrical Sub-Aliases ────────────────────── */
   "Single outlet/fixture": "Select Electrical Issues Below",
@@ -2317,17 +2307,17 @@ const SERVICE_ALIASES = {
   "Rekey locks": "Locksmith",
 
   /* ─── Cleaning ──────────────────────────────────── */
-  "Cleaning": "Cleaner / Housekeeper",
-  "Housekeeper": "Cleaner / Housekeeper",
+  Cleaning: "Cleaner / Housekeeper",
+  Housekeeper: "Cleaner / Housekeeper",
   "House Cleaning": "Cleaner / Housekeeper",
-  "Janitorial": "Cleaner / Housekeeper",
+  Janitorial: "Cleaner / Housekeeper",
   "Home cleaning": "Cleaner / Housekeeper",
   "Move-out cleaning": "Cleaner / Housekeeper",
   "Deep cleaning": "Cleaner / Housekeeper",
 
   /* ─── Handyman / Case Fixes ─────────────────────── */
   "Handyman (General Fixes)": "Handyman (general fixes)",
-  "Handyman": "Handyman (general fixes)",
+  Handyman: "Handyman (general fixes)",
 
   /* ─── Painter / Case Fixes ──────────────────────── */
   "Painter (Interior/Exterior)": "Painter (interior/exterior)",
@@ -2342,11 +2332,11 @@ const SERVICE_ALIASES = {
   "Glass Repair": "Window & Glass Repair",
 
   /* ─── Landscaping ───────────────────────────────── */
-  "Landscaper": "Landscaper / Lawn Care",
+  Landscaper: "Landscaper / Lawn Care",
   "Lawn Care": "Landscaper / Lawn Care",
 
   /* ─── Pest Control ──────────────────────────────── */
-  "Exterminator": "Pest Control / Exterminator",
+  Exterminator: "Pest Control / Exterminator",
   "Pest Control": "Pest Control / Exterminator",
 
   /* ─── Fence ────────────────────────────────────── */
@@ -2359,8 +2349,8 @@ const SERVICE_ALIASES = {
   "Pool Service": "Pool & Spa Technician",
 
   /* ─── Contractor ───────────────────────────────── */
-  "Remodeler": "General Contractor / Remodeler",
-  "Contractor": "General Contractor / Remodeler",
+  Remodeler: "General Contractor / Remodeler",
+  Contractor: "General Contractor / Remodeler",
 
   /* ─── Auto / Roadside ──────────────────────────── */
   "Car Mechanic (General)": "Car Mechanic (general)",
@@ -2372,16 +2362,14 @@ const SERVICE_ALIASES = {
   "Auto Glass Replacement": "Auto Glass Repair/Replacement",
 
   /* ─── Misc ─────────────────────────────────────── */
-  "Arborist": "Tree Service / Arborist",
+  Arborist: "Tree Service / Arborist",
 };
 
 // Unified resolver
 // export const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
 
-
 // /** Helper to normalize any input service name */
 // // const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
-
 
 // ===== NAICS 2017 codes per service =====
 const SPV2_NAICS_BY_SERVICE = {
@@ -2401,7 +2389,7 @@ const SPV2_NAICS_BY_SERVICE = {
   // New
   "Handyman (general fixes)": "236118", // Residential remodel/handyman
   "Cleaner / Housekeeper": "561720", // Janitorial/cleaning
-  "Locksmith": "561622", // Locksmiths
+  Locksmith: "561622", // Locksmiths
   "Landscaper / Lawn Care": "561730", // Landscaping
   "Painter (interior/exterior)": "238320", // Painting contractors
   "Pest Control / Exterminator": "561710", // Pest control
@@ -2514,7 +2502,7 @@ const SPV2_NAICS_BY_SERVICE = {
 // };
 
 const SPV2_CFG = {
-  location: { rppAlpha: 0.85, acsAlpha: 0.60, clamp: [0.80, 1.30] },
+  location: { rppAlpha: 0.85, acsAlpha: 0.6, clamp: [0.8, 1.3] },
   competition: { beta: 0.15, clamp: [0.85, 1.15] },
   severityMult: { minor: 1.0, moderate: 1.25, severe: 1.6 },
   addOnFees: {
@@ -2544,7 +2532,7 @@ const SPV2_CFG = {
 
     // New Handyman / related
     "Handyman (General Fixes)": [95, 695],
-    "Locksmith": [95, 595],
+    Locksmith: [95, 595],
     "Carpenter (Doors/Trim/Cabinets)": [150, 1295],
     "Garage Door Technician": [200, 1495],
     "Window & Glass Repair": [150, 1295],
@@ -2593,9 +2581,8 @@ const SPV2_CFG = {
   cacheTTLms: 10 * 60 * 1000,
 };
 
-
-const FEE_RATE = 0.07;   // 7% BlinqFix fee
-const RUSH_FEE = 100;    // Always included
+const FEE_RATE = 0.07; // 7% BlinqFix fee
+const RUSH_FEE = 100; // Always included
 
 // ===== Cache & helpers =====
 const _spv2_cache = new Map();
@@ -2632,13 +2619,18 @@ async function _spv2_fetchJson(url, label = "req") {
 // ===== Free public datasets =====
 async function _spv2_geocodeToFips(addressLine) {
   const key = `geocode:${addressLine}`;
-  const hit = _spv2_get(key); if (hit) return hit;
-  const base = "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress";
-  const url = `${base}?address=${encodeURIComponent(addressLine)}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
+  const hit = _spv2_get(key);
+  if (hit) return hit;
+  const base =
+    "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress";
+  const url = `${base}?address=${encodeURIComponent(
+    addressLine
+  )}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
   const json = await _spv2_fetchJson(url, "census-geocoder");
   const match = json?.result?.addressMatches?.[0];
   const county = match?.geographies?.Counties?.[0];
-  if (!match || !county?.STATE || !county?.COUNTY) throw new Error("Address not found or FIPS missing");
+  if (!match || !county?.STATE || !county?.COUNTY)
+    throw new Error("Address not found or FIPS missing");
   const out = {
     normalizedAddress: match.matchedAddress,
     stateFIPS: county.STATE,
@@ -2652,7 +2644,8 @@ async function _spv2_geocodeToFips(addressLine) {
 
 async function _spv2_getACS(stateFIPS, countyFIPS) {
   const key = `acs:${stateFIPS}:${countyFIPS}`;
-  const hit = _spv2_get(key); if (hit) return hit;
+  const hit = _spv2_get(key);
+  if (hit) return hit;
   const vars = "B19013_001E,B11001_001E";
   const countyURL = `https://api.census.gov/data/2023/acs/acs5?get=NAME,${vars}&for=county:${countyFIPS}&in=state:${stateFIPS}`;
   const usURL = `https://api.census.gov/data/2023/acs/acs5?get=${vars}&for=us:*`;
@@ -2660,19 +2653,26 @@ async function _spv2_getACS(stateFIPS, countyFIPS) {
     _spv2_fetchJson(countyURL, "acs-county"),
     _spv2_fetchJson(usURL, "acs-us"),
   ]);
-  const c = cArr?.[1]; const u = uArr?.[1];
+  const c = cArr?.[1];
+  const u = uArr?.[1];
   const out = {
-    county: { name: c?.[0], medianIncome: Number(c?.[1]), households: Number(c?.[2]) },
-    us:     { medianIncome: Number(u?.[0]), households: Number(u?.[1]) },
+    county: {
+      name: c?.[0],
+      medianIncome: Number(c?.[1]),
+      households: Number(c?.[2]),
+    },
+    us: { medianIncome: Number(u?.[0]), households: Number(u?.[1]) },
   };
-  if (!out.county.medianIncome || !out.us.medianIncome) throw new Error("ACS income unavailable");
+  if (!out.county.medianIncome || !out.us.medianIncome)
+    throw new Error("ACS income unavailable");
   _spv2_set(key, out);
   return out;
 }
 
 async function _spv2_getCBPByNAICS(stateFIPS, countyFIPS, naics) {
   const key = `cbp:${stateFIPS}:${countyFIPS}:${naics}`;
-  const hit = _spv2_get(key); if (hit) return hit;
+  const hit = _spv2_get(key);
+  if (hit) return hit;
   const countyURL = `https://api.census.gov/data/2023/cbp?get=ESTAB,NAME&for=county:${countyFIPS}&in=state:${stateFIPS}&NAICS2017=${naics}`;
   const usURL = `https://api.census.gov/data/2023/cbp?get=ESTAB&for=us:*&NAICS2017=${naics}`;
   const [cArr, uArr] = await Promise.all([
@@ -2684,7 +2684,7 @@ async function _spv2_getCBPByNAICS(stateFIPS, countyFIPS, naics) {
   const out = {
     ok: Number.isFinite(countyEst) && Number.isFinite(usEst),
     county: { name: cArr?.[1]?.[1], establishments: countyEst },
-    us:     { establishments: usEst },
+    us: { establishments: usEst },
     naics,
   };
   _spv2_set(key, out);
@@ -2701,10 +2701,13 @@ async function _spv2_getCBPPreferTargeted(stateFIPS, countyFIPS, service) {
 
 async function _spv2_getRPP(stateFIPS) {
   const key = `rpp:${stateFIPS}`;
-  const hit = _spv2_get(key); if (hit) return hit;
+  const hit = _spv2_get(key);
+  if (hit) return hit;
   const user = process.env.BEA_API_KEY;
   if (!user) return null;
-  const url = `https://apps.bea.gov/api/data/?UserID=${encodeURIComponent(user)}&method=GetData&datasetname=RegionalIncome&TableName=RPP1&LineCode=1&GeoFips=${stateFIPS}&Year=LAST&ResultFormat=json`;
+  const url = `https://apps.bea.gov/api/data/?UserID=${encodeURIComponent(
+    user
+  )}&method=GetData&datasetname=RegionalIncome&TableName=RPP1&LineCode=1&GeoFips=${stateFIPS}&Year=LAST&ResultFormat=json`;
   try {
     const json = await _spv2_fetchJson(url, "bea-rpp");
     const v = Number(json?.BEAAPI?.Results?.Data?.[0]?.DataValue);
@@ -2788,105 +2791,215 @@ function _spv2_computeQuestionnaire(service, details = {}) {
   let severity = "moderate";
   let mult = 1.0;
   let addOns = 0;
-  const mul = (x) => { mult *= x; };
-  const add = (x) => { addOns += x; };
+  const mul = (x) => {
+    mult *= x;
+  };
+  const add = (x) => {
+    addOns += x;
+  };
 
   switch (service) {
     /* ─── Existing Cases ───────────────────────────────────── */
     case "Burst or Leaking Pipes": {
-      if (seen((q, a) => q.includes("exposed") && (a.includes("behind") || a.includes("ceiling") || a.includes("floor") || a.includes("unknown")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("exposed") &&
+            (a.includes("behind") ||
+              a.includes("ceiling") ||
+              a.includes("floor") ||
+              a.includes("unknown"))
+        )
+      )
         severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => q.includes("how long") && (a.includes("6+") || a.includes("unknown")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("how long") &&
+            (a.includes("6+") || a.includes("unknown"))
+        )
+      )
         severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => q.includes("still") && a.includes("yes"))) 
+      if (seen((q, a) => q.includes("still") && a.includes("yes")))
         add(SPV2_CFG.addOnFees.urgent);
-      if (seen((q, a) => q.includes("damage") && (a.includes("water-stained") || a.includes("sagging") || a.includes("minor stain")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("damage") &&
+            (a.includes("water-stained") ||
+              a.includes("sagging") ||
+              a.includes("minor stain"))
+        )
+      )
         mul(1.12);
       if (seen((q, a) => a.includes("unknown"))) mul(1.06);
       break;
     }
     case "Sewer Backups or Clogged Drains": {
-      if (seen((q, a) => q.includes("area") && (a.includes("entire") || a.includes("unknown")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("area") &&
+            (a.includes("entire") || a.includes("unknown"))
+        )
+      )
         severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => q.includes("overflow") && (a.includes("sewage") || a.includes("toilet") || a.includes("sink")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("overflow") &&
+            (a.includes("sewage") || a.includes("toilet") || a.includes("sink"))
+        )
+      )
         mul(1.15);
-      if (seen((q, a) => q.includes("cleanout") && (a.includes("no") || a.includes("maybe") || a.includes("not sure")))) 
-        mul(1.10);
-      if (seen((q, a) => q.includes("used") && (a.includes("liquid") || a.includes("snaked")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("cleanout") &&
+            (a.includes("no") || a.includes("maybe") || a.includes("not sure"))
+        )
+      )
+        mul(1.1);
+      if (
+        seen(
+          (q, a) =>
+            q.includes("used") && (a.includes("liquid") || a.includes("snaked"))
+        )
+      )
         add(SPV2_CFG.addOnFees.chemicalAttempt);
       break;
     }
     case "Roof Leaks or Storm Damage": {
-      if (seen((q, a) => q.includes("where") && (a.includes("ceiling drip") || a.includes("skylight") || a.includes("multiple") || a.includes("unknown")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("where") &&
+            (a.includes("ceiling drip") ||
+              a.includes("skylight") ||
+              a.includes("multiple") ||
+              a.includes("unknown"))
+        )
+      )
         severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => q.includes("type of roof") && (a.includes("tile") || a.includes("metal") || a.includes("flat")))) 
-        mul(1.10);
-      if (seen((q, a) => q.includes("steep") && (a.includes("steep") || a.includes("moderate")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("type of roof") &&
+            (a.includes("tile") || a.includes("metal") || a.includes("flat"))
+        )
+      )
+        mul(1.1);
+      if (
+        seen(
+          (q, a) =>
+            q.includes("steep") &&
+            (a.includes("steep") || a.includes("moderate"))
+        )
+      )
         add(SPV2_CFG.addOnFees.roofSteep);
-      if (seen((q, a) => q.includes("isolated") && (a.includes("multiple") || a.includes("whole")))) 
+      if (
+        seen(
+          (q, a) =>
+            q.includes("isolated") &&
+            (a.includes("multiple") || a.includes("whole"))
+        )
+      )
         mul(1.15);
-      if (seen((q, a) => q.includes("interior damage") && (a.includes("sagging") || a.includes("furniture") || a.includes("stain")))) 
-        mul(1.10);
+      if (
+        seen(
+          (q, a) =>
+            q.includes("interior damage") &&
+            (a.includes("sagging") ||
+              a.includes("furniture") ||
+              a.includes("stain"))
+        )
+      )
+        mul(1.1);
       break;
     }
 
     /* ─── New Services ─────────────────────────────────────── */
     case "Handyman (general fixes)": {
-      if (seen((q, a) => q.includes("issue") && a.includes("multiple"))) mul(1.15);
+      if (seen((q, a) => q.includes("issue") && a.includes("multiple")))
+        mul(1.15);
       if (seen((q, a) => a.includes("urgent"))) add(SPV2_CFG.addOnFees.urgent);
       break;
     }
     case "Cleaner / Housekeeper": {
-      if (seen((q, a) => q.includes("frequency") && a.includes("deep"))) mul(1.25);
-      if (seen((q, a) => q.includes("sqft") && (a.includes("3000") || a.includes("large")))) mul(1.20);
+      if (seen((q, a) => q.includes("frequency") && a.includes("deep")))
+        mul(1.25);
+      if (
+        seen(
+          (q, a) =>
+            q.includes("sqft") && (a.includes("3000") || a.includes("large"))
+        )
+      )
+        mul(1.2);
       break;
     }
     case "Locksmith": {
-      if (seen((q, a) => a.includes("locked out"))) add(SPV2_CFG.addOnFees.urgent);
+      if (seen((q, a) => a.includes("locked out")))
+        add(SPV2_CFG.addOnFees.urgent);
       if (seen((q, a) => a.includes("car"))) mul(1.15);
       break;
     }
     case "Appliance Failures": {
-      if (seen((q, a) => q.includes("issue") && a.includes("spark"))) severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => q.includes("age") && (a.includes("10+") || a.includes("unknown")))) mul(1.15);
+      if (seen((q, a) => q.includes("issue") && a.includes("spark")))
+        severity = _spv2_bumpSeverity(severity, "severe");
+      if (
+        seen(
+          (q, a) =>
+            q.includes("age") && (a.includes("10+") || a.includes("unknown"))
+        )
+      )
+        mul(1.15);
       break;
     }
     case "Painter (interior/exterior)": {
-      if (seen((q, a) => q.includes("sqft") && a.includes("large"))) severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => a.includes("paint match"))) add(SPV2_CFG.addOnFees.paintMatch);
+      if (seen((q, a) => q.includes("sqft") && a.includes("large")))
+        severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("paint match")))
+        add(SPV2_CFG.addOnFees.paintMatch);
       break;
     }
     case "Pest Control / Exterminator": {
-      if (seen((q, a) => q.includes("type") && a.includes("termites"))) severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => a.includes("whole home"))) mul(1.20);
+      if (seen((q, a) => q.includes("type") && a.includes("termites")))
+        severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("whole home"))) mul(1.2);
       break;
     }
     case "Carpenter (doors/trim/cabinets)": {
-      if (seen((q, a) => q.includes("repair") && a.includes("custom"))) mul(1.25);
+      if (seen((q, a) => q.includes("repair") && a.includes("custom")))
+        mul(1.25);
       break;
     }
     case "Garage Door Technician": {
-      if (seen((q, a) => a.includes("spring"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("spring")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Window & Glass Repair": {
-      if (seen((q, a) => a.includes("large") || a.includes("tempered"))) mul(1.20);
+      if (seen((q, a) => a.includes("large") || a.includes("tempered")))
+        mul(1.2);
       break;
     }
     case "Gutter Cleaning / Repair": {
-      if (seen((q, a) => q.includes("story") && a.includes("2"))) add(SPV2_CFG.addOnFees.roofSteep);
+      if (seen((q, a) => q.includes("story") && a.includes("2")))
+        add(SPV2_CFG.addOnFees.roofSteep);
       break;
     }
     case "Tile & Grout Specialist": {
-      if (seen((q, a) => a.includes("mold") || a.includes("water"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("mold") || a.includes("water")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Flooring Installer / Repair": {
-      if (seen((q, a) => q.includes("sqft") && a.includes("1000+"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => q.includes("sqft") && a.includes("1000+")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Smart-home / Low-voltage Installer": {
-      if (seen((q, a) => a.includes("multi-room"))) mul(1.20);
+      if (seen((q, a) => a.includes("multi-room"))) mul(1.2);
       break;
     }
     case "Security System Installer": {
@@ -2894,11 +3007,13 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       break;
     }
     case "IT / Wi-Fi Setup (Home Networking)": {
-      if (seen((q, a) => a.includes("enterprise") || a.includes("mesh"))) mul(1.20);
+      if (seen((q, a) => a.includes("enterprise") || a.includes("mesh")))
+        mul(1.2);
       break;
     }
     case "TV Mounting / Home Theater Installer": {
-      if (seen((q, a) => a.includes("over fireplace") || a.includes("large"))) mul(1.20);
+      if (seen((q, a) => a.includes("over fireplace") || a.includes("large")))
+        mul(1.2);
       break;
     }
     case "Moving Help (Labor-only)": {
@@ -2907,7 +3022,8 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       break;
     }
     case "Junk Removal / Hauling": {
-      if (seen((q, a) => a.includes("truckloads") || a.includes("multiple"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("truckloads") || a.includes("multiple")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Pressure Washing": {
@@ -2915,24 +3031,27 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       break;
     }
     case "Fence Repair / Installer": {
-      if (seen((q, a) => a.includes("linear feet") && a.includes("100+"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("linear feet") && a.includes("100+")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Masonry / Concrete": {
-      if (seen((q, a) => a.includes("steps") || a.includes("foundation"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("steps") || a.includes("foundation")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Insulation / Weatherization Tech": {
-      if (seen((q, a) => a.includes("attic"))) mul(1.20);
+      if (seen((q, a) => a.includes("attic"))) mul(1.2);
       break;
     }
     case "Chimney Sweep & Masonry": {
-      if (seen((q, a) => a.includes("structural"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("structural")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Water Damage Mitigation": {
       severity = _spv2_bumpSeverity(severity, "severe");
-      if (seen((q, a) => a.includes("mold"))) mul(1.20);
+      if (seen((q, a) => a.includes("mold"))) mul(1.2);
       break;
     }
     case "Basement Waterproofing": {
@@ -2940,7 +3059,8 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       break;
     }
     case "Tree Service / Arborist": {
-      if (seen((q, a) => a.includes("large") || a.includes("near power"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("large") || a.includes("near power")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Pool & Spa Technician": {
@@ -2948,11 +3068,13 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       break;
     }
     case "Deck/Patio Repair & Build": {
-      if (seen((q, a) => a.includes("new build"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("new build")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Window/Door Replacement (Glazier)": {
-      if (seen((q, a) => a.includes("double pane") || a.includes("storm"))) mul(1.20);
+      if (seen((q, a) => a.includes("double pane") || a.includes("storm")))
+        mul(1.2);
       break;
     }
     case "Solar Installer": {
@@ -2969,15 +3091,17 @@ function _spv2_computeQuestionnaire(service, details = {}) {
     }
     case "Car Mechanic (general)":
     case "Mobile Mechanic": {
-      if (seen((q, a) => a.includes("engine") || a.includes("transmission"))) severity = _spv2_bumpSeverity(severity, "severe");
+      if (seen((q, a) => a.includes("engine") || a.includes("transmission")))
+        severity = _spv2_bumpSeverity(severity, "severe");
       break;
     }
     case "Tow Truck / Roadside Assistance": {
-      if (seen((q, a) => a.includes("after hours"))) add(SPV2_CFG.addOnFees.urgent);
+      if (seen((q, a) => a.includes("after hours")))
+        add(SPV2_CFG.addOnFees.urgent);
       break;
     }
     case "Auto Glass Repair/Replacement": {
-      if (seen((q, a) => a.includes("windshield"))) mul(1.20);
+      if (seen((q, a) => a.includes("windshield"))) mul(1.2);
       break;
     }
     case "Car Detailing (mobile)": {
@@ -2989,13 +3113,15 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       break;
     }
     case "Barber / Hairdresser": {
-      if (seen((q, a) => a.includes("wedding") || a.includes("event"))) mul(1.20);
+      if (seen((q, a) => a.includes("wedding") || a.includes("event")))
+        mul(1.2);
       break;
     }
 
     /* ─── Default ─────────────────────────────────────────── */
     default: {
-      if (seen((q, a) => a.includes("unknown") || a.includes("not sure"))) mul(1.05);
+      if (seen((q, a) => a.includes("unknown") || a.includes("not sure")))
+        mul(1.05);
     }
   }
 
@@ -3003,7 +3129,6 @@ function _spv2_computeQuestionnaire(service, details = {}) {
   mult *= sevFactor;
   return { severity, multiplier: Number(mult.toFixed(3)), addOns };
 }
-
 
 // ===== Final & rails =====
 function _spv2_finalize(service, x) {
@@ -3026,21 +3151,28 @@ function _spv2_finalize(service, x) {
 //   return foundKey || input;
 // }
 
-
 // ===== Unified handler =====
 const estimateHandler = async (req, res) => {
   try {
     let { service, address, city, zipcode, details = {} } = req.body || {};
 
     // normalize
-    service = resolveService(service);
+    // Normalize the incoming service
+    service = resolveService(service, SPV2_SERVICE_ANCHORS, SERVICE_ALIASES);
+    console.log("🔍 Raw service:", req.body.service);
+    console.log("🔍 Resolved service:", service);
 
     if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
-      return res.status(400).json({ ok: false, error: "Unknown or missing service" });
+      return res
+        .status(400)
+        .json({ ok: false, error: "Unknown or missing service" });
     }
-    
-        const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
-        if (!addrLine) return res.status(400).json({ ok: false, error: "Address required" });
+
+    const addrLine = `${address || ""}${city ? ", " + city : ""}${
+      zipcode ? " " + zipcode : ""
+    }`.trim();
+    if (!addrLine)
+      return res.status(400).json({ ok: false, error: "Address required" });
     // const { service, address, city, zipcode, details = {} } = req.body || {};
     // if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
     //   return res.status(400).json({ ok: false, error: "Unknown or missing service" });
