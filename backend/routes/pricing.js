@@ -2274,11 +2274,6 @@ const SPV2_SERVICE_ANCHORS = {
 /* ========================================================================== */
 const SERVICE_ALIASES = {
   /* ─── Core Trade Mapping ─────────────────────────── */
-  Plumbing: "Burst or Leaking Pipes",
-  Roofing: "Roof Leaks or Storm Damage",
-  HVAC: "HVAC System Failure",
-  Electrician: "Select Electrical Issues Below",
-  // Core categories → correct anchors
   "Plumbing": "Burst or Leaking Pipes",
   "Roofing": "Roof Leaks or Storm Damage",
   "HVAC": "HVAC System Failure",
