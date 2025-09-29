@@ -1,13 +1,7 @@
-// utils/serviceResolver.js
-
-/**
- * Normalize a service name to its canonical anchor
- * Works with both aliases and direct service anchors
- */
 export const resolveService = (input, anchors = {}, aliases = {}) => {
     if (!input) return input;
   
-    // Direct anchor match
+    // Direct match
     if (anchors[input]) return input;
   
     // Alias mapping
