@@ -2229,7 +2229,7 @@ const SPV2_SERVICE_ANCHORS = {
   // New (mirrors BASE_PRICE)
   "Handyman (general fixes)": 175,
   "Cleaner / Housekeeper": 150,
-  Locksmith: 225,
+  "Locksmith": 225,
   "Landscaper / Lawn Care": 200,
   "Painter (interior/exterior)": 500,
   "Pest Control / Exterminator": 250,
@@ -2279,10 +2279,10 @@ const SERVICE_ALIASES = {
   HVAC: "HVAC System Failure",
   Electrician: "Select Electrical Issues Below",
   // Core categories → correct anchors
-  Plumbing: "Burst or Leaking Pipes",
-  Roofing: "Roof Leaks or Storm Damage",
-  HVAC: "HVAC System Failure",
-  Electrician: "Select Electrical Issues Below",
+  "Plumbing": "Burst or Leaking Pipes",
+  "Roofing": "Roof Leaks or Storm Damage",
+  "HVAC": "HVAC System Failure",
+  "Electrician": "Select Electrical Issues Below",
 
   /* ─── Electrical Sub-Aliases ────────────────────── */
   "Single outlet/fixture": "Select Electrical Issues Below",
@@ -2307,17 +2307,17 @@ const SERVICE_ALIASES = {
   "Rekey locks": "Locksmith",
 
   /* ─── Cleaning ──────────────────────────────────── */
-  Cleaning: "Cleaner / Housekeeper",
-  Housekeeper: "Cleaner / Housekeeper",
+  "Cleaning": "Cleaner / Housekeeper",
+  "Housekeeper": "Cleaner / Housekeeper",
   "House Cleaning": "Cleaner / Housekeeper",
-  Janitorial: "Cleaner / Housekeeper",
+  "Janitorial": "Cleaner / Housekeeper",
   "Home cleaning": "Cleaner / Housekeeper",
   "Move-out cleaning": "Cleaner / Housekeeper",
   "Deep cleaning": "Cleaner / Housekeeper",
 
   /* ─── Handyman / Case Fixes ─────────────────────── */
   "Handyman (General Fixes)": "Handyman (general fixes)",
-  Handyman: "Handyman (general fixes)",
+  "Handyman": "Handyman (general fixes)",
 
   /* ─── Painter / Case Fixes ──────────────────────── */
   "Painter (Interior/Exterior)": "Painter (interior/exterior)",
@@ -2332,11 +2332,11 @@ const SERVICE_ALIASES = {
   "Glass Repair": "Window & Glass Repair",
 
   /* ─── Landscaping ───────────────────────────────── */
-  Landscaper: "Landscaper / Lawn Care",
+  "Landscaper": "Landscaper / Lawn Care",
   "Lawn Care": "Landscaper / Lawn Care",
 
   /* ─── Pest Control ──────────────────────────────── */
-  Exterminator: "Pest Control / Exterminator",
+  "Exterminator": "Pest Control / Exterminator",
   "Pest Control": "Pest Control / Exterminator",
 
   /* ─── Fence ────────────────────────────────────── */
@@ -2349,8 +2349,8 @@ const SERVICE_ALIASES = {
   "Pool Service": "Pool & Spa Technician",
 
   /* ─── Contractor ───────────────────────────────── */
-  Remodeler: "General Contractor / Remodeler",
-  Contractor: "General Contractor / Remodeler",
+  "Remodeler": "General Contractor / Remodeler",
+  "Contractor": "General Contractor / Remodeler",
 
   /* ─── Auto / Roadside ──────────────────────────── */
   "Car Mechanic (General)": "Car Mechanic (general)",
@@ -2362,7 +2362,7 @@ const SERVICE_ALIASES = {
   "Auto Glass Replacement": "Auto Glass Repair/Replacement",
 
   /* ─── Misc ─────────────────────────────────────── */
-  Arborist: "Tree Service / Arborist",
+  "Arborist": "Tree Service / Arborist",
 };
 
 // Unified resolver
@@ -2389,7 +2389,7 @@ const SPV2_NAICS_BY_SERVICE = {
   // New
   "Handyman (general fixes)": "236118", // Residential remodel/handyman
   "Cleaner / Housekeeper": "561720", // Janitorial/cleaning
-  Locksmith: "561622", // Locksmiths
+  "Locksmith": "561622", // Locksmiths
   "Landscaper / Lawn Care": "561730", // Landscaping
   "Painter (interior/exterior)": "238320", // Painting contractors
   "Pest Control / Exterminator": "561710", // Pest control
@@ -2532,7 +2532,7 @@ const SPV2_CFG = {
 
     // New Handyman / related
     "Handyman (General Fixes)": [95, 695],
-    Locksmith: [95, 595],
+    "Locksmith": [95, 595],
     "Carpenter (Doors/Trim/Cabinets)": [150, 1295],
     "Garage Door Technician": [200, 1495],
     "Window & Glass Repair": [150, 1295],
