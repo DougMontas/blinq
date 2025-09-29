@@ -1,7 +1,8 @@
-export const resolveService = (input, anchors = {}, aliases = {}) => {
+// utils/serviceResolver.js
+export const resolveService = (input, anchors, aliases) => {
     if (!input) return input;
   
-    // Direct match
+    // Exact match in anchors
     if (anchors[input]) return input;
   
     // Alias mapping
