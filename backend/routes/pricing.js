@@ -1410,7 +1410,7 @@ const SERVICE_ALIASES = {
 };
 
 /** Helper to normalize any input service name */
-const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
+// const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
 
 
 // ===== NAICS 2017 codes per service =====
