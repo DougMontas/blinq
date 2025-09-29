@@ -2042,6 +2042,21 @@ function _spv2_finalize(service, x) {
   return _spv2_roundTo(clamped, SPV2_CFG.roundTo);
 }
 
+function resolveService(input) {
+  if (!input) return input;
+  // Direct match
+  if (SPV2_SERVICE_ANCHORS[input]) return input;
+  // Alias match
+  if (SERVICE_ALIASES[input]) return SERVICE_ALIASES[input];
+  // Fallback: try case-insensitive match
+  const lower = input.toLowerCase();
+  const foundKey = Object.keys(SPV2_SERVICE_ANCHORS).find(
+    (k) => k.toLowerCase() === lower
+  );
+  return foundKey || input;
+}
+
+
 // ===== Unified handler =====
 const estimateHandler = async (req, res) => {
       try {
