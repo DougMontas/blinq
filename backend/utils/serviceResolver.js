@@ -1,9 +1,23 @@
 // utils/serviceResolver.js
-import { SERVICE_ALIASES } from "../pricing.js";
 
 /**
  * Normalize a service name to its canonical anchor
- * @param {string} svc - raw service from frontend
- * @returns {string} canonical service
+ * Works with both aliases and direct service anchors
  */
-export const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
+export const resolveService = (input, anchors = {}, aliases = {}) => {
+    if (!input) return input;
+  
+    // Direct anchor match
+    if (anchors[input]) return input;
+  
+    // Alias mapping
+    if (aliases[input]) return aliases[input];
+  
+    // Case-insensitive fallback
+    const lower = input.toLowerCase();
+    const foundKey = Object.keys(anchors).find(
+      (k) => k.toLowerCase() === lower
+    );
+    return foundKey || input;
+  };
+  
