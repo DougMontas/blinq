@@ -1375,39 +1375,101 @@ const SPV2_SERVICE_ANCHORS = {
 /* SERVICE ALIASES                                                            */
 /* ========================================================================== */
 const SERVICE_ALIASES = {
-   /* ─── Electrical ───────────────────────────── */
-   "Single outlet/fixture": "Select Electrical Issues Below",
-   "Multiple circuits": "Select Electrical Issues Below",
-   "Panel or attic work": "Select Electrical Issues Below",
- 
-   /* ─── Plumbing ─────────────────────────────── */
-   "Leaking faucet": "Burst or Leaking Pipes",
-   "Clogged sink": "Sewer Backups or Clogged Drains",
-   "Water heater issue": "Water Heater Failure",
- 
-   /* ─── HVAC ─────────────────────────────────── */
-   "AC not cooling": "HVAC System Failure",
-   "Heater not working": "HVAC System Failure",
- 
-   /* ─── Roofing ─────────────────────────────── */
-   "Ceiling leak": "Roof Leaks or Storm Damage",
-   "Missing shingles": "Roof Leaks or Storm Damage",
- 
-   /* ─── Locksmith ───────────────────────────── */
-   "Locked out": "Locksmith",
-   "Rekey locks": "Locksmith",
- 
-   /* ─── Cleaning ────────────────────────────── */
-   "Home cleaning": "Cleaner / Housekeeper",
-   "Move-out cleaning": "Cleaner / Housekeeper",
-   "Deep cleaning": "Cleaner / Housekeeper",
- 
-   /* ─── Auto ────────────────────────────────── */
-   "Flat tire": "Mobile Tire Service",
-   "Jump start": "Tow Truck / Roadside Assistance",
-   "Battery replacement": "Mobile Mechanic",
-   "Engine issue": "Car Mechanic (general)",
+  /* ─── Core Trade Mapping ─────────────────────────── */
+  Plumbing: "Burst or Leaking Pipes",
+  Roofing: "Roof Leaks or Storm Damage",
+  HVAC: "HVAC System Failure",
+  Electrician: "Select Electrical Issues Below",
+  // Core categories → correct anchors
+"Plumbing": "Burst or Leaking Pipes",
+"Roofing": "Roof Leaks or Storm Damage",
+"HVAC": "HVAC System Failure",
+"Electrician": "Select Electrical Issues Below",
+
+  /* ─── Electrical Sub-Aliases ────────────────────── */
+  "Single outlet/fixture": "Select Electrical Issues Below",
+  "Multiple circuits": "Select Electrical Issues Below",
+  "Panel or attic work": "Select Electrical Issues Below",
+
+  /* ─── Plumbing Sub-Aliases ──────────────────────── */
+  "Leaking faucet": "Burst or Leaking Pipes",
+  "Clogged sink": "Sewer Backups or Clogged Drains",
+  "Water heater issue": "Water Heater Failure",
+
+  /* ─── HVAC Sub-Aliases ──────────────────────────── */
+  "AC not cooling": "HVAC System Failure",
+  "Heater not working": "HVAC System Failure",
+
+  /* ─── Roofing Sub-Aliases ───────────────────────── */
+  "Ceiling leak": "Roof Leaks or Storm Damage",
+  "Missing shingles": "Roof Leaks or Storm Damage",
+
+  /* ─── Locksmith ─────────────────────────────────── */
+  "Locked out": "Locksmith",
+  "Rekey locks": "Locksmith",
+
+  /* ─── Cleaning ──────────────────────────────────── */
+  "Cleaning": "Cleaner / Housekeeper",
+  "Housekeeper": "Cleaner / Housekeeper",
+  "House Cleaning": "Cleaner / Housekeeper",
+  "Janitorial": "Cleaner / Housekeeper",
+  "Home cleaning": "Cleaner / Housekeeper",
+  "Move-out cleaning": "Cleaner / Housekeeper",
+  "Deep cleaning": "Cleaner / Housekeeper",
+
+  /* ─── Handyman / Case Fixes ─────────────────────── */
+  "Handyman (General Fixes)": "Handyman (general fixes)",
+  "Handyman": "Handyman (general fixes)",
+
+  /* ─── Painter / Case Fixes ──────────────────────── */
+  "Painter (Interior/Exterior)": "Painter (interior/exterior)",
+
+  /* ─── Gutter / Flooring / Case Fixes ────────────── */
+  "Gutter Cleaning/Repair": "Gutter Cleaning / Repair",
+  "Flooring Installer/Repair": "Flooring Installer / Repair",
+
+  /* ─── Window/Door Variants ──────────────────────── */
+  "Window/Door Replacement (Glazier)": "Window/Door Replacement (Glazier)",
+  "Window Repair": "Window & Glass Repair",
+  "Glass Repair": "Window & Glass Repair",
+
+  /* ─── Landscaping ───────────────────────────────── */
+  "Landscaper": "Landscaper / Lawn Care",
+  "Lawn Care": "Landscaper / Lawn Care",
+
+  /* ─── Pest Control ──────────────────────────────── */
+  "Exterminator": "Pest Control / Exterminator",
+  "Pest Control": "Pest Control / Exterminator",
+
+  /* ─── Fence ────────────────────────────────────── */
+  "Fence Installer": "Fence Repair / Installer",
+  "Fence Repair": "Fence Repair / Installer",
+
+  /* ─── Pool / Spa ───────────────────────────────── */
+  "Pool Technician": "Pool & Spa Technician",
+  "Spa Technician": "Pool & Spa Technician",
+  "Pool Service": "Pool & Spa Technician",
+
+  /* ─── Contractor ───────────────────────────────── */
+  "Remodeler": "General Contractor / Remodeler",
+  "Contractor": "General Contractor / Remodeler",
+
+  /* ─── Auto / Roadside ──────────────────────────── */
+  "Car Mechanic (General)": "Car Mechanic (general)",
+  "Car Detailing (Mobile)": "Car Detailing (mobile)",
+  "Tow Truck": "Tow Truck / Roadside Assistance",
+  "Roadside Assistance": "Tow Truck / Roadside Assistance",
+  "Auto Glass": "Auto Glass Repair/Replacement",
+  "Auto Glass Repair": "Auto Glass Repair/Replacement",
+  "Auto Glass Replacement": "Auto Glass Repair/Replacement",
+
+  /* ─── Misc ─────────────────────────────────────── */
+  "Arborist": "Tree Service / Arborist",
 };
+
+// Unified resolver
+export const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
+
 
 /** Helper to normalize any input service name */
 // const resolveService = (svc) => SERVICE_ALIASES[svc] || svc;
