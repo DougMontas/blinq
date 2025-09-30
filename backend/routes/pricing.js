@@ -2778,6 +2778,7 @@ function _spv2_competitionMultiplier({ countyEstab, usEstab, countyHH, usHH }) {
 //   mult *= sevFactor;
 //   return { severity, multiplier: Number(mult.toFixed(3)), addOns };
 // }
+
 function _spv2_computeQuestionnaire(service, details = {}) {
   const norm = (x = "") => String(x).toLowerCase();
   const entries = Object.entries(details).map(([q, a]) => [norm(q), norm(a)]);
