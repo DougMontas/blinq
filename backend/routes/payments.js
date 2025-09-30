@@ -67,7 +67,7 @@ export async function createJobPaymentIntent({
 
 // IMPORTANT: This version must be compatible with your stripe-react-native SDK.
 // 2022-11-15 is safe for current SDKs.
-const STRIPE_EPH_API_VERSION = "2022-11-15";
+// const STRIPE_EPH_API_VERSION = "2022-11-15";
 
 /**
  * Helper: coerce an amount (dollars or cents) into integer cents.
@@ -193,6 +193,7 @@ async function buildPaymentSheetSession({
  * NEW: PaymentSheet session endpoint (recommended)
  * Your RN app should POST here with { jobId } OR { amount }, plus optional customer info.
  */
+
 //old works with core categories
 // router.post("/payments/payment-sheet", async (req, res) => {
 //   try {
@@ -231,72 +232,74 @@ async function buildPaymentSheetSession({
 // /api/jobs/payments/payment-sheet
 // Creates a PaymentIntent for the customer to fund the job (subtotal + 7% customer fee)
 // Returns { customer, ephemeralKey, paymentIntentClientSecret }
-router.post("/payments/payment-sheet", auth, async (req, res) => {
-  try {
-    const { jobId } = req.body || {};
-    if (!jobId) return res.status(400).json({ msg: "Missing jobId" });
 
-    const job = await Job.findById(jobId);
-    if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    // Only the job's customer can pay
-    if (String(job.customer) !== String(req.user._id)) {
-      return res.status(403).json({ msg: "Forbidden" });
-    }
+// router.post("/payments/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body || {};
+//     if (!jobId) return res.status(400).json({ msg: "Missing jobId" });
 
-    // ---- Compute dollars on the server (never trust client) ----
-    const base   = job.baseAmount || 0;
-    const adjust = job.adjustmentAmount || 0;
-    const rush   = job.rushFee || 0;
-    const extra  = job.additionalCharge || 0;
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    const subtotal = base + adjust + rush + extra;
-    const CUSTOMER_FEE_RATE = 0.07;                          // 7%
-    const customerFee = +(subtotal * CUSTOMER_FEE_RATE).toFixed(2);
-    const totalToCharge = subtotal + customerFee;            // dollars
-    const amount = Math.round(totalToCharge * 100);          // cents
+//     // Only the job's customer can pay
+//     if (String(job.customer) !== String(req.user._id)) {
+//       return res.status(403).json({ msg: "Forbidden" });
+//     }
 
-    // ---- Stripe customer (reuse if we have one) ----
-    let stripeCustomerId = req.user.stripeCustomerId;
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: req.user.email || undefined,
-        name:  req.user.name  || undefined,
-        metadata: { userId: String(req.user._id) }
-      });
-      stripeCustomerId = customer.id;
-      await Users.findByIdAndUpdate(req.user._id, { stripeCustomerId }, { new: true });
-    }
+//     // ---- Compute dollars on the server (never trust client) ----
+//     const base   = job.baseAmount || 0;
+//     const adjust = job.adjustmentAmount || 0;
+//     const rush   = job.rushFee || 0;
+//     const extra  = job.additionalCharge || 0;
 
-    // ---- Ephemeral key for PaymentSheet ----
-    const ephemeralKey = await stripe.ephemeralKeys.create(
-      { customer: stripeCustomerId },
-      { apiVersion: "2022-11-15" } // keep in sync with your Stripe version
-    );
+//     const subtotal = base + adjust + rush + extra;
+//     const CUSTOMER_FEE_RATE = 0.07;                          // 7%
+//     const customerFee = +(subtotal * CUSTOMER_FEE_RATE).toFixed(2);
+//     const totalToCharge = subtotal + customerFee;            // dollars
+//     const amount = Math.round(totalToCharge * 100);          // cents
 
-    // ---- PaymentIntent (no transfer/application_fee here) ----
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: "usd",
-      customer: stripeCustomerId,
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        jobId: String(job._id),
-        userId: String(req.user._id),
-        purpose: "blinqfix_initial_payment"
-      }
-    });
+//     // ---- Stripe customer (reuse if we have one) ----
+//     let stripeCustomerId = req.user.stripeCustomerId;
+//     if (!stripeCustomerId) {
+//       const customer = await stripe.customers.create({
+//         email: req.user.email || undefined,
+//         name:  req.user.name  || undefined,
+//         metadata: { userId: String(req.user._id) }
+//       });
+//       stripeCustomerId = customer.id;
+//       await Users.findByIdAndUpdate(req.user._id, { stripeCustomerId }, { new: true });
+//     }
 
-    return res.json({
-      customer: stripeCustomerId,
-      ephemeralKey: ephemeralKey.secret,
-      paymentIntentClientSecret: paymentIntent.client_secret
-    });
-  } catch (err) {
-    console.error("Stripe payment-sheet error:", err);
-    return res.status(500).json({ msg: "Stripe error", error: err.message });
-  }
-});
+//     // ---- Ephemeral key for PaymentSheet ----
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: stripeCustomerId },
+//       { apiVersion: "2022-11-15" } // keep in sync with your Stripe version
+//     );
+
+//     // ---- PaymentIntent (no transfer/application_fee here) ----
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount,
+//       currency: "usd",
+//       customer: stripeCustomerId,
+//       automatic_payment_methods: { enabled: true },
+//       metadata: {
+//         jobId: String(job._id),
+//         userId: String(req.user._id),
+//         purpose: "blinqfix_initial_payment"
+//       }
+//     });
+
+//     return res.json({
+//       customer: stripeCustomerId,
+//       ephemeralKey: ephemeralKey.secret,
+//       paymentIntentClientSecret: paymentIntent.client_secret
+//     });
+//   } catch (err) {
+//     console.error("Stripe payment-sheet error:", err);
+//     return res.status(500).json({ msg: "Stripe error", error: err.message });
+//   }
+// });
 
 
 /**
@@ -356,65 +359,166 @@ router.post("/stripe", async (req, res) => {
 //   }
 // });
 
+//__________________________________________________________
+//__________________________________________________________
+
+// --- ONE CANONICAL ENDPOINT ---
+const STRIPE_EPH_API_VERSION = "2022-11-15";
+
+// If you want auth, keep it; otherwise remove "auth" temporarily to unblock
+router.post("/payments/payment-sheet",  auth,  async (req, res) => {
+  const where = "/payments/payment-sheet";
+  try {
+    const { jobId } = req.body || {};
+    console.log(`[${where}] hit`, {
+      jobId,
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+      mountedHere: "/api/payments",           // <- confirm your mount in server.js
+      authHeader: !!req.headers.authorization,
+      user: req.user ? { id: String(req.user._id || req.user.id), email: req.user.email } : null,
+    });
+
+    if (!jobId) return res.status(400).json({ ok:false, msg:"Missing jobId" });
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ ok:false, msg:"Job not found" });
+
+    // If you keep auth, ensure only the customer can pay:
+    // if (auth && String(job.customer) !== String(req.user._id)) {
+    //   return res.status(403).json({ ok:false, msg:"Forbidden" });
+    // }
+
+    // Compute dollars on server from canonical fields
+    const base   = job.baseAmount || 0;
+    const adjust = job.adjustmentAmount || 0;
+    const rush   = job.rushFee || 0;
+    const extra  = job.additionalCharge || 0;
+
+    const subtotal = base + adjust + rush + extra;
+    const customerFee = +(subtotal * 0.07).toFixed(2);
+    const totalToCharge = subtotal + customerFee;     // dollars
+    const amount = Math.round(totalToCharge * 100);   // cents
+
+    if (!amount || amount <= 0) {
+      console.warn(`[${where}] non-positive amount`, { subtotal, customerFee, amount });
+      return res.status(400).json({ ok:false, msg:"Invalid amount to charge" });
+    }
+
+    console.log(`[${where}] totals`, { base, adjust, rush, extra, subtotal, customerFee, amountCents: amount });
+
+    // Ensure Stripe customer (reuse if saved on user)
+    let stripeCustomerId =
+      (req.user && req.user.stripeCustomerId) ||
+      (await Users.findById(job.customer).lean())?.stripeCustomerId;
+
+    if (!stripeCustomerId) {
+      const customerUser = await Users.findById(job.customer).lean();
+      const created = await stripe.customers.create({
+        email: customerUser?.email || undefined,
+        name:  customerUser?.name  || undefined,
+        metadata: { userId: String(customerUser?._id || "") },
+      });
+      stripeCustomerId = created.id;
+      if (customerUser?._id) {
+        await Users.findByIdAndUpdate(customerUser._id, { stripeCustomerId });
+      }
+      console.log(`[${where}] created Stripe customer`, { stripeCustomerId });
+    }
+
+    // Ephemeral key for PaymentSheet
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: stripeCustomerId },
+      { apiVersion: STRIPE_EPH_API_VERSION }
+    );
+
+    // PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: "usd",
+      customer: stripeCustomerId,
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        jobId: String(job._id),
+        userId: String(job.customer),
+        purpose: "blinqfix_initial_payment",
+      },
+    });
+
+    console.log(`[${where}] OK`, { paymentIntentId: paymentIntent.id });
+
+    return res.json({
+      ok: true,
+      customer: stripeCustomerId,
+      ephemeralKey: ephemeralKey.secret,
+      paymentIntentClientSecret: paymentIntent.client_secret,
+      publishableKey: process.env.STRIPE_PUBLIC_KEY,
+    });
+  } catch (err) {
+    console.error(`[${where}] ERROR`, err);
+    return res.status(500).json({ ok:false, msg:"Stripe error", error: err.message });
+  }
+});
+
+
 /********************************************************************************************
  * @route   POST /api/payments/payment-sheet
  * @desc    Create ephemeral key + payment intent for mobile app
  *******************************************************************************************/
+//old working
+// router.post("/payment-sheet", auth, async (req, res) => {
+//   try {
+//     const { jobId } = req.body;
+//     if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
 
-router.post("/payment-sheet", auth, async (req, res) => {
-  try {
-    const { jobId } = req.body;
-    if (!jobId) return res.status(400).json({ msg: "Missing job ID." });
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ msg: "Job not found." });
 
-    const job = await Job.findById(jobId);
-    if (!job) return res.status(404).json({ msg: "Job not found." });
+//     const customerName =
+//       req.body.customerName || req.user.name || "BlinqFix User";
+//     const customerEmail = req.body.customerEmail || req.user.email || "";
 
-    const customerName =
-      req.body.customerName || req.user.name || "BlinqFix User";
-    const customerEmail = req.body.customerEmail || req.user.email || "";
+//     const customer = await stripe.customers.create({
+//       name: customerName,
+//       email: customerEmail,
+//       metadata: { jobId, userId: req.user.id },
+//     });
 
-    const customer = await stripe.customers.create({
-      name: customerName,
-      email: customerEmail,
-      metadata: { jobId, userId: req.user.id },
-    });
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: customer.id },
+//       { apiVersion: "2022-11-15" }
+//     );
 
-    const ephemeralKey = await stripe.ephemeralKeys.create(
-      { customer: customer.id },
-      { apiVersion: "2022-11-15" }
-    );
+//     const amountCents = Math.round((job.estimatedTotal || 0) * 100);
 
-    const amountCents = Math.round((job.estimatedTotal || 0) * 100);
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount: amountCents,
+//       currency: "usd",
+//       customer: customer.id,
+//       description: "BlinqFix Emergency Job",
+//       automatic_payment_methods: { enabled: true },
+//       metadata: {
+//         stripeAccount: stripe._apiKey?.slice(0, 8),
+//         jobId: job._id.toString(),
+//       },
+//     });
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountCents,
-      currency: "usd",
-      customer: customer.id,
-      description: "BlinqFix Emergency Job",
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        stripeAccount: stripe._apiKey?.slice(0, 8),
-        jobId: job._id.toString(),
-      },
-    });
+//     console.log("🎯 PaymentIntent Created:", {
+//       id: paymentIntent.id,
+//       secret: paymentIntent.client_secret,
+//       mode: stripe._apiKey?.includes("live") ? "LIVE" : "TEST",
+//     });
 
-    console.log("🎯 PaymentIntent Created:", {
-      id: paymentIntent.id,
-      secret: paymentIntent.client_secret,
-      mode: stripe._apiKey?.includes("live") ? "LIVE" : "TEST",
-    });
-
-    return res.json({
-      paymentIntentClientSecret: paymentIntent.client_secret,
-      customer: customer.id,
-      ephemeralKey: ephemeralKey.secret,
-      publishableKey: process.env.STRIPE_PUBLIC_KEY,
-    });
-  } catch (err) {
-    console.error("❌ /payment-sheet error:", err.message, err);
-    res.status(500).json({ msg: err.message || "Stripe Payment Init Failed" });
-  }
-});
+//     return res.json({
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       customer: customer.id,
+//       ephemeralKey: ephemeralKey.secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//   } catch (err) {
+//     console.error("❌ /payment-sheet error:", err.message, err);
+//     res.status(500).json({ msg: err.message || "Stripe Payment Init Failed" });
+//   }
+// });
 
 /********************************************************************************************
  * @route   POST /api/payments/xrpl
