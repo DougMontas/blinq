@@ -366,72 +366,145 @@ router.post("/stripe", async (req, res) => {
 const STRIPE_EPH_API_VERSION = "2022-11-15";
 
 // If you want auth, keep it; otherwise remove "auth" temporarily to unblock
-router.post("/payments/payment-sheet",  auth,  async (req, res) => {
-  const where = "/payments/payment-sheet";
+// router.post("/payments/payment-sheet",  auth,  async (req, res) => {
+//   const where = "/payments/payment-sheet";
+//   try {
+//     const { jobId } = req.body || {};
+//     console.log(`[${where}] hit`, {
+//       jobId,
+//       hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+//       mountedHere: "/api/payments",           // <- confirm your mount in server.js
+//       authHeader: !!req.headers.authorization,
+//       user: req.user ? { id: String(req.user._id || req.user.id), email: req.user.email } : null,
+//     });
+
+//     if (!jobId) return res.status(400).json({ ok:false, msg:"Missing jobId" });
+
+//     const job = await Job.findById(jobId);
+//     if (!job) return res.status(404).json({ ok:false, msg:"Job not found" });
+
+//     // If you keep auth, ensure only the customer can pay:
+//     // if (auth && String(job.customer) !== String(req.user._id)) {
+//     //   return res.status(403).json({ ok:false, msg:"Forbidden" });
+//     // }
+
+//     // Compute dollars on server from canonical fields
+//     const base   = job.baseAmount || 0;
+//     const adjust = job.adjustmentAmount || 0;
+//     const rush   = job.rushFee || 0;
+//     const extra  = job.additionalCharge || 0;
+
+//     const subtotal = base + adjust + rush + extra;
+//     const customerFee = +(subtotal * 0.07).toFixed(2);
+//     const totalToCharge = subtotal + customerFee;     // dollars
+//     const amount = Math.round(totalToCharge * 100);   // cents
+
+//     if (!amount || amount <= 0) {
+//       console.warn(`[${where}] non-positive amount`, { subtotal, customerFee, amount });
+//       return res.status(400).json({ ok:false, msg:"Invalid amount to charge" });
+//     }
+
+//     console.log(`[${where}] totals`, { base, adjust, rush, extra, subtotal, customerFee, amountCents: amount });
+
+//     // Ensure Stripe customer (reuse if saved on user)
+//     let stripeCustomerId =
+//       (req.user && req.user.stripeCustomerId) ||
+//       (await Users.findById(job.customer).lean())?.stripeCustomerId;
+
+//     if (!stripeCustomerId) {
+//       const customerUser = await Users.findById(job.customer).lean();
+//       const created = await stripe.customers.create({
+//         email: customerUser?.email || undefined,
+//         name:  customerUser?.name  || undefined,
+//         metadata: { userId: String(customerUser?._id || "") },
+//       });
+//       stripeCustomerId = created.id;
+//       if (customerUser?._id) {
+//         await Users.findByIdAndUpdate(customerUser._id, { stripeCustomerId });
+//       }
+//       console.log(`[${where}] created Stripe customer`, { stripeCustomerId });
+//     }
+
+//     // Ephemeral key for PaymentSheet
+//     const ephemeralKey = await stripe.ephemeralKeys.create(
+//       { customer: stripeCustomerId },
+//       { apiVersion: STRIPE_EPH_API_VERSION }
+//     );
+
+//     // PaymentIntent
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount,
+//       currency: "usd",
+//       customer: stripeCustomerId,
+//       automatic_payment_methods: { enabled: true },
+//       metadata: {
+//         jobId: String(job._id),
+//         userId: String(job.customer),
+//         purpose: "blinqfix_initial_payment",
+//       },
+//     });
+
+//     console.log(`[${where}] OK`, { paymentIntentId: paymentIntent.id });
+
+//     return res.json({
+//       ok: true,
+//       customer: stripeCustomerId,
+//       ephemeralKey: ephemeralKey.secret,
+//       paymentIntentClientSecret: paymentIntent.client_secret,
+//       publishableKey: process.env.STRIPE_PUBLIC_KEY,
+//     });
+//   } catch (err) {
+//     console.error(`[${where}] ERROR`, err);
+//     return res.status(500).json({ ok:false, msg:"Stripe error", error: err.message });
+//   }
+// });
+
+router.post("/payments/payment-sheet", auth, async (req, res) => {
   try {
     const { jobId } = req.body || {};
-    console.log(`[${where}] hit`, {
-      jobId,
-      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-      mountedHere: "/api/payments",           // <- confirm your mount in server.js
-      authHeader: !!req.headers.authorization,
-      user: req.user ? { id: String(req.user._id || req.user.id), email: req.user.email } : null,
-    });
+    console.log("🟦 /payments/payment-sheet requested for jobId:", jobId, " by user:", req.user?._id);
 
-    if (!jobId) return res.status(400).json({ ok:false, msg:"Missing jobId" });
+    if (!jobId) return res.status(400).json({ msg: "Missing jobId" });
 
     const job = await Job.findById(jobId);
-    if (!job) return res.status(404).json({ ok:false, msg:"Job not found" });
+    if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    // If you keep auth, ensure only the customer can pay:
-    // if (auth && String(job.customer) !== String(req.user._id)) {
-    //   return res.status(403).json({ ok:false, msg:"Forbidden" });
-    // }
+    // Only the job's customer can pay
+    if (String(job.customer) !== String(req.user._id)) {
+      console.warn("🚫 Payment-sheet forbidden. job.customer:", job.customer, "req.user:", req.user?._id);
+      return res.status(403).json({ msg: "Forbidden" });
+    }
 
-    // Compute dollars on server from canonical fields
     const base   = job.baseAmount || 0;
     const adjust = job.adjustmentAmount || 0;
     const rush   = job.rushFee || 0;
     const extra  = job.additionalCharge || 0;
-
     const subtotal = base + adjust + rush + extra;
-    const customerFee = +(subtotal * 0.07).toFixed(2);
+
+    const CUSTOMER_FEE_RATE = 0.07;
+    const customerFee = +(subtotal * CUSTOMER_FEE_RATE).toFixed(2);
     const totalToCharge = subtotal + customerFee;     // dollars
     const amount = Math.round(totalToCharge * 100);   // cents
 
-    if (!amount || amount <= 0) {
-      console.warn(`[${where}] non-positive amount`, { subtotal, customerFee, amount });
-      return res.status(400).json({ ok:false, msg:"Invalid amount to charge" });
-    }
+    console.log("🧮 Amounts:", { base, adjust, rush, extra, subtotal, customerFee, totalToCharge, amount });
 
-    console.log(`[${where}] totals`, { base, adjust, rush, extra, subtotal, customerFee, amountCents: amount });
-
-    // Ensure Stripe customer (reuse if saved on user)
-    let stripeCustomerId =
-      (req.user && req.user.stripeCustomerId) ||
-      (await Users.findById(job.customer).lean())?.stripeCustomerId;
-
+    let stripeCustomerId = req.user.stripeCustomerId;
     if (!stripeCustomerId) {
-      const customerUser = await Users.findById(job.customer).lean();
-      const created = await stripe.customers.create({
-        email: customerUser?.email || undefined,
-        name:  customerUser?.name  || undefined,
-        metadata: { userId: String(customerUser?._id || "") },
+      const customer = await stripe.customers.create({
+        email: req.user.email || undefined,
+        name:  req.user.name  || undefined,
+        metadata: { userId: String(req.user._id) }
       });
-      stripeCustomerId = created.id;
-      if (customerUser?._id) {
-        await Users.findByIdAndUpdate(customerUser._id, { stripeCustomerId });
-      }
-      console.log(`[${where}] created Stripe customer`, { stripeCustomerId });
+      stripeCustomerId = customer.id;
+      await Users.findByIdAndUpdate(req.user._id, { stripeCustomerId }, { new: true });
+      console.log("👤 Created Stripe customer:", stripeCustomerId);
     }
 
-    // Ephemeral key for PaymentSheet
     const ephemeralKey = await stripe.ephemeralKeys.create(
       { customer: stripeCustomerId },
-      { apiVersion: STRIPE_EPH_API_VERSION }
+      { apiVersion: "2022-11-15" }
     );
 
-    // PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: "usd",
@@ -439,25 +512,23 @@ router.post("/payments/payment-sheet",  auth,  async (req, res) => {
       automatic_payment_methods: { enabled: true },
       metadata: {
         jobId: String(job._id),
-        userId: String(job.customer),
-        purpose: "blinqfix_initial_payment",
-      },
+        userId: String(req.user._id),
+        purpose: "blinqfix_initial_payment"
+      }
     });
 
-    console.log(`[${where}] OK`, { paymentIntentId: paymentIntent.id });
-
+    console.log("✅ PI created:", paymentIntent.id, "amount:", amount);
     return res.json({
-      ok: true,
       customer: stripeCustomerId,
       ephemeralKey: ephemeralKey.secret,
-      paymentIntentClientSecret: paymentIntent.client_secret,
-      publishableKey: process.env.STRIPE_PUBLIC_KEY,
+      paymentIntentClientSecret: paymentIntent.client_secret
     });
   } catch (err) {
-    console.error(`[${where}] ERROR`, err);
-    return res.status(500).json({ ok:false, msg:"Stripe error", error: err.message });
+    console.error("❌ Stripe payment-sheet error:", err);
+    return res.status(500).json({ msg: "Stripe error", error: err.message });
   }
 });
+
 
 
 /********************************************************************************************

@@ -46,6 +46,7 @@ const fields = [
 /**
  * POST /api/jobs
  */
+//old working
 // router.post("/", auth, async (req, res) => {
 //   try {
 //     const {
@@ -97,11 +98,107 @@ const fields = [
 //   }
 // });
 
+// router.post("/", auth, async (req, res) => {
+//   try {
+//     const {
+//       category,
+//       service,
+//       address,
+//       serviceCity,
+//       serviceZipcode,
+//       details = {},
+//       baseAmount = 0,
+//       adjustmentAmount = 0,
+//       rushFee = 0,
+//       estimatedTotal = baseAmount + adjustmentAmount + rushFee,
+//       location, // <-- ✅ include location
+//     } = req.body;
+
+//     let serviceType = category;
+//     serviceType = resolveService(serviceType);
+
+//     if (!SPV2_SERVICE_ANCHORS[serviceType]) {
+//       return res.status(400).json({ msg: `Invalid service type: ${serviceType}` });
+//     }
+
+//     if (!category || !address) {
+//       return res
+//         .status(400)
+//         .json({ msg: "`category` and `address` are required." });
+//     }
+
+//     if (
+//       !location ||
+//       location.type !== "Point" ||
+//       !Array.isArray(location.coordinates) ||
+//       location.coordinates.length !== 2 ||
+//       location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
+//     ) {
+//       return res.status(400).json({ msg: "Invalid or missing coordinates." });
+//     }
+
+//     console.log("🛠️ Incoming job req.body:", req.body);
+
+//     // const job = await Job.create({
+//     //   customer: req.user.id,
+//     //   address,
+//     //   serviceCity,
+//     //   serviceZipcode,
+//     //   serviceType: category,
+//     //   details: {
+//     //     issue: service,
+//     //     ...details,
+//     //   },
+//     //   baseAmount,
+//     //   adjustmentAmount,
+//     //   rushFee,
+//     //   estimatedTotal,
+//     //   paymentStatus: "unpaid",
+//     //   status: "pending",
+//     //   invitedProviders: [],
+//     //   invitationPhase: 0,
+//     //   location, // ✅ Required for geospatial queries and validation
+//     // });
+
+
+//     const job = await Job.create({
+//       customer: req.user.id,
+//       address,
+//       serviceCity,
+//       serviceZipcode,
+//       serviceType, // <-- normalized
+//       details: {
+//         issue: service,
+//         ...details,
+//       },
+//       baseAmount,
+//       adjustmentAmount,
+//       rushFee,
+//       estimatedTotal,
+//       paymentStatus: "unpaid",
+//       status: "pending",
+//       invitedProviders: [],
+//       invitationPhase: 0,
+//       location,
+//     });
+    
+//     return res.status(201).json(job);
+//   } catch (err) {
+//     console.error("POST /api/jobs error:", err);
+//     return res
+//       .status(500)
+//       .json({ msg: "Could not create job", error: err.message });
+//   }
+// });
+
+// routes/jobs.js
 router.post("/", auth, async (req, res) => {
   try {
+    console.log("🟩 /api/jobs CREATE: incoming body =", JSON.stringify(req.body, null, 2));
+
     const {
-      category,
-      service,
+      category,          // expected: "Plumbing" | "Roofing" | "HVAC" | "Electrician"
+      service,           // e.g. "Single outlet/fixture"
       address,
       serviceCity,
       serviceZipcode,
@@ -110,66 +207,41 @@ router.post("/", auth, async (req, res) => {
       adjustmentAmount = 0,
       rushFee = 0,
       estimatedTotal = baseAmount + adjustmentAmount + rushFee,
-      location, // <-- ✅ include location
+      location,          // { type:"Point", coordinates:[lng,lat] }  (OPTIONAL for now)
     } = req.body;
 
-    let serviceType = category;
-    serviceType = resolveService(serviceType);
-
-    if (!SPV2_SERVICE_ANCHORS[serviceType]) {
-      return res.status(400).json({ msg: `Invalid service type: ${serviceType}` });
-    }
-
     if (!category || !address) {
-      return res
-        .status(400)
-        .json({ msg: "`category` and `address` are required." });
+      return res.status(400).json({ msg: "`category` and `address` are required." });
     }
 
-    if (
-      !location ||
-      location.type !== "Point" ||
-      !Array.isArray(location.coordinates) ||
-      location.coordinates.length !== 2 ||
-      location.coordinates.some((n) => typeof n !== "number" || isNaN(n))
-    ) {
-      return res.status(400).json({ msg: "Invalid or missing coordinates." });
+    // 🔧 Make coordinates OPTIONAL (don’t block submission)
+    let normalizedLocation = null;
+    if (location && location.type === "Point" && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+      const [lng, lat] = location.coordinates.map(Number);
+      if (Number.isFinite(lng) && Number.isFinite(lat)) {
+        normalizedLocation = { type: "Point", coordinates: [lng, lat] };
+      }
+    }
+    if (!normalizedLocation) {
+      console.warn("⚠️ No/invalid coordinates in request. Proceeding without location.");
     }
 
-    console.log("🛠️ Incoming job req.body:", req.body);
+    // ✅ Only allow the 4 core categories for serviceType (this matches your schema)
+    const allowedCore = new Set(["Plumbing", "Roofing", "HVAC", "Electrician"]);
+    if (!allowedCore.has(category)) {
+      console.error("❌ Invalid category for serviceType:", category);
+      return res.status(400).json({
+        msg: `Unsupported category "${category}". Must be one of: ${[...allowedCore].join(", ")}.`,
+      });
+    }
 
-    // const job = await Job.create({
-    //   customer: req.user.id,
-    //   address,
-    //   serviceCity,
-    //   serviceZipcode,
-    //   serviceType: category,
-    //   details: {
-    //     issue: service,
-    //     ...details,
-    //   },
-    //   baseAmount,
-    //   adjustmentAmount,
-    //   rushFee,
-    //   estimatedTotal,
-    //   paymentStatus: "unpaid",
-    //   status: "pending",
-    //   invitedProviders: [],
-    //   invitationPhase: 0,
-    //   location, // ✅ Required for geospatial queries and validation
-    // });
-
-
-    const job = await Job.create({
+    const jobDoc = {
       customer: req.user.id,
       address,
       serviceCity,
       serviceZipcode,
-      serviceType, // <-- normalized
-      details: {
-        issue: service,
-        ...details,
-      },
+      serviceType: category,                   // <-- enum-safe
+      details: { issue: service, ...details },
       baseAmount,
       adjustmentAmount,
       rushFee,
@@ -178,17 +250,25 @@ router.post("/", auth, async (req, res) => {
       status: "pending",
       invitedProviders: [],
       invitationPhase: 0,
-      location,
-    });
-    
+    };
+    if (normalizedLocation) jobDoc.location = normalizedLocation;
+
+    const job = await Job.create(jobDoc);
+
+    console.log("✅ Job created:", { id: job._id, serviceType: job.serviceType, estimatedTotal: job.estimatedTotal });
     return res.status(201).json(job);
   } catch (err) {
-    console.error("POST /api/jobs error:", err);
-    return res
-      .status(500)
-      .json({ msg: "Could not create job", error: err.message });
+    // Surface validation details
+    const svcErr = err?.errors?.serviceType?.message;
+    const locErr = err?.errors?.location?.message;
+    console.error("❌ POST /api/jobs error:", err.message, { svcErr, locErr });
+    return res.status(400).json({
+      msg: "Could not create job",
+      reason: svcErr || locErr || err.message,
+    });
   }
 });
+
 
 /**
  * PUT /api/jobs/:jobId/accept
