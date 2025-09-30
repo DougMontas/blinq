@@ -3238,3 +3238,7 @@ router.post("/v2/estimate", estimateHandler);
 router.post("/estimate", estimateHandler);
 
 export default router;
+
+
+// Export your mappings so other files can import them
+export { SPV2_SERVICE_ANCHORS, SERVICE_ALIASES, SPV2_NAICS_BY_SERVICE };
