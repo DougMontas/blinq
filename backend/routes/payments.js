@@ -458,9 +458,11 @@ const STRIPE_EPH_API_VERSION = "2022-11-15";
 //     return res.status(500).json({ ok:false, msg:"Stripe error", error: err.message });
 //   }
 // });
+//testing
 
-router.post("/payments/payment-sheet", auth, async (req, res) => {
+router.post("/payment-sheet", auth, async (req, res) => {
   try {
+    console.log("🟦 /api/payments/payment-sheet hit with body:", req.body);
     const { jobId } = req.body || {};
     console.log("🟦 /payments/payment-sheet requested for jobId:", jobId, " by user:", req.user?._id);
 
