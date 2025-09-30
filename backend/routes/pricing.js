@@ -2978,6 +2978,7 @@ function _spv2_computeQuestionnaire(service, details = {}) {
         add(SPV2_CFG.addOnFees.chemicalAttempt);
       break;
     }
+    case "Roofing":
     case "Roof Leaks or Storm Damage": {
       if (
         seen(
