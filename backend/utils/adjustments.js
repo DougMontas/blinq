@@ -1,5 +1,5 @@
 // utils/adjustments.js
-import { MATRIX } from "../config/matrix.js"; // or wherever you stored the array
+import { MATRIX } from "../../App/frontend/utils/serviceMatrix.js"; // or wherever you stored the array
 
 function* normalizeAnswers(details) {
   // supports either { "Question": "Option", ... } OR [{question, option}, ...]
