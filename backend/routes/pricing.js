@@ -2195,6 +2195,8 @@
 import express from "express";
 import { resolveService } from "../utils/serviceResolver.js";
 import { SPV2_SERVICE_ANCHORS, SERVICE_ALIASES, SPV2_NAICS_BY_SERVICE } from "../config/services.js"
+import { getAdjustments } from "../utils/adjustments.js";
+
 
 const router = express.Router();
 
@@ -3378,11 +3380,16 @@ console.log("🧩 details received:", JSON.stringify(details));
     });
     const q = _spv2_computeQuestionnaire(service, details);
 
+    const matrixAdj = getAdjustments(service, details);
+    console.log("🧩 matrixAdj:", matrixAdj);
+
     console.log("📊 multipliers:", { locM, compM, q });
 
     // 5) Anchor → raw price (before fees)
+    // 4) Anchor → price
     const base = SPV2_SERVICE_ANCHORS[service];
-    const raw = base * locM * compM * q.multiplier + q.addOns;
+    const raw = base * locM * compM * q.multiplier + q.addOns + matrixAdj;
+
     const priceUSD = _spv2_finalize(service, raw);
 
     // 6) Always-on rush + platform fee
