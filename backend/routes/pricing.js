@@ -2193,7 +2193,7 @@
 //version 3 testing
 // pricing.js
 import express from "express";
-import { resolveService } from "../utils/serviceResolver.js";
+import { resolveService } from "../utils/serviceResolver";
 
 const router = express.Router();
 
