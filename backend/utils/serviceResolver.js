@@ -38,7 +38,7 @@
 //   };
   
 
-import { SERVICE_ALIASES, SPV2_SERVICE_ANCHORS } from "../pricing.js";
+import { SERVICE_ALIASES, SPV2_SERVICE_ANCHORS } from "../routes/pricing";
 
 export function resolveService(input) {
   if (!input) return input;
