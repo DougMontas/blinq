@@ -2810,7 +2810,7 @@ function _spv2_computeQuestionnaire(service, details = {}) {
   const entries = Object.entries(details).map(([q, a]) => [norm(q), norm(a)]);
   const seen = (pred) => entries.some(([q, a]) => pred(q, a));
 
-  let severity = "moderate";
+  let severity = "minor";
   let mult = 1.0;
   let addOns = 0;
   const mul = (x) => {
@@ -2822,6 +2822,30 @@ function _spv2_computeQuestionnaire(service, details = {}) {
 
   switch (service) {
     /* ─── Existing Cases ───────────────────────────────────── */
+    case "Select Electrical Issues Below": {
+      // Type of issue?
+      if (seen((q,a) => q.includes("type of issue") && a.includes("outlet")))
+        add(75);
+      if (seen((q,a) => q.includes("type of issue") && a.includes("breaker")))
+        add(125);
+    
+      // Scope of work?
+      if (seen((q,a) => q.includes("scope") && a.includes("single")))
+        add(50);
+      if (seen((q,a) => q.includes("scope") && a.includes("multiple")))
+        add(200);
+    
+      // Accessibility?
+      if (seen((q,a) => q.includes("access") && (a.includes("panel") || a.includes("attic"))))
+        add(150);
+    
+      // Optional: bump severity slightly for harder jobs
+      if (seen((q,a) => q.includes("scope") && a.includes("multiple")))
+        severity = _spv2_bumpSeverity(severity, "moderate");
+    
+      break;
+    }
+    
     case "Burst or Leaking Pipes": {
       if (
         seen(
@@ -3281,7 +3305,14 @@ function _spv2_finalize(service, x) {
 
 const estimateHandler = async (req, res) => {
   try {
-    let { service, address, city, zipcode, details } = req.body || {};
+    let { service, address, city, zipcode } = req.body || {};
+let details =
+  req.body?.details ??
+  req.body?.answers ??
+  req.body?.questionnaire ??
+  req.body?.form ??
+  {};
+console.log("🧩 details received:", JSON.stringify(details));
     if (typeof details !== "object" || !details) details = {};
 
     // 0) Normalize service
