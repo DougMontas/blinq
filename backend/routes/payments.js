@@ -193,39 +193,111 @@ async function buildPaymentSheetSession({
  * NEW: PaymentSheet session endpoint (recommended)
  * Your RN app should POST here with { jobId } OR { amount }, plus optional customer info.
  */
-router.post("/payments/payment-sheet", async (req, res) => {
+//old works with core categories
+// router.post("/payments/payment-sheet", async (req, res) => {
+//   try {
+//     const {
+//       jobId,
+//       amount,           // dollars or cents
+//       currency,
+//       customerId,
+//       customerEmail,
+//       customerName,
+//       connectAccountId, // for Connect (optional)
+//     } = req.body || {};
+
+//     const out = await buildPaymentSheetSession({
+//       jobId,
+//       amount,
+//       currency,
+//       customerId,
+//       customerEmail,
+//       customerName,
+//       connectAccountId,
+//       idempotencyKey: jobId ? `job:${jobId}:initial` : undefined,
+//     });
+
+//     return res.json(out);
+//   } catch (err) {
+//     console.error("[/payments/payment-sheet] error:", err);
+//     return res.status(err.status || 500).json({
+//       ok: false,
+//       code: err.code || "stripe_error",
+//       message: err.message || "Stripe error",
+//     });
+//   }
+// });
+
+// /api/jobs/payments/payment-sheet
+// Creates a PaymentIntent for the customer to fund the job (subtotal + 7% customer fee)
+// Returns { customer, ephemeralKey, paymentIntentClientSecret }
+router.post("/payments/payment-sheet", auth, async (req, res) => {
   try {
-    const {
-      jobId,
-      amount,           // dollars or cents
-      currency,
-      customerId,
-      customerEmail,
-      customerName,
-      connectAccountId, // for Connect (optional)
-    } = req.body || {};
+    const { jobId } = req.body || {};
+    if (!jobId) return res.status(400).json({ msg: "Missing jobId" });
 
-    const out = await buildPaymentSheetSession({
-      jobId,
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    // Only the job's customer can pay
+    if (String(job.customer) !== String(req.user._id)) {
+      return res.status(403).json({ msg: "Forbidden" });
+    }
+
+    // ---- Compute dollars on the server (never trust client) ----
+    const base   = job.baseAmount || 0;
+    const adjust = job.adjustmentAmount || 0;
+    const rush   = job.rushFee || 0;
+    const extra  = job.additionalCharge || 0;
+
+    const subtotal = base + adjust + rush + extra;
+    const CUSTOMER_FEE_RATE = 0.07;                          // 7%
+    const customerFee = +(subtotal * CUSTOMER_FEE_RATE).toFixed(2);
+    const totalToCharge = subtotal + customerFee;            // dollars
+    const amount = Math.round(totalToCharge * 100);          // cents
+
+    // ---- Stripe customer (reuse if we have one) ----
+    let stripeCustomerId = req.user.stripeCustomerId;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: req.user.email || undefined,
+        name:  req.user.name  || undefined,
+        metadata: { userId: String(req.user._id) }
+      });
+      stripeCustomerId = customer.id;
+      await Users.findByIdAndUpdate(req.user._id, { stripeCustomerId }, { new: true });
+    }
+
+    // ---- Ephemeral key for PaymentSheet ----
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: stripeCustomerId },
+      { apiVersion: "2022-11-15" } // keep in sync with your Stripe version
+    );
+
+    // ---- PaymentIntent (no transfer/application_fee here) ----
+    const paymentIntent = await stripe.paymentIntents.create({
       amount,
-      currency,
-      customerId,
-      customerEmail,
-      customerName,
-      connectAccountId,
-      idempotencyKey: jobId ? `job:${jobId}:initial` : undefined,
+      currency: "usd",
+      customer: stripeCustomerId,
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        jobId: String(job._id),
+        userId: String(req.user._id),
+        purpose: "blinqfix_initial_payment"
+      }
     });
 
-    return res.json(out);
-  } catch (err) {
-    console.error("[/payments/payment-sheet] error:", err);
-    return res.status(err.status || 500).json({
-      ok: false,
-      code: err.code || "stripe_error",
-      message: err.message || "Stripe error",
+    return res.json({
+      customer: stripeCustomerId,
+      ephemeralKey: ephemeralKey.secret,
+      paymentIntentClientSecret: paymentIntent.client_secret
     });
+  } catch (err) {
+    console.error("Stripe payment-sheet error:", err);
+    return res.status(500).json({ msg: "Stripe error", error: err.message });
   }
 });
+
 
 /**
  * LEGACY: Keep /stripe route working but return what PaymentSheet needs.
