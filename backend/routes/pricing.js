@@ -3263,21 +3263,21 @@ function _spv2_finalize(service, x) {
 
 
 // ── Safe fallbacks if any external dataset fails ─────────────────────────────
-function _spv2_safeDefaults() {
-  return {
-    acs: {
-      county: { name: "Unknown County", medianIncome: 70000, households: 50000 },
-      us:     {                   medianIncome: 74755, households: 128000000 },
-    },
-    cbp: {
-      ok: true,
-      county: { name: "Unknown County", establishments: 1500 },
-      us:     { establishments: 800000 },
-      naics: "238220",
-    },
-    rpp: null, // optional; location multiplier will fall back to ACS
-  };
-}
+// function _spv2_safeDefaults() {
+//   return {
+//     acs: {
+//       county: { name: "Unknown County", medianIncome: 70000, households: 50000 },
+//       us:     {                   medianIncome: 74755, households: 128000000 },
+//     },
+//     cbp: {
+//       ok: true,
+//       county: { name: "Unknown County", establishments: 1500 },
+//       us:     { establishments: 800000 },
+//       naics: "238220",
+//     },
+//     rpp: null, // optional; location multiplier will fall back to ACS
+//   };
+// }
 
 const estimateHandler = async (req, res) => {
   try {
