@@ -205,4 +205,66 @@ const SPV2_SERVICE_ANCHORS = {
     "Barber / Hairdresser": "812111", // Barber shops
   };
 
-  export { SPV2_SERVICE_ANCHORS, SERVICE_ALIASES, SPV2_NAICS_BY_SERVICE };
+  const SERVICE_TO_CATEGORY = {
+    /* -------- Core emergencies / trades -------- */
+    "Burst or Leaking Pipes": "Plumbing",
+    "Sewer Backups or Clogged Drains": "Plumbing",
+    "Water Heater Failure": "Plumbing",
+    "Gas Leaks": "Plumbing",
+    "HVAC System Failure": "HVAC",
+    "Roof Leaks or Storm Damage": "Roofing",
+    "Select Electrical Issues Below": "Electrician",
+  
+    "Drywall Repair": "Drywall",
+    "Broken Windows or Doors": "Windows_Doors",
+    "Appliance Failures": "Appliance_Repair",
+    "Mold or Water Damage Remediation": "Water_Mold_Remediation",
+  
+    /* -------- Expanded catalog -------- */
+    "Handyman (general fixes)": "Handyman",
+    "Cleaner / Housekeeper": "Cleaning",
+    "Locksmith": "LockSmith",                   // note the capital S to match enum
+    "Landscaper / Lawn Care": "Landscaping",
+    "Painter (interior/exterior)": "Painting",
+    "Pest Control / Exterminator": "Pest_Control",
+    "Carpenter (doors/trim/cabinets)": "Carpentry",
+    "Garage Door Technician": "Garage_Doors",
+    "Window & Glass Repair": "Windows_Glass",
+    "Gutter Cleaning / Repair": "Gutters",
+    "Irrigation / Sprinkler Tech": "Landscaping",
+    "Tile & Grout Specialist": "Tile_Grout",
+    "Flooring Installer / Repair": "Flooring",
+    "Smart-home / Low-voltage Installer": "Smart_Home",
+    "Security System Installer": "Smart_Home",
+    "IT / Wi-Fi Setup (Home Networking)": "IT_Services",
+    "TV Mounting / Home Theater Installer": "Smart_Home",
+  
+    "Moving Help (Labor-only)": "Moving",
+    "Junk Removal / Hauling": "Junk_Removal",
+    "Pressure Washing": "Exterior_Cleaning",
+    "Fence Repair / Installer": "Fencing",
+    "Masonry / Concrete": "Masonry_Concrete",
+    "Insulation / Weatherization Tech": "Environmental",
+    "Chimney Sweep & Masonry": "Chimney",
+    "Water Damage Mitigation": "Water_Mold_Remediation",
+    "Basement Waterproofing": "Water_Mold_Remediation",
+    "Tree Service / Arborist": "Tree_Service",
+    "Pool & Spa Technician": "Pool_Spa",
+    "Deck/Patio Repair & Build": "Deck_Patio",
+    "Window/Door Replacement (Glazier)": "Windows_Doors",
+    "Solar Installer": "Solar",
+    "General Contractor / Remodeler": "Remodeling",
+    "Radon Mitigation / Environmental": "Environmental",
+  
+    /* -------- Auto & personal -------- */
+    "Car Mechanic (general)": "Auto",
+    "Mobile Mechanic": "Auto",
+    "Tow Truck / Roadside Assistance": "Auto",
+    "Auto Glass Repair/Replacement": "Auto",
+    "Car Detailing (mobile)": "Auto_Detailing",
+    "Mobile Tire Service": "Auto",
+    "Barber / Hairdresser": "Personal_Services",
+  };
+  
+
+  export { SPV2_SERVICE_ANCHORS, SERVICE_ALIASES, SPV2_NAICS_BY_SERVICE, SERVICE_TO_CATEGORY };

@@ -18,6 +18,7 @@ import nodemailer from "nodemailer";
 import twilio from "twilio";
 import { resolveService } from "../utils/serviceResolver.js";
 import SPV2_SERVICE_ANCHORS from "./pricing.js"
+import SERVICE_TO_CATEGORY from "../config/services.js"
 
 const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
 const router = express.Router();

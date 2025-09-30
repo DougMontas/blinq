@@ -2517,11 +2517,75 @@ const SPV2_CFG = {
     securityEmergency: 75,
     paintMatch: 125,
   },
+  // rails: {
+  //   // Defaults
+  //   default: [95, 4995],
+
+  //   // Already done
+  //   "Drywall Repair": [95, 995],
+  //   "Appliance Failures": [95, 895],
+  //   "Burst or Leaking Pipes": [150, 1495],
+  //   "Sewer Backups or Clogged Drains": [150, 1495],
+  //   "Roof Leaks or Storm Damage": [250, 2995],
+  //   "Water Heater Failure": [250, 2495],
+  //   "HVAC System Failure": [200, 1995],
+  //   "Select Electrical Issues Below": [150, 1495],
+  //   "Broken Windows or Doors": [125, 1495],
+  //   "Gas Leaks": [200, 1995],
+  //   "Mold or Water Damage Remediation": [750, 4995],
+
+  //   // New Handyman / related
+  //   "Handyman (General Fixes)": [95, 695],
+  //   "Locksmith": [95, 595],
+  //   "Carpenter (Doors/Trim/Cabinets)": [150, 1295],
+  //   "Garage Door Technician": [200, 1495],
+  //   "Window & Glass Repair": [150, 1295],
+  //   "Gutter Cleaning/Repair": [95, 795],
+  //   "Fence Repair/Installer": [200, 1995],
+  //   "Deck/Patio Repair & Build": [300, 2995],
+
+  //   // Cleaning / Maintenance
+  //   "Cleaner/Housekeeper": [95, 495],
+  //   "Landscaper / Lawn Care": [95, 995],
+  //   "Painter (Interior/Exterior)": [250, 2495],
+  //   "Pest Control / Exterminator": [150, 995],
+  //   "Irrigation/Sprinkler Tech": [150, 1195],
+  //   "Tile & Grout Specialist": [150, 1195],
+  //   "Flooring Installer/Repair": [250, 2995],
+  //   "Pressure Washing": [95, 795],
+  //   "Insulation / Weatherization Tech": [200, 1995],
+  //   "Chimney Sweep & Masonry": [150, 1295],
+  //   "Basement Waterproofing": [750, 4995],
+  //   "Water Damage Mitigation": [500, 3995],
+
+  //   // Tech / Smart Home
+  //   "Smart-home / Low-voltage Installer": [150, 1295],
+  //   "Security System Installer": [200, 1995],
+  //   "IT / Wi-Fi Setup (Home Networking)": [95, 495],
+  //   "TV Mounting / Home Theater Installer": [95, 695],
+  //   "Solar Installer": [1000, 9995],
+  //   "General Contractor / Remodeler": [750, 9995],
+  //   "Radon Mitigation / Environmental": [750, 4995],
+
+  //   // Outdoor
+  //   "Masonry / Concrete (Steps, Walkways)": [300, 3995],
+  //   "Tree Service / Arborist": [250, 2495],
+  //   "Pool & Spa Technician": [200, 1495],
+
+  //   // Auto & Personal
+  //   "Car Mechanic (General)": [95, 695],
+  //   "Mobile Mechanic": [95, 895],
+  //   "Tow Truck / Roadside Assistance": [75, 495],
+  //   "Auto Glass Repair/Replacement": [95, 695],
+  //   "Car Detailing (Mobile)": [75, 495],
+  //   "Mobile Tire Service": [95, 695],
+  //   "Barber / Hairdresser": [25, 195],
+  // },
   rails: {
     // Defaults
     default: [95, 4995],
-
-    // Already done
+  
+    // Core emergencies / trades
     "Drywall Repair": [95, 995],
     "Appliance Failures": [95, 895],
     "Burst or Leaking Pipes": [150, 1495],
@@ -2533,32 +2597,30 @@ const SPV2_CFG = {
     "Broken Windows or Doors": [125, 1495],
     "Gas Leaks": [200, 1995],
     "Mold or Water Damage Remediation": [750, 4995],
-
-    // New Handyman / related
-    "Handyman (General Fixes)": [95, 695],
+  
+    // Expanded catalog (normalized to anchors)
+    "Handyman (general fixes)": [95, 695],
     "Locksmith": [95, 595],
-    "Carpenter (Doors/Trim/Cabinets)": [150, 1295],
+    "Carpenter (doors/trim/cabinets)": [150, 1295],
     "Garage Door Technician": [200, 1495],
     "Window & Glass Repair": [150, 1295],
-    "Gutter Cleaning/Repair": [95, 795],
-    "Fence Repair/Installer": [200, 1995],
+    "Gutter Cleaning / Repair": [95, 795],
+    "Fence Repair / Installer": [200, 1995],
     "Deck/Patio Repair & Build": [300, 2995],
-
-    // Cleaning / Maintenance
-    "Cleaner/Housekeeper": [95, 495],
+  
+    "Cleaner / Housekeeper": [95, 495],
     "Landscaper / Lawn Care": [95, 995],
-    "Painter (Interior/Exterior)": [250, 2495],
+    "Painter (interior/exterior)": [250, 2495],
     "Pest Control / Exterminator": [150, 995],
-    "Irrigation/Sprinkler Tech": [150, 1195],
+    "Irrigation / Sprinkler Tech": [150, 1195],
     "Tile & Grout Specialist": [150, 1195],
-    "Flooring Installer/Repair": [250, 2995],
+    "Flooring Installer / Repair": [250, 2995],
     "Pressure Washing": [95, 795],
     "Insulation / Weatherization Tech": [200, 1995],
     "Chimney Sweep & Masonry": [150, 1295],
     "Basement Waterproofing": [750, 4995],
     "Water Damage Mitigation": [500, 3995],
-
-    // Tech / Smart Home
+  
     "Smart-home / Low-voltage Installer": [150, 1295],
     "Security System Installer": [200, 1995],
     "IT / Wi-Fi Setup (Home Networking)": [95, 495],
@@ -2566,21 +2628,20 @@ const SPV2_CFG = {
     "Solar Installer": [1000, 9995],
     "General Contractor / Remodeler": [750, 9995],
     "Radon Mitigation / Environmental": [750, 4995],
-
-    // Outdoor
-    "Masonry / Concrete (Steps, Walkways)": [300, 3995],
+  
+    "Masonry / Concrete": [300, 3995],
     "Tree Service / Arborist": [250, 2495],
     "Pool & Spa Technician": [200, 1495],
-
-    // Auto & Personal
-    "Car Mechanic (General)": [95, 695],
+  
+    "Car Mechanic (general)": [95, 695],
     "Mobile Mechanic": [95, 895],
     "Tow Truck / Roadside Assistance": [75, 495],
     "Auto Glass Repair/Replacement": [95, 695],
-    "Car Detailing (Mobile)": [75, 495],
+    "Car Detailing (mobile)": [75, 495],
     "Mobile Tire Service": [95, 695],
     "Barber / Hairdresser": [25, 195],
   },
+  
   roundTo: 5,
   cacheTTLms: 10 * 60 * 1000,
 };
