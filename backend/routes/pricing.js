@@ -2196,6 +2196,7 @@ import express from "express";
 import { resolveService } from "../utils/serviceResolver.js";
 import { SPV2_SERVICE_ANCHORS, SERVICE_ALIASES, SPV2_NAICS_BY_SERVICE } from "../config/services.js"
 import { getAdjustments } from "../utils/adjustments.js";
+import { normalizeDetails } from "../utils/normalizer.js";
 
 
 const router = express.Router();
@@ -3368,6 +3369,9 @@ function _spv2_finalize(service, x) {
 // }
 
 const estimateHandler = async (req, res) => {
+  const normalizedDetails = normalizeDetails(details, service);
+console.log("🧩 details (raw):", JSON.stringify(details));
+console.log("🧩 details (norm):", JSON.stringify(normalizedDetails));
   try {
     let { service, address, city, zipcode } = req.body || {};
 let details =
@@ -3440,7 +3444,7 @@ console.log("🧩 details received:", JSON.stringify(details));
       countyHH: acs.county.households,
       usHH: acs.us.households,
     });
-    const q = _spv2_computeQuestionnaire(service, details);
+    const q = _spv2_computeQuestionnaire(service, normalizedDetails);
 
     const matrixAdj = getAdjustments(service, details);
     console.log("🧩 matrixAdj:", matrixAdj);
