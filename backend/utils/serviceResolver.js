@@ -37,23 +37,51 @@
 //     return input;
 //   };
   
-
+// utils/serviceResolver.js
 import { SERVICE_ALIASES, SPV2_SERVICE_ANCHORS } from "../config/services.js";
 
+/** Normalize strings for matching: lowercase, collapse spaces, normalize slashes */
+function norm(s = "") {
+  return String(s)
+    .toLowerCase()
+    .trim()
+    .replace(/\s*\/\s*/g, " / ")  // ensure "a/b" === "a / b"
+    .replace(/\s+/g, " ");        // collapse runs of spaces
+}
+
+/** Build a canonical map once at module load */
+const CANONICAL_BY_KEY = (() => {
+  const map = new Map();
+
+  // Anchors map to themselves
+  for (const key of Object.keys(SPV2_SERVICE_ANCHORS)) {
+    map.set(norm(key), key);
+  }
+
+  // Aliases map to their target anchor
+  for (const [alias, target] of Object.entries(SERVICE_ALIASES)) {
+    const canonical = SPV2_SERVICE_ANCHORS[target] ? target : null;
+    if (canonical) map.set(norm(alias), canonical);
+    // (dev guard) if target is missing in anchors, you can log once here
+    // else console.warn("Alias points to missing anchor:", { alias, target });
+  }
+
+  return map;
+})();
+
+/**
+ * Resolve any incoming label (category/service/alias/near-match)
+ * to a canonical anchor key used in pricing maps.
+ * If unknown, returns the original input (so callers can decide to 400).
+ */
 export function resolveService(input) {
-  if (!input) return input;
+  if (input == null) return input;
+  const hit = CANONICAL_BY_KEY.get(norm(input));
+  return hit || input;
+}
 
-  // Direct anchor match
-  if (SPV2_SERVICE_ANCHORS[input]) return input;
-
-  // Alias match
-  if (SERVICE_ALIASES[input]) return SERVICE_ALIASES[input];
-
-  // Case-insensitive fallback
-  const lower = input.toLowerCase();
-  const foundKey = Object.keys(SPV2_SERVICE_ANCHORS).find(
-    (k) => k.toLowerCase() === lower
-  );
-
-  return foundKey || input;
+/** Optional helper: returns null when not resolvable to a known anchor */
+export function resolveServiceOrNull(input) {
+  const hit = resolveService(input);
+  return SPV2_SERVICE_ANCHORS[hit] ? hit : null;
 }

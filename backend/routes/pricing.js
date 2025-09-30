@@ -2740,6 +2740,25 @@ function _spv2_competitionMultiplier({ countyEstab, usEstab, countyHH, usHH }) {
   return _spv2_clamp(m, SPV2_CFG.competition.clamp);
 }
 
+
+function _spv2_safeDefaults() {
+  // Reasonable national medians to keep multipliers ~1 when datasets fail
+  return {
+    acs: {
+      county: { medianIncome: 70000, households: 100000 },
+      us:     { medianIncome: 70000, households: 120000000 },
+    },
+    cbp: {
+      county: { establishments: 1, name: "Unknown County" },
+      us:     { establishments: 1 },
+      naics:  "000000",
+      ok:     false,
+    },
+    rpp: null, // forces location multiplier to use ACS path
+  };
+}
+
+
 // ===== Questionnaire → severity/multipliers/add-ons =====
 // function _spv2_computeQuestionnaire(service, details = {}) {
 //   const norm = (x = "") => String(x).toLowerCase();
@@ -3155,45 +3174,166 @@ function _spv2_finalize(service, x) {
 // }
 
 // ===== Unified handler =====
+
+//old
+// const estimateHandler = async (req, res) => {
+//   try {
+//     let { service, address, city, zipcode, details = {} } = req.body || {};
+
+//     // normalize
+//     // Normalize the incoming service
+//     //old
+//     // service = resolveService(service, SPV2_SERVICE_ANCHORS, SERVICE_ALIASES);
+//     service = resolveService(service);
+
+//     console.log("🔍 Raw service:", req.body.service);
+//     console.log("🔍 Resolved service:", service);
+
+//     if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
+//       return res
+//         .status(400)
+//         .json({ ok: false, error: "Unknown or missing service" });
+//     }
+
+//     const addrLine = `${address || ""}${city ? ", " + city : ""}${
+//       zipcode ? " " + zipcode : ""
+//     }`.trim();
+//     if (!addrLine)
+//       return res.status(400).json({ ok: false, error: "Address required" });
+//     // const { service, address, city, zipcode, details = {} } = req.body || {};
+//     // if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
+//     //   return res.status(400).json({ ok: false, error: "Unknown or missing service" });
+//     // }
+//     // const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
+//     // if (!addrLine) return res.status(400).json({ ok: false, error: "Address required" });
+
+//     // 1) Geocode → FIPS
+//     const geo = await _spv2_geocodeToFips(addrLine);
+
+//     // 2) Datasets
+//     const [acs, cbp, rpp] = await Promise.all([
+//       _spv2_getACS(geo.stateFIPS, geo.countyFIPS),
+//       _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, service),
+//       _spv2_getRPP(geo.stateFIPS),
+//     ]);
+
+//     // 3) Multipliers
+//     const locM = _spv2_locationMultiplier({
+//       rppMult: rpp?.multiplier,
+//       countyIncome: acs.county.medianIncome,
+//       usIncome: acs.us.medianIncome,
+//     });
+//     const compM = _spv2_competitionMultiplier({
+//       countyEstab: cbp.county.establishments,
+//       usEstab: cbp.us.establishments,
+//       countyHH: acs.county.households,
+//       usHH: acs.us.households,
+//     });
+//     const q = _spv2_computeQuestionnaire(service, details);
+
+//     // 4) Anchor → price
+//     const base = SPV2_SERVICE_ANCHORS[service];
+//     const raw = base * locM * compM * q.multiplier + q.addOns;
+//     const priceUSD = _spv2_finalize(service, raw);
+
+//     // 5) Rush Fee (always $100)
+//     const serviceFeeUSD = RUSH_FEE;
+
+//     // 6) Fees & totals
+//     const subtotal = priceUSD + serviceFeeUSD;
+//     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
+//     const grandTotal = subtotal + convenienceFee;
+
+//     res.json({
+//       ok: true,
+//       service,
+//       priceUSD,
+//       serviceFeeUSD,
+//       convenienceFee,
+//       estimatedTotal: grandTotal,
+//       address: geo.normalizedAddress,
+//       lat: geo.lat,
+//       lon: geo.lon,
+//     });
+//   } catch (err) {
+//     console.error("[SmartPriceV2]", err);
+//     res.status(500).json({ ok: false, error: err.message || String(err) });
+//   }
+// };
+
+
+// ── Safe fallbacks if any external dataset fails ─────────────────────────────
+function _spv2_safeDefaults() {
+  return {
+    acs: {
+      county: { name: "Unknown County", medianIncome: 70000, households: 50000 },
+      us:     {                   medianIncome: 74755, households: 128000000 },
+    },
+    cbp: {
+      ok: true,
+      county: { name: "Unknown County", establishments: 1500 },
+      us:     { establishments: 800000 },
+      naics: "238220",
+    },
+    rpp: null, // optional; location multiplier will fall back to ACS
+  };
+}
+
 const estimateHandler = async (req, res) => {
   try {
-    let { service, address, city, zipcode, details = {} } = req.body || {};
+    let { service, address, city, zipcode, details } = req.body || {};
+    if (typeof details !== "object" || !details) details = {};
 
-    // normalize
-    // Normalize the incoming service
-    service = resolveService(service, SPV2_SERVICE_ANCHORS, SERVICE_ALIASES);
-    console.log("🔍 Raw service:", req.body.service);
+    // 0) Normalize service
+    const rawService = service;
+    service = resolveService(service);
+    console.log("🔍 Raw service:", rawService);
     console.log("🔍 Resolved service:", service);
 
     if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "Unknown or missing service" });
+      return res.status(400).json({ ok: false, error: "Unknown or missing service" });
     }
 
-    const addrLine = `${address || ""}${city ? ", " + city : ""}${
-      zipcode ? " " + zipcode : ""
-    }`.trim();
-    if (!addrLine)
+    // 1) Build/validate address
+    const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
+    if (!addrLine) {
       return res.status(400).json({ ok: false, error: "Address required" });
-    // const { service, address, city, zipcode, details = {} } = req.body || {};
-    // if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
-    //   return res.status(400).json({ ok: false, error: "Unknown or missing service" });
-    // }
-    // const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
-    // if (!addrLine) return res.status(400).json({ ok: false, error: "Address required" });
+    }
 
-    // 1) Geocode → FIPS
-    const geo = await _spv2_geocodeToFips(addrLine);
+    // 2) Geocode → FIPS
+    let geo;
+    try {
+      geo = await _spv2_geocodeToFips(addrLine);
+      console.log("🧭 geo:", geo);
+    } catch (e) {
+      console.error("❌ geocode failed:", e.message);
+      return res.status(400).json({ ok: false, error: "Address not found" });
+    }
 
-    // 2) Datasets
-    const [acs, cbp, rpp] = await Promise.all([
-      _spv2_getACS(geo.stateFIPS, geo.countyFIPS),
-      _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, service),
-      _spv2_getRPP(geo.stateFIPS),
-    ]);
+    // 3) Datasets (with graceful fallback)
+    let acs, cbp, rpp;
+    try {
+      [acs, cbp, rpp] = await Promise.all([
+        _spv2_getACS(geo.stateFIPS, geo.countyFIPS),
+        _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, service),
+        _spv2_getRPP(geo.stateFIPS),
+      ]);
+    } catch (e) {
+      console.error("❌ dataset fetch failed, using safe defaults:", e.message);
+      ({ acs, cbp, rpp } = _spv2_safeDefaults());
+    }
 
-    // 3) Multipliers
+    // Guard malformed pieces so we never throw TypeErrors
+    if (!acs?.county?.medianIncome || !acs?.us?.medianIncome) {
+      console.warn("⚠️ ACS malformed, using safe defaults");
+      acs = _spv2_safeDefaults().acs;
+    }
+    if (!cbp?.county?.establishments || !cbp?.us?.establishments) {
+      console.warn("⚠️ CBP malformed, using safe defaults");
+      cbp = _spv2_safeDefaults().cbp;
+    }
+
+    // 4) Multipliers
     const locM = _spv2_locationMultiplier({
       rppMult: rpp?.multiplier,
       countyIncome: acs.county.medianIncome,
@@ -3207,20 +3347,21 @@ const estimateHandler = async (req, res) => {
     });
     const q = _spv2_computeQuestionnaire(service, details);
 
-    // 4) Anchor → price
+    console.log("📊 multipliers:", { locM, compM, q });
+
+    // 5) Anchor → raw price (before fees)
     const base = SPV2_SERVICE_ANCHORS[service];
     const raw = base * locM * compM * q.multiplier + q.addOns;
     const priceUSD = _spv2_finalize(service, raw);
 
-    // 5) Rush Fee (always $100)
+    // 6) Always-on rush + platform fee
     const serviceFeeUSD = RUSH_FEE;
-
-    // 6) Fees & totals
     const subtotal = priceUSD + serviceFeeUSD;
     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
     const grandTotal = subtotal + convenienceFee;
 
-    res.json({
+    // 7) Response
+    return res.json({
       ok: true,
       service,
       priceUSD,
@@ -3230,12 +3371,14 @@ const estimateHandler = async (req, res) => {
       address: geo.normalizedAddress,
       lat: geo.lat,
       lon: geo.lon,
+      debug: { base, locM, compM, q }, // keep while stabilizing; remove later
     });
   } catch (err) {
-    console.error("[SmartPriceV2]", err);
-    res.status(500).json({ ok: false, error: err.message || String(err) });
+    console.error("[SmartPriceV2] fatal:", err);
+    return res.status(500).json({ ok: false, error: err.message || String(err) });
   }
 };
+
 
 router.post("/v2/estimate", estimateHandler);
 router.post("/estimate", estimateHandler);
