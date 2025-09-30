@@ -2278,6 +2278,10 @@ const SERVICE_ALIASES = {
   "Roofing": "Roof Leaks or Storm Damage",
   "HVAC": "HVAC System Failure",
   "Electrician": "Select Electrical Issues Below",
+  "Landscaping": "Landscaper / Lawn Care", 
+  "Electricians": "Select Electrical Issues Below",
+  "Electrical": "Select Electrical Issues Below",
+
 
   /* ─── Electrical Sub-Aliases ────────────────────── */
   "Single outlet/fixture": "Select Electrical Issues Below",
