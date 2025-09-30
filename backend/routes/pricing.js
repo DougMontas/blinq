@@ -2193,7 +2193,7 @@
 //version 3 testing
 // pricing.js
 import express from "express";
-import { resolveService } from "../utils/serviceResolver";
+import { resolveService } from "../utils/serviceResolver.js";
 import { SPV2_SERVICE_ANCHORS, SERVICE_ALIASES, SPV2_NAICS_BY_SERVICE } from "../config/services.js"
 
 const router = express.Router();
