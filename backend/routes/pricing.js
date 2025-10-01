@@ -3369,21 +3369,150 @@ function _spv2_finalize(service, x) {
 // }
 
 
-const estimateHandler = async (req, res) => {
+// const estimateHandler = async (req, res) => {
+//   try {
+//     // 0) Read body and normalize the "details" input shape
+//     let { service, address, city, zipcode } = req.body || {};
+//     let details =
+//       req.body?.details ??
+//       req.body?.answers ??
+//       req.body?.questionnaire ??
+//       req.body?.form ??
+//       {};
+//     if (typeof details !== "object" || !details) details = {};
+
+//     console.log("🧩 details (raw):", JSON.stringify(details));
+
+//     // 1) Normalize the service label first
+//     const rawService = service;
+//     service = resolveService(service);
+//     console.log("🔍 Raw service:", rawService);
+//     console.log("🔍 Resolved service:", service);
+
+//     if (!service || !(service in SPV2_SERVICE_ANCHORS)) {
+//       return res.status(400).json({ ok: false, error: "Unknown or missing service" });
+//     }
+
+//     // 2) Normalize questionnaire details using the resolved service
+//     const normalizedDetails = normalizeDetails(service, details);
+//     console.log("🧩 details (norm):", JSON.stringify(normalizedDetails));
+
+//     // 3) Build/validate address
+//     const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
+//     if (!addrLine) {
+//       return res.status(400).json({ ok: false, error: "Address required" });
+//     }
+
+//     // 4) Geocode → FIPS
+//     let geo;
+//     try {
+//       geo = await _spv2_geocodeToFips(addrLine);
+//       console.log("🧭 geo:", geo);
+//     } catch (e) {
+//       console.error("❌ geocode failed:", e.message);
+//       return res.status(400).json({ ok: false, error: "Address not found" });
+//     }
+
+//     // 5) Datasets (with graceful fallback)
+//     let acs, cbp, rpp;
+//     try {
+//       [acs, cbp, rpp] = await Promise.all([
+//         _spv2_getACS(geo.stateFIPS, geo.countyFIPS),
+//         _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, service),
+//         _spv2_getRPP(geo.stateFIPS),
+//       ]);
+//     } catch (e) {
+//       console.error("❌ dataset fetch failed, using safe defaults:", e.message);
+//       ({ acs, cbp, rpp } = _spv2_safeDefaults());
+//     }
+
+//     // Guard malformed pieces so we never throw TypeErrors
+//     if (!acs?.county?.medianIncome || !acs?.us?.medianIncome) {
+//       console.warn("⚠️ ACS malformed, using safe defaults");
+//       acs = _spv2_safeDefaults().acs;
+//     }
+//     if (!cbp?.county?.establishments || !cbp?.us?.establishments) {
+//       console.warn("⚠️ CBP malformed, using safe defaults");
+//       cbp = _spv2_safeDefaults().cbp;
+//     }
+
+//     // 6) Multipliers (use normalized details)
+//     const locM = _spv2_locationMultiplier({
+//       rppMult: rpp?.multiplier,
+//       countyIncome: acs.county.medianIncome,
+//       usIncome: acs.us.medianIncome,
+//     });
+//     const compM = _spv2_competitionMultiplier({
+//       countyEstab: cbp.county.establishments,
+//       usEstab: cbp.us.establishments,
+//       countyHH: acs.county.households,
+//       usHH: acs.us.households,
+//     });
+//     const q = _spv2_computeQuestionnaire(service, normalizedDetails);
+
+//     // Matrix-based flat adjustments MUST use normalized details
+//     const matrixAdj = getAdjustments(service, normalizedDetails);
+//     console.log("🧩 matrixAdj:", matrixAdj);
+//     console.log("📊 multipliers:", { locM, compM, q });
+
+//     // 7) Anchor → raw price (before fees)
+//     const base = SPV2_SERVICE_ANCHORS[service];
+//     const raw = base * locM * compM * q.multiplier + q.addOns + matrixAdj;
+//     const priceUSD = _spv2_finalize(service, raw);
+
+//     // 8) Always-on rush + platform fee
+//     const serviceFeeUSD = RUSH_FEE;
+//     const subtotal = priceUSD + serviceFeeUSD;
+//     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
+//     const grandTotal = subtotal + convenienceFee;
+
+//     // 9) Response
+//     return res.json({
+//       ok: true,
+//       service,
+//       priceUSD,
+//       serviceFeeUSD,
+//       convenienceFee,
+//       estimatedTotal: grandTotal,
+//       address: geo.normalizedAddress,
+//       lat: geo.lat,
+//       lon: geo.lon,
+//       debug: {
+//         base,
+//         locM,
+//         compM,
+//         q,
+//         matrixAdj,
+//         details: normalizedDetails,
+//       },
+//     });
+//   } catch (err) {
+//     console.error("[SmartPriceV2] fatal:", err);
+//     return res.status(500).json({ ok: false, error: err.message || String(err) });
+//   }
+// };
+
+export const estimateHandler = async (req, res) => {
   try {
-    // 0) Read body and normalize the "details" input shape
-    let { service, address, city, zipcode } = req.body || {};
-    let details =
-      req.body?.details ??
-      req.body?.answers ??
-      req.body?.questionnaire ??
-      req.body?.form ??
-      {};
-    if (typeof details !== "object" || !details) details = {};
+    // 0) Parse body safely
+    let {
+      service,
+      address,
+      address2, // optional apt/suite
+      city,
+      zipcode,
+      details,
+      answers,
+      questionnaire,
+      form,
+    } = req.body || {};
 
-    console.log("🧩 details (raw):", JSON.stringify(details));
+    // normalize details input shape
+    let rawDetails =
+      details ?? answers ?? questionnaire ?? form ?? {};
+    if (typeof rawDetails !== "object" || !rawDetails) rawDetails = {};
 
-    // 1) Normalize the service label first
+    // 1) Resolve service
     const rawService = service;
     service = resolveService(service);
     console.log("🔍 Raw service:", rawService);
@@ -3393,17 +3522,27 @@ const estimateHandler = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Unknown or missing service" });
     }
 
-    // 2) Normalize questionnaire details using the resolved service
-    const normalizedDetails = normalizeDetails(service, details);
+    // 2) Normalize details (AFTER service is resolved)
+    const normalizedDetails = normalizeDetails(service, rawDetails);
+    console.log("🧩 details (raw):", JSON.stringify(rawDetails));
     console.log("🧩 details (norm):", JSON.stringify(normalizedDetails));
 
-    // 3) Build/validate address
-    const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
+    // 3) Build address line (include apt/suite if present; not required)
+    const addrLine = [
+      address || "",
+      address2 || "",           // <- optional
+      city ? `, ${city}` : "",
+      zipcode ? ` ${zipcode}` : "",
+    ]
+      .join("")
+      .replace(/\s+/g, " ")
+      .trim();
+
     if (!addrLine) {
       return res.status(400).json({ ok: false, error: "Address required" });
     }
 
-    // 4) Geocode → FIPS
+    // 4) Geocode → FIPS (with graceful error)
     let geo;
     try {
       geo = await _spv2_geocodeToFips(addrLine);
@@ -3413,7 +3552,7 @@ const estimateHandler = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Address not found" });
     }
 
-    // 5) Datasets (with graceful fallback)
+    // 5) Datasets (with fallback)
     let acs, cbp, rpp;
     try {
       [acs, cbp, rpp] = await Promise.all([
@@ -3425,8 +3564,6 @@ const estimateHandler = async (req, res) => {
       console.error("❌ dataset fetch failed, using safe defaults:", e.message);
       ({ acs, cbp, rpp } = _spv2_safeDefaults());
     }
-
-    // Guard malformed pieces so we never throw TypeErrors
     if (!acs?.county?.medianIncome || !acs?.us?.medianIncome) {
       console.warn("⚠️ ACS malformed, using safe defaults");
       acs = _spv2_safeDefaults().acs;
@@ -3436,7 +3573,7 @@ const estimateHandler = async (req, res) => {
       cbp = _spv2_safeDefaults().cbp;
     }
 
-    // 6) Multipliers (use normalized details)
+    // 6) Multipliers + questionnaire + matrix adjustments
     const locM = _spv2_locationMultiplier({
       rppMult: rpp?.multiplier,
       countyIncome: acs.county.medianIncome,
@@ -3450,23 +3587,21 @@ const estimateHandler = async (req, res) => {
     });
     const q = _spv2_computeQuestionnaire(service, normalizedDetails);
 
-    // Matrix-based flat adjustments MUST use normalized details
     const matrixAdj = getAdjustments(service, normalizedDetails);
     console.log("🧩 matrixAdj:", matrixAdj);
     console.log("📊 multipliers:", { locM, compM, q });
 
-    // 7) Anchor → raw price (before fees)
+    // 7) Price
     const base = SPV2_SERVICE_ANCHORS[service];
     const raw = base * locM * compM * q.multiplier + q.addOns + matrixAdj;
     const priceUSD = _spv2_finalize(service, raw);
 
-    // 8) Always-on rush + platform fee
+    // 8) Fees & totals
     const serviceFeeUSD = RUSH_FEE;
     const subtotal = priceUSD + serviceFeeUSD;
     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
     const grandTotal = subtotal + convenienceFee;
 
-    // 9) Response
     return res.json({
       ok: true,
       service,
@@ -3477,21 +3612,13 @@ const estimateHandler = async (req, res) => {
       address: geo.normalizedAddress,
       lat: geo.lat,
       lon: geo.lon,
-      debug: {
-        base,
-        locM,
-        compM,
-        q,
-        matrixAdj,
-        details: normalizedDetails,
-      },
+      debug: { base, locM, compM, q },
     });
   } catch (err) {
     console.error("[SmartPriceV2] fatal:", err);
     return res.status(500).json({ ok: false, error: err.message || String(err) });
   }
 };
-
 
 
 router.post("/v2/estimate", estimateHandler);

@@ -539,13 +539,52 @@ const usersSchema = new mongoose.Schema(
       {
         type: String,
         enum: [
+          // Core trades
           "Roofing",
           "Plumbing",
           "HVAC",
-          "Electrical",
+          "Electrician",
+        
+          // Home services
           "Handyman",
+          "LockSmith",
           "Cleaning",
+          "Landscaping",
+          "Painting",
+          "Flooring",
+          "Pest_Control",
+          "Carpentry",
+          "Garage_Doors",
+          "Windows_Doors",
+          "Windows_Glass",
+          "Gutters",
+          "Tile_Grout",
+          "Smart_Home",
+          "IT_Services",
+          "Drywall",
+          "Appliance_Repair",
+          "Water_Mold_Remediation",
+          "Deck_Patio",
+          "Masonry_Concrete",
+          "Environmental",
+          "Chimney",
+          "Tree_Service",
+          "Pool_Spa",
+          "Solar",
+          "Remodeling",
+          "Exterior_Cleaning",
+          "Fencing",
+          "Moving",
+          "Junk_Removal",
+        
+          // Auto & personal
+          "Auto",
+          "Auto_Detailing",
+          "Personal_Services",
+        
+          // Legacy / catch-all
           "Odd_Jobs",
+          "Other_Services",
         ],
       },
     ],
