@@ -36,12 +36,60 @@ import {
   Shield,
   UserCircle,
   ArrowRight,
+  MapIcon,
 } from "lucide-react-native";
 
 import api from "../api/client";
 import FooterPro from "../components/FooterPro";
 
-const SERVICES = ["Electrician", "HVAC", "Plumbing", "Roofing", "Handyman"];
+const SERVICES = [
+    // Core trades
+    "Roofing",
+    "Plumbing",
+    "HVAC",
+    "Electrician",
+  
+    // Home services
+    "Handyman",
+    "LockSmith",
+    "Cleaning",
+    "Landscaping",
+    "Painting",
+    "Flooring",
+    "Pest_Control",
+    "Carpentry",
+    "Garage_Doors",
+    "Windows_Doors",
+    "Windows_Glass",
+    "Gutters",
+    "Tile_Grout",
+    "Smart_Home",
+    "IT_Services",
+    "Drywall",
+    "Appliance_Repair",
+    "Water_Mold_Remediation",
+    "Deck_Patio",
+    "Masonry_Concrete",
+    "Environmental",
+    "Chimney",
+    "Tree_Service",
+    "Pool_Spa",
+    "Solar",
+    "Remodeling",
+    "Exterior_Cleaning",
+    "Fencing",
+    "Moving",
+    "Junk_Removal",
+  
+    // Auto & personal
+    "Auto",
+    "Auto_Detailing",
+    "Personal_Services",
+  
+    // Legacy / catch-all
+    "Odd_Jobs",
+    "Other_Services",
+  ];
 const BILLING = ["profit_sharing", "hybrid"];
 
 const BILLING_PRODUCTS = {
@@ -52,6 +100,7 @@ const BILLING_PRODUCTS = {
 export default function RegistrationScreen() {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const navigation = useNavigation();
+  const [aptSuite, setAptSuite] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -440,6 +489,9 @@ export default function RegistrationScreen() {
                   onChangeText={(val) => onChange("email", val)}
                 />
               </View>
+              <View style={styles.inputGroup}>
+
+            </View>
               <View style={styles.inputContainer}>
                 <Lock color="#94a3b8" size={20} style={styles.inputIcon} />
                 <TextInput
@@ -469,6 +521,18 @@ export default function RegistrationScreen() {
                   placeholderTextColor="#94a3b8"
                   value={formData.address}
                   onChangeText={(val) => onChange("address", val)}
+                />
+              </View>
+              <View style={styles.inputContainer}>
+              <MapPin color="#94a3b8" size={20} style={styles.inputIcon} />
+                {/* <Text style={styles.input}>Apt / Suite (optional)</Text> */}
+                <TextInput
+                  style={styles.input}
+                  placeholder="Apt 4B, Suite 210, Unit #7…"
+                  placeholderTextColor="#94a3b8"
+                  value={aptSuite}
+                  onChangeText={setAptSuite}
+                  autoCapitalize="characters"
                 />
               </View>
               <View style={styles.row}>
