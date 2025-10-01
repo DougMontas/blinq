@@ -3368,22 +3368,22 @@ function _spv2_finalize(service, x) {
 //   };
 // }
 
+
 const estimateHandler = async (req, res) => {
-  const normalizedDetails = normalizeDetails(details, service);
-console.log("🧩 details (raw):", JSON.stringify(details));
-console.log("🧩 details (norm):", JSON.stringify(normalizedDetails));
   try {
+    // 0) Read body and normalize the "details" input shape
     let { service, address, city, zipcode } = req.body || {};
-let details =
-  req.body?.details ??
-  req.body?.answers ??
-  req.body?.questionnaire ??
-  req.body?.form ??
-  {};
-console.log("🧩 details received:", JSON.stringify(details));
+    let details =
+      req.body?.details ??
+      req.body?.answers ??
+      req.body?.questionnaire ??
+      req.body?.form ??
+      {};
     if (typeof details !== "object" || !details) details = {};
 
-    // 0) Normalize service
+    console.log("🧩 details (raw):", JSON.stringify(details));
+
+    // 1) Normalize the service label first
     const rawService = service;
     service = resolveService(service);
     console.log("🔍 Raw service:", rawService);
@@ -3393,13 +3393,17 @@ console.log("🧩 details received:", JSON.stringify(details));
       return res.status(400).json({ ok: false, error: "Unknown or missing service" });
     }
 
-    // 1) Build/validate address
+    // 2) Normalize questionnaire details using the resolved service
+    const normalizedDetails = normalizeDetails(service, details);
+    console.log("🧩 details (norm):", JSON.stringify(normalizedDetails));
+
+    // 3) Build/validate address
     const addrLine = `${address || ""}${city ? ", " + city : ""}${zipcode ? " " + zipcode : ""}`.trim();
     if (!addrLine) {
       return res.status(400).json({ ok: false, error: "Address required" });
     }
 
-    // 2) Geocode → FIPS
+    // 4) Geocode → FIPS
     let geo;
     try {
       geo = await _spv2_geocodeToFips(addrLine);
@@ -3409,7 +3413,7 @@ console.log("🧩 details received:", JSON.stringify(details));
       return res.status(400).json({ ok: false, error: "Address not found" });
     }
 
-    // 3) Datasets (with graceful fallback)
+    // 5) Datasets (with graceful fallback)
     let acs, cbp, rpp;
     try {
       [acs, cbp, rpp] = await Promise.all([
@@ -3432,7 +3436,7 @@ console.log("🧩 details received:", JSON.stringify(details));
       cbp = _spv2_safeDefaults().cbp;
     }
 
-    // 4) Multipliers
+    // 6) Multipliers (use normalized details)
     const locM = _spv2_locationMultiplier({
       rppMult: rpp?.multiplier,
       countyIncome: acs.county.medianIncome,
@@ -3446,25 +3450,23 @@ console.log("🧩 details received:", JSON.stringify(details));
     });
     const q = _spv2_computeQuestionnaire(service, normalizedDetails);
 
-    const matrixAdj = getAdjustments(service, details);
+    // Matrix-based flat adjustments MUST use normalized details
+    const matrixAdj = getAdjustments(service, normalizedDetails);
     console.log("🧩 matrixAdj:", matrixAdj);
-
     console.log("📊 multipliers:", { locM, compM, q });
 
-    // 5) Anchor → raw price (before fees)
-    // 4) Anchor → price
+    // 7) Anchor → raw price (before fees)
     const base = SPV2_SERVICE_ANCHORS[service];
     const raw = base * locM * compM * q.multiplier + q.addOns + matrixAdj;
-
     const priceUSD = _spv2_finalize(service, raw);
 
-    // 6) Always-on rush + platform fee
+    // 8) Always-on rush + platform fee
     const serviceFeeUSD = RUSH_FEE;
     const subtotal = priceUSD + serviceFeeUSD;
     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
     const grandTotal = subtotal + convenienceFee;
 
-    // 7) Response
+    // 9) Response
     return res.json({
       ok: true,
       service,
@@ -3475,13 +3477,21 @@ console.log("🧩 details received:", JSON.stringify(details));
       address: geo.normalizedAddress,
       lat: geo.lat,
       lon: geo.lon,
-      debug: { base, locM, compM, q }, // keep while stabilizing; remove later
+      debug: {
+        base,
+        locM,
+        compM,
+        q,
+        matrixAdj,
+        details: normalizedDetails,
+      },
     });
   } catch (err) {
     console.error("[SmartPriceV2] fatal:", err);
     return res.status(500).json({ ok: false, error: err.message || String(err) });
   }
 };
+
 
 
 router.post("/v2/estimate", estimateHandler);
