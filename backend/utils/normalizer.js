@@ -1853,8 +1853,12 @@ export const QUESTION_ALIASES = {
     [/^property size|lot size/i, "property.size"],
   ],
   "car detailing (mobile)": [
-    [/^package/i, "package"],
-    [/^vehicle size/i, "vehicle.size"],
+    [/^interior only$/i, "interior only"],
+    [/^exterior only$/i, "exterior only"],
+    [/^interior and exterior$/i, "interior and exterior"],
+    [/^car$/i, "car"],                      
+    [/^suv$/i, "suv"],                      
+    [/^large ?suv$/i, "large suv"], // keep legacy
   ],
   "roadside service": [
     [/^issue$/i, "issue"],
