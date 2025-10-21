@@ -1709,7 +1709,6 @@
 //   getRushFee,
 // };
 
-
 //new
 
 // utils/serviceMatrix.js ___ working new with test
@@ -3291,7 +3290,6 @@
 //   },
 // ];
 
-
 // /* ========================================================================== */
 // /* COVERED DESCRIPTIONS                                                       */
 // /* ========================================================================== */
@@ -3442,7 +3440,6 @@
 //   coveredDescriptions,
 //   getRushFee,
 // };
-
 
 //__________________________//
 //adding all categories test mode
@@ -3769,7 +3766,6 @@
 //     "Developer test checkout: fixed $1, no other fees.",
 // };
 
-
 /* ========================================================================== */
 /* BASE PRICE ANCHORS                                                         */
 /* ========================================================================== */
@@ -3832,7 +3828,6 @@
 //   // Dev test service
 //   "Test $1 Service Developer test checkout: fixed $1, no other fees.": 1,
 // };
-
 
 // Dev-only
 // if (typeof __DEV__ !== "undefined" ? __DEV__ : process.env.NODE_ENV !== "production") {
@@ -4027,7 +4022,6 @@
 //   getAdjustment,
 //   estimateTotal,
 // };
-
 
 //current working
 // /* ========================================================================== */
@@ -4370,9 +4364,6 @@
 // { Service: "Barber / Hairdresser", Question: "service", Option: "house call", Adjustment: 40 },
 
 //  ]
-  
-
-
 
 // // export const MATRIX = [
 // //   /* ================== CORE TRADES ================== */
@@ -4489,7 +4480,6 @@
 // //   { Service: "Insulation / Weatherization Tech", Question: "Home size?", Option: "Large (>2500 sqft)", Adjustment: 400 },
 // // ];
 
-
 // /* ========================================================================== */
 // /* COVERED DESCRIPTIONS (category-level, from your expanded set)              */
 // /* ========================================================================== */
@@ -4573,8 +4563,6 @@
 // // export const getCoveredDescription = (serviceKey) => coveredDescriptions?.[serviceKey] || "";
 // export const getRushFee = () => RUSH_FEE;
 
-
-
 // /* ========================================================================== */
 // //new to help with adjustments
 // // Canonicalize "labels" coming from UI → keys used in pricing tables
@@ -4616,9 +4604,6 @@
 //   return found || raw; // may still miss, but we tried
 // };
 
-
-
-
 // /* ========================================================================== */
 // /* CATEGORY MAPPINGS (service -> category)                                    */
 // /* NOTE: Only map actual SERVICE NAMES that exist in MATRIX rows.             */
@@ -4645,7 +4630,6 @@
 //   "General Contractor / Remodeler": "Remodeling",
 //   "Insulation / Weatherization Tech": "Environmental",
 // };
-
 
 // /* ========================================================================== */
 // /* BUILD CATEGORY -> SERVICES, QUESTIONS, PRICING                             */
@@ -4765,7 +4749,6 @@
 //   return value;
 // };
 
-
 // /**
 //  * estimateTotal(serviceOrCategory, answers)
 //  * - Backward-compatible:
@@ -4825,7 +4808,6 @@
 //   return base + adjustments;
 // };
 
-
 // export default {
 //   questions,
 //   pricing,
@@ -4836,7 +4818,6 @@
 //   getAdjustment,
 //   estimateTotal,
 // };
-
 
 //testing new/* ========================================================================== */
 /* MATRIX + PRICING (UPDATED)                                                 */
@@ -5207,136 +5188,957 @@
 //   estimateTotal,
 // };
 
-
 /* ========================================================================== */
 /* MATRIX + PRICING (UPDATED & FIXED)                                         */
+/* ========================================================================== */
+
+// export const MATRIX = [
+//   /* ================== CORE TRADES ================== */
+//   // Plumbing
+//   { Service: "Plumbing", Question: "leak or clog", Option: "leak", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "leak or clog", Option: "clogged", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "where located", Option: "kitchen sink", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "where located", Option: "bathroom sink", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "where located", Option: "bathroom toilet", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "where located", Option: "bathroom shower", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "where located", Option: "bathroom bathtub", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "severity", Option: "minor leak", Adjustment: 0 },
+//   { Service: "Plumbing", Question: "severity", Option: "major leak", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "severity", Option: "minor clog", Adjustment: 0 },
+//   { Service: "Plumbing", Question: "severity", Option: "major clog", Adjustment: 50 },
+//   { Service: "Plumbing", Question: "access", Option: "easy access", Adjustment: 0 },
+//   { Service: "Plumbing", Question: "access", Option: "behind wall", Adjustment: 75 },
+//   { Service: "Plumbing", Question: "access", Option: "behind ceiling", Adjustment: 75 },
+
+//   // Roofing
+//   { Service: "Roofing", Question: "roof type", Option: "shingles", Adjustment: 50 },
+//   { Service: "Roofing", Question: "roof type", Option: "tile", Adjustment: 150 },
+//   { Service: "Roofing", Question: "roof type", Option: "metal", Adjustment: 150 },
+//   { Service: "Roofing", Question: "roof type", Option: "flat", Adjustment: 0 },
+//   { Service: "Roofing", Question: "damaged area", Option: "small patch", Adjustment: 75 },
+//   { Service: "Roofing", Question: "damaged area", Option: "large section", Adjustment: 300 },
+//   { Service: "Roofing", Question: "access", Option: "single story", Adjustment: 0 },
+//   { Service: "Roofing", Question: "access", Option: "second story", Adjustment: 200 },
+//   { Service: "Roofing", Question: "access", Option: "steep", Adjustment: 200 },
+
+//   // HVAC
+//   { Service: "HVAC", Question: "system type", Option: "central ac", Adjustment: 50 },
+//   { Service: "HVAC", Question: "system type", Option: "heating", Adjustment: 75 },
+//   { Service: "HVAC", Question: "problem", Option: "not cooling", Adjustment: 75 },
+//   { Service: "HVAC", Question: "problem", Option: "not heating", Adjustment: 75 },
+//   { Service: "HVAC", Question: "problem", Option: "freezing", Adjustment: 75 },
+//   { Service: "HVAC", Question: "problem", Option: "leaking", Adjustment: 75 },
+//   { Service: "HVAC", Question: "problem", Option: "strange noise", Adjustment: 50 },
+//   { Service: "HVAC", Question: "problem", Option: "strange smell", Adjustment: 50 },
+//   { Service: "HVAC", Question: "urgency", Option: "comfort issue", Adjustment: 0 },
+//   { Service: "HVAC", Question: "urgency", Option: "system down", Adjustment: 75 },
+
+//   // Electrician
+//   { Service: "Electrician", Question: "type of issue", Option: "outlet not working", Adjustment: 50 },
+//   { Service: "Electrician", Question: "type of issue", Option: "light switch not working", Adjustment: 50 },
+//   { Service: "Electrician", Question: "type of issue", Option: "light flickering", Adjustment: 50 },
+//   { Service: "Electrician", Question: "type of issue", Option: "breaker tripping", Adjustment: 75 },
+//   { Service: "Electrician", Question: "scope of work", Option: "single outlet", Adjustment: 50 },
+//   { Service: "Electrician", Question: "scope of work", Option: "single fixture", Adjustment: 50 },
+//   { Service: "Electrician", Question: "scope of work", Option: "single switch", Adjustment: 50 },
+//   { Service: "Electrician", Question: "accessibility", Option: "easy access", Adjustment: 0 },
+//   { Service: "Electrician", Question: "accessibility", Option: "high ceiling", Adjustment: 75 },
+
+//   // Handyman
+//   { Service: "Handyman", Question: "project length", Option: "up to 3 hours", Adjustment: 50 },
+//   { Service: "Handyman", Question: "project length", Option: "up to 5 hours", Adjustment: 75 },
+//   { Service: "Handyman", Question: "project length", Option: "up to 8 hours", Adjustment: 100 },
+//   { Service: "Handyman", Question: "project type", Option: "maintenance", Adjustment: 25 },
+//   { Service: "Handyman", Question: "project type", Option: "installation", Adjustment: 50 },
+//   { Service: "Handyman", Question: "project type", Option: "repair", Adjustment: 35 },
+
+//   // Locksmith
+//   { Service: "Locksmith", Question: "lockout", Option: "home lockout", Adjustment: 100 },
+//   { Service: "Locksmith", Question: "lockout", Option: "car lockout", Adjustment: 120 },
+//   { Service: "Locksmith", Question: "lock type", Option: "standard", Adjustment: 0 },
+//   { Service: "Locksmith", Question: "lock type", Option: "high security", Adjustment: 100 },
+//   { Service: "Locksmith", Question: "lock type", Option: "smart lock", Adjustment: 100 },
+
+//   // Cleaning
+//   { Service: "Cleaner / Housekeeper", Question: "cleaning type", Option: "basic (up to 3 hours)", Adjustment: 0 },
+//   { Service: "Cleaner / Housekeeper", Question: "cleaning type", Option: "deep cleaning (up to 5 hours)", Adjustment: 100 },
+//   { Service: "Cleaner / Housekeeper", Question: "cleaning type", Option: "move out (up to 8 hours)", Adjustment: 150 },
+
+//   // Painting
+//   { Service: "Painter (interior/exterior)", Question: "painting type", Option: "interior", Adjustment: 50 },
+//   { Service: "Painter (interior/exterior)", Question: "painting type", Option: "exterior", Adjustment: 150 },
+//   { Service: "Painter (interior/exterior)", Question: "job size", Option: "up to 500 sqft", Adjustment: 150 },
+//   { Service: "Painter (interior/exterior)", Question: "job size", Option: "500 to 1000 sqft", Adjustment: 450 },
+//   { Service: "Painter (interior/exterior)", Question: "job size", Option: "1000 to 1500 sqft", Adjustment: 750 },
+//   { Service: "Painter (interior/exterior)", Question: "job size", Option: "1500 to 2000 sqft", Adjustment: 1200 },
+//   { Service: "Painter (interior/exterior)", Question: "ceiling height", Option: "up to 8 feet", Adjustment: 50 },
+//   { Service: "Painter (interior/exterior)", Question: "ceiling height", Option: "up to 10 feet", Adjustment: 100 },
+//   { Service: "Painter (interior/exterior)", Question: "ceiling height", Option: "up to 12 feet", Adjustment: 200 },
+
+//   // Landscaping
+//   { Service: "Landscaper / Lawn Care", Question: "work type", Option: "mowing", Adjustment: 0 },
+//   { Service: "Landscaper / Lawn Care", Question: "work type", Option: "trimming", Adjustment: 25 },
+//   { Service: "Landscaper / Lawn Care", Question: "work type", Option: "tree removal (less than 6 inch diameter)", Adjustment: 200 },
+//   { Service: "Landscaper / Lawn Care", Question: "work type", Option: "hedge removal", Adjustment: 200 },
+//   { Service: "Landscaper / Lawn Care", Question: "property size", Option: "small yard", Adjustment: 0 },
+//   { Service: "Landscaper / Lawn Care", Question: "property size", Option: "large property", Adjustment: 50 },
+//   { Service: "Landscaper / Lawn Care", Question: "property size", Option: "extra large", Adjustment: 100 },
+
+//   // Car Detailing (Mobile)  (updated values + sizes: car/suv)
+//   { Service: "Car Detailing (mobile)", Question: "package", Option: "interior only", Adjustment: 30 },
+//   { Service: "Car Detailing (mobile)", Question: "package", Option: "exterior only", Adjustment: 0 },
+//   { Service: "Car Detailing (mobile)", Question: "package", Option: "interior and exterior", Adjustment: 55 },
+//   { Service: "Car Detailing (mobile)", Question: "vehicle size", Option: "car", Adjustment: 5 },
+//   { Service: "Car Detailing (mobile)", Question: "vehicle size", Option: "suv", Adjustment: 25 },
+
+//   // Roadside Service
+//   { Service: "Roadside Service", Question: "issue", Option: "battery", Adjustment: 0 },
+//   { Service: "Roadside Service", Question: "issue", Option: "tire", Adjustment: 25 },
+//   { Service: "Roadside Service", Question: "issue", Option: "tow", Adjustment: 0 },
+//   { Service: "Roadside Service", Question: "vehicle location", Option: "home driveway", Adjustment: 0 },
+//   { Service: "Roadside Service", Question: "vehicle location", Option: "highway", Adjustment: 70 },
+//   { Service: "Roadside Service", Question: "vehicle location", Option: "remote", Adjustment: 100 },
+
+//   // Mobile Mechanic
+//   { Service: "Mobile Mechanic", Question: "issue", Option: "car does not start", Adjustment: 100 },
+//   { Service: "Mobile Mechanic", Question: "issue", Option: "oil change", Adjustment: 40 },
+//   { Service: "Mobile Mechanic", Question: "issue", Option: "brake replacement", Adjustment: 100 },
+
+//   // Pest Control
+//   { Service: "Pest Control / Exterminator", Question: "pest type", Option: "ants", Adjustment: 50 },
+//   { Service: "Pest Control / Exterminator", Question: "pest type", Option: "roaches", Adjustment: 75 },
+//   { Service: "Pest Control / Exterminator", Question: "pest type", Option: "rodents", Adjustment: 100 },
+//   { Service: "Pest Control / Exterminator", Question: "pest type", Option: "termites", Adjustment: 50 },
+//   { Service: "Pest Control / Exterminator", Question: "pest type", Option: "bedbugs", Adjustment: 50 },
+//   { Service: "Pest Control / Exterminator", Question: "severity", Option: "mild", Adjustment: 0 },
+//   { Service: "Pest Control / Exterminator", Question: "severity", Option: "severe", Adjustment: 0 },
+
+//   // General Contractor (Consulting/Estimating)
+//   { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 3 hours", Adjustment: 0 },
+//   { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 5 hours", Adjustment: 300 },
+//   { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 8 hours", Adjustment: 500 },
+// ];
+
+// /* ========================================================================== */
+// /* COVERED DESCRIPTIONS                                                       */
+// /* ========================================================================== */
+// export const coveredDescriptions = {
+//   "Plumbing":
+//     "Covers leaks, burst pipes, clogs, and other emergency plumbing issues. Parts replacement and specialty work may incur additional charges.",
+//   "Roofing":
+//     "Covers patching leaks, replacing damaged shingles/tiles, and temporary weatherproofing. Full roof replacements not included.",
+//   "HVAC":
+//     "Covers repair of central AC or heating systems. Includes diagnostics and emergency fixes. Replacement units not included.",
+//   "Electrician":
+//     "Covers outlet, breaker, and wiring issues. Complex rewiring or panel upgrades may require additional estimates.",
+//   "Handyman":
+//     "Covers small household projects and repairs. Larger remodel or specialty work may require contractor services.",
+//   "Locksmith":
+//     "Covers standard home and auto lockouts. Specialty locks, smart locks, or rekeying may add extra costs.",
+//   "Cleaner / Housekeeper":
+//     "Covers basic, deep, or move-in/out home cleaning. Supplies and equipment included. Specialty cleaning may cost extra.",
+//   "Mobile Mechanic":
+//     "Covers on-site diagnostics and light repairs. Major repairs may require a shop.",
+//   "Pest Control / Exterminator":
+//     "Covers inspection and treatment for ants, roaches, rodents, termites, and bedbugs.",
+//   "Painter (interior/exterior)":
+//     "Covers surface prep and painting of walls/ceilings or exterior siding.",
+//   "Landscaper / Lawn Care":
+//     "Covers mowing, trimming, yard cleanup, and small tree/hedge work.",
+//   "Car Detailing (mobile)":
+//     "Covers mobile detailing packages and add-ons.",
+//   "Roadside Service":
+//     "Covers basic roadside assistance such as battery jumps, tire changes, or short tows.",
+//   "General Contractor (Consulting/Estimating)":
+//     "Covers onsite consulting/estimating time blocks only.",
+// };
+
+// /* ========================================================================== */
+// /* BASE PRICE ANCHORS                                                         */
+// /* ========================================================================== */
+// export const BASE_PRICE = {
+//   "Plumbing": 175,
+//   "Roofing": 250,
+//   "HVAC": 200,
+//   "Electrician": 150,
+//   "Handyman": 125,
+//   "Locksmith": 120,
+//   "Cleaner / Housekeeper": 125,
+//   "Roadside Service": 100,
+//   "Mobile Mechanic": 125,
+//   "Pest Control / Exterminator": 150,
+//   "Painter (interior/exterior)": 200,
+//   "Landscaper / Lawn Care": 50,
+//   "General Contractor (Consulting/Estimating)": 0,
+//   "Car Detailing (mobile)": 50,
+// };
+
+// if (typeof __DEV__ !== "undefined" ? __DEV__ : process.env.NODE_ENV !== "production") {
+//   BASE_PRICE["Test: $1 Flat (No Fees)"] = 1;
+//   coveredDescriptions["Test: $1 Flat (No Fees)"] =
+//     "Developer test checkout: fixed $1, no other fees.";
+// }
+
+// /* ========================================================================== */
+// /* HELPERS                                                                    */
+// /* ========================================================================== */
+// const RUSH_FEE = 100;
+// export const getRushFee = () => RUSH_FEE;
+
+// const slug = (s) =>
+//   String(s || "")
+//     .trim()
+//     .toLowerCase()
+//     .replace(/\s+/g, " ")
+//     .replace(/[^a-z0-9]+/g, "_")
+//     .replace(/^_+|_+$/g, "");
+
+// /* ========================================================================== */
+// /* CATEGORY MAPPINGS (service -> category)                                    */
+// /* ========================================================================== */
+// export const SERVICE_TO_CATEGORY = {
+//   "Plumbing": "Plumbing",
+//   "Roofing": "Roofing",
+//   "HVAC": "HVAC",
+//   "Electrician": "Electrician",
+//   "Handyman": "Handyman",
+//   "Locksmith": "Locksmith",
+//   "Cleaner / Housekeeper": "Cleaning",
+//   "Mobile Mechanic": "Auto",
+//   "Pest Control / Exterminator": "Pest Control",
+//   "Painter (interior/exterior)": "Painting",
+//   "Landscaper / Lawn Care": "Landscaping",
+//   "Car Detailing (mobile)": "Auto",
+//   "Roadside Service": "Auto",
+//   "General Contractor (Consulting/Estimating)": "Consulting/Estimating",
+// };
+
+// /* ========================================================================== */
+// /* BUILD CATEGORY -> SERVICES, QUESTIONS, PRICING                             */
+// /* ========================================================================== */
+// export const questions = {};
+// export const pricing = {};
+
+// // 1) category → services
+// const categoryServices = {};
+// for (const { Service } of MATRIX) {
+//   const cat = SERVICE_TO_CATEGORY[Service] || "Odd Jobs";
+//   (categoryServices[cat] ??= new Set()).add(Service);
+// }
+
+// // 2) Category-level service picker (✅ give it a UNIQUE, non-numeric id)
+// for (const [cat, svcSet] of Object.entries(categoryServices)) {
+//   questions[cat] = [
+//     {
+//       id: "__service_picker__", // <— avoids id collision with service questions
+//       question: `Which ${cat.replace(/_/g, " ").toLowerCase()} issue are you experiencing?`,
+//       type: "multiple",
+//       options: Array.from(svcSet).map((svc) => ({ value: svc, label: String(svc) })),
+//     },
+//   ];
+// }
+
+// // 3) Service-level questions (store SLUGGED keys)
+// for (const row of MATRIX) {
+//   const { Service, Question, Option, Adjustment } = row;
+//   questions[Service] ??= [];
+//   pricing[Service] ??= {};
+
+//   const qKey = slug(Question);
+//   const oKey = slug(Option);
+
+//   let qObj = questions[Service].find((q) => slug(q.question) === qKey);
+//   if (!qObj) {
+//     qObj = {
+//       id: questions[Service].length + 1, // starts at 1 per service group (OK now that picker id is unique)
+//       question: Question,
+//       type: "multiple",
+//       options: [],
+//     };
+//     questions[Service].push(qObj);
+//   }
+//   if (!qObj.options.find((o) => slug(o.value) === oKey)) {
+//     qObj.options.push({ value: Option, label: String(Option) });
+//   }
+
+//   (pricing[Service][qKey] ??= {})[oKey] = Number(Adjustment) || 0;
+// }
+
+// /* ========================================================================== */
+// /* EXPORTED HELPERS                                                           */
+// /* ========================================================================== */
+// export const getBasePrice = (serviceOrCategory) => {
+//   if (BASE_PRICE[serviceOrCategory] != null) return BASE_PRICE[serviceOrCategory];
+//   const cat = SERVICE_TO_CATEGORY[serviceOrCategory];
+//   return cat && BASE_PRICE[cat] ? BASE_PRICE[cat] : 0;
+// };
+
+// export const getCoveredDescription = (serviceKey) =>
+//   coveredDescriptions[serviceKey] || "";
+
+// const resolveToService = (serviceOrCategory, answers = {}) => {
+//   const raw = String(serviceOrCategory || "");
+//   if (pricing[raw]) return raw;
+//   const picked = answers.service || answers.selectedService || answers.scope || null;
+//   if (picked && pricing[picked]) return picked;
+//   const servicesInCategory = Object.keys(SERVICE_TO_CATEGORY || {}).filter(
+//     (svc) => (SERVICE_TO_CATEGORY || {})[svc] === raw
+//   );
+//   const found = servicesInCategory.find((svc) => pricing[svc]);
+//   return found || raw;
+// };
+
+// export const getQuestions = (serviceOrCategory) => {
+//   if (questions[serviceOrCategory]) return questions[serviceOrCategory];
+//   const mappedCategory = SERVICE_TO_CATEGORY[serviceOrCategory];
+//   if (mappedCategory && questions[mappedCategory]) return questions[mappedCategory];
+//   const servicesInCategory = Object.keys(SERVICE_TO_CATEGORY).filter(
+//     (svc) => SERVICE_TO_CATEGORY[svc] === serviceOrCategory
+//   );
+//   if (servicesInCategory.length > 0)
+//     return servicesInCategory.flatMap((svc) => questions[svc] || []);
+//   console.warn("⚠️ No questions found for:", serviceOrCategory);
+//   return [];
+// };
+
+// export const getAdjustment = (serviceOrCategory, question, option, answers = {}) => {
+//   const service = resolveToService(serviceOrCategory, answers);
+//   const qKey = slug(question);
+//   const oKey = slug(option);
+//   const value = pricing?.[service]?.[qKey]?.[oKey];
+//   if (value == null) {
+//     if (typeof __DEV__ !== "undefined" ? __DEV__ : process.env.NODE_ENV !== "production") {
+//       const qAvail = Object.keys(pricing?.[service] || {});
+//       console.debug("[pricing miss]", { service, qKey, oKey, availableQuestions: qAvail });
+//     }
+//     return 0;
+//   }
+//   return value;
+// };
+
+// export const estimateTotal = (serviceOrCategory, answers = {}) => {
+//   const selectedService = resolveToService(serviceOrCategory, answers);
+//   const base = getBasePrice(selectedService);
+//   const adjustments = Object.entries(answers).reduce((sum, [question, option]) => {
+//     if (Array.isArray(option)) {
+//       return sum + option.reduce((acc, opt) => acc + getAdjustment(selectedService, question, opt, answers), 0);
+//     }
+//     return sum + getAdjustment(selectedService, question, option, answers);
+//   }, 0);
+//   return base + adjustments;
+// };
+
+// export default {
+//   MATRIX,
+//   questions,
+//   pricing,
+//   coveredDescriptions,
+//   BASE_PRICE,
+//   getBasePrice,
+//   getCoveredDescription,
+//   getRushFee,
+//   getQuestions,
+//   getAdjustment,
+//   estimateTotal,
+// };
+
+/* ========================================================================== */
+/* MATRIX + PRICING (FINAL)                                                   */
 /* ========================================================================== */
 
 export const MATRIX = [
   /* ================== CORE TRADES ================== */
   // Plumbing
-  { Service: "Plumbing", Question: "leak or clog", Option: "leak", Adjustment: 50 },
-  { Service: "Plumbing", Question: "leak or clog", Option: "clogged", Adjustment: 50 },
-  { Service: "Plumbing", Question: "where located", Option: "kitchen sink", Adjustment: 50 },
-  { Service: "Plumbing", Question: "where located", Option: "bathroom sink", Adjustment: 50 },
-  { Service: "Plumbing", Question: "where located", Option: "bathroom toilet", Adjustment: 50 },
-  { Service: "Plumbing", Question: "where located", Option: "bathroom shower", Adjustment: 50 },
-  { Service: "Plumbing", Question: "where located", Option: "bathroom bathtub", Adjustment: 50 },
-  { Service: "Plumbing", Question: "severity", Option: "minor leak", Adjustment: 0 },
-  { Service: "Plumbing", Question: "severity", Option: "major leak", Adjustment: 50 },
-  { Service: "Plumbing", Question: "severity", Option: "minor clog", Adjustment: 0 },
-  { Service: "Plumbing", Question: "severity", Option: "major clog", Adjustment: 50 },
-  { Service: "Plumbing", Question: "access", Option: "easy access", Adjustment: 0 },
-  { Service: "Plumbing", Question: "access", Option: "behind wall", Adjustment: 75 },
-  { Service: "Plumbing", Question: "access", Option: "behind ceiling", Adjustment: 75 },
+  {
+    Service: "Plumbing",
+    Question: "leak or clog",
+    Option: "leak",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "leak or clog",
+    Option: "clogged",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "where located",
+    Option: "kitchen sink",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "where located",
+    Option: "bathroom sink",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "where located",
+    Option: "bathroom toilet",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "where located",
+    Option: "bathroom shower",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "where located",
+    Option: "bathroom bathtub",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "severity",
+    Option: "minor leak",
+    Adjustment: 0,
+  },
+  {
+    Service: "Plumbing",
+    Question: "severity",
+    Option: "major leak",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "severity",
+    Option: "minor clog",
+    Adjustment: 0,
+  },
+  {
+    Service: "Plumbing",
+    Question: "severity",
+    Option: "major clog",
+    Adjustment: 50,
+  },
+  {
+    Service: "Plumbing",
+    Question: "access",
+    Option: "easy access",
+    Adjustment: 0,
+  },
+  {
+    Service: "Plumbing",
+    Question: "access",
+    Option: "behind wall",
+    Adjustment: 75,
+  },
+  {
+    Service: "Plumbing",
+    Question: "access",
+    Option: "behind ceiling",
+    Adjustment: 75,
+  },
 
   // Roofing
-  { Service: "Roofing", Question: "roof type", Option: "shingles", Adjustment: 50 },
-  { Service: "Roofing", Question: "roof type", Option: "tile", Adjustment: 150 },
-  { Service: "Roofing", Question: "roof type", Option: "metal", Adjustment: 150 },
+  {
+    Service: "Roofing",
+    Question: "roof type",
+    Option: "shingles",
+    Adjustment: 50,
+  },
+  {
+    Service: "Roofing",
+    Question: "roof type",
+    Option: "tile",
+    Adjustment: 150,
+  },
+  {
+    Service: "Roofing",
+    Question: "roof type",
+    Option: "metal",
+    Adjustment: 150,
+  },
   { Service: "Roofing", Question: "roof type", Option: "flat", Adjustment: 0 },
-  { Service: "Roofing", Question: "damaged area", Option: "small patch", Adjustment: 75 },
-  { Service: "Roofing", Question: "damaged area", Option: "large section", Adjustment: 300 },
-  { Service: "Roofing", Question: "access", Option: "single story", Adjustment: 0 },
-  { Service: "Roofing", Question: "access", Option: "second story", Adjustment: 200 },
+  {
+    Service: "Roofing",
+    Question: "damaged area",
+    Option: "small patch",
+    Adjustment: 75,
+  },
+  {
+    Service: "Roofing",
+    Question: "damaged area",
+    Option: "large section",
+    Adjustment: 300,
+  },
+  {
+    Service: "Roofing",
+    Question: "access",
+    Option: "single story",
+    Adjustment: 0,
+  },
+  {
+    Service: "Roofing",
+    Question: "access",
+    Option: "second story",
+    Adjustment: 200,
+  },
   { Service: "Roofing", Question: "access", Option: "steep", Adjustment: 200 },
 
   // HVAC
-  { Service: "HVAC", Question: "system type", Option: "central ac", Adjustment: 50 },
-  { Service: "HVAC", Question: "system type", Option: "heating", Adjustment: 75 },
-  { Service: "HVAC", Question: "problem", Option: "not cooling", Adjustment: 75 },
-  { Service: "HVAC", Question: "problem", Option: "not heating", Adjustment: 75 },
+  {
+    Service: "HVAC",
+    Question: "system type",
+    Option: "central ac",
+    Adjustment: 50,
+  },
+  {
+    Service: "HVAC",
+    Question: "system type",
+    Option: "heating",
+    Adjustment: 75,
+  },
+  {
+    Service: "HVAC",
+    Question: "problem",
+    Option: "not cooling",
+    Adjustment: 75,
+  },
+  {
+    Service: "HVAC",
+    Question: "problem",
+    Option: "not heating",
+    Adjustment: 75,
+  },
   { Service: "HVAC", Question: "problem", Option: "freezing", Adjustment: 75 },
   { Service: "HVAC", Question: "problem", Option: "leaking", Adjustment: 75 },
-  { Service: "HVAC", Question: "problem", Option: "strange noise", Adjustment: 50 },
-  { Service: "HVAC", Question: "problem", Option: "strange smell", Adjustment: 50 },
-  { Service: "HVAC", Question: "urgency", Option: "comfort issue", Adjustment: 0 },
-  { Service: "HVAC", Question: "urgency", Option: "system down", Adjustment: 75 },
+  {
+    Service: "HVAC",
+    Question: "problem",
+    Option: "strange noise",
+    Adjustment: 50,
+  },
+  {
+    Service: "HVAC",
+    Question: "problem",
+    Option: "strange smell",
+    Adjustment: 50,
+  },
+  {
+    Service: "HVAC",
+    Question: "urgency",
+    Option: "comfort issue",
+    Adjustment: 0,
+  },
+  {
+    Service: "HVAC",
+    Question: "urgency",
+    Option: "system down",
+    Adjustment: 75,
+  },
 
   // Electrician
-  { Service: "Electrician", Question: "type of issue", Option: "outlet not working", Adjustment: 50 },
-  { Service: "Electrician", Question: "type of issue", Option: "light switch not working", Adjustment: 50 },
-  { Service: "Electrician", Question: "type of issue", Option: "light flickering", Adjustment: 50 },
-  { Service: "Electrician", Question: "type of issue", Option: "breaker tripping", Adjustment: 75 },
-  { Service: "Electrician", Question: "scope of work", Option: "single outlet", Adjustment: 50 },
-  { Service: "Electrician", Question: "scope of work", Option: "single fixture", Adjustment: 50 },
-  { Service: "Electrician", Question: "scope of work", Option: "single switch", Adjustment: 50 },
-  { Service: "Electrician", Question: "accessibility", Option: "easy access", Adjustment: 0 },
-  { Service: "Electrician", Question: "accessibility", Option: "high ceiling", Adjustment: 75 },
+  {
+    Service: "Electrician",
+    Question: "type of issue",
+    Option: "outlet not working",
+    Adjustment: 50,
+  },
+  {
+    Service: "Electrician",
+    Question: "type of issue",
+    Option: "light switch not working",
+    Adjustment: 50,
+  },
+  {
+    Service: "Electrician",
+    Question: "type of issue",
+    Option: "light flickering",
+    Adjustment: 50,
+  },
+  {
+    Service: "Electrician",
+    Question: "type of issue",
+    Option: "breaker tripping",
+    Adjustment: 75,
+  },
+  {
+    Service: "Electrician",
+    Question: "scope of work",
+    Option: "single outlet",
+    Adjustment: 50,
+  },
+  {
+    Service: "Electrician",
+    Question: "scope of work",
+    Option: "single fixture",
+    Adjustment: 50,
+  },
+  {
+    Service: "Electrician",
+    Question: "scope of work",
+    Option: "single switch",
+    Adjustment: 50,
+  },
+  {
+    Service: "Electrician",
+    Question: "accessibility",
+    Option: "easy access",
+    Adjustment: 0,
+  },
+  {
+    Service: "Electrician",
+    Question: "accessibility",
+    Option: "high ceiling",
+    Adjustment: 75,
+  },
 
   // Handyman
-  { Service: "Handyman", Question: "project length", Option: "up to 3 hours", Adjustment: 50 },
-  { Service: "Handyman", Question: "project length", Option: "up to 5 hours", Adjustment: 75 },
-  { Service: "Handyman", Question: "project length", Option: "up to 8 hours", Adjustment: 100 },
-  { Service: "Handyman", Question: "project type", Option: "maintenance", Adjustment: 25 },
-  { Service: "Handyman", Question: "project type", Option: "installation", Adjustment: 50 },
-  { Service: "Handyman", Question: "project type", Option: "repair", Adjustment: 35 },
+  {
+    Service: "Handyman",
+    Question: "project length",
+    Option: "up to 3 hours",
+    Adjustment: 50,
+  },
+  {
+    Service: "Handyman",
+    Question: "project length",
+    Option: "up to 5 hours",
+    Adjustment: 75,
+  },
+  {
+    Service: "Handyman",
+    Question: "project length",
+    Option: "up to 8 hours",
+    Adjustment: 100,
+  },
+  {
+    Service: "Handyman",
+    Question: "project type",
+    Option: "maintenance",
+    Adjustment: 25,
+  },
+  {
+    Service: "Handyman",
+    Question: "project type",
+    Option: "installation",
+    Adjustment: 50,
+  },
+  {
+    Service: "Handyman",
+    Question: "project type",
+    Option: "repair",
+    Adjustment: 35,
+  },
 
   // Locksmith
-  { Service: "Locksmith", Question: "lockout", Option: "home lockout", Adjustment: 100 },
-  { Service: "Locksmith", Question: "lockout", Option: "car lockout", Adjustment: 120 },
-  { Service: "Locksmith", Question: "lock type", Option: "standard", Adjustment: 0 },
-  { Service: "Locksmith", Question: "lock type", Option: "high security", Adjustment: 100 },
-  { Service: "Locksmith", Question: "lock type", Option: "smart lock", Adjustment: 100 },
+  {
+    Service: "Locksmith",
+    Question: "lockout",
+    Option: "home lockout",
+    Adjustment: 100,
+  },
+  {
+    Service: "Locksmith",
+    Question: "lockout",
+    Option: "car lockout",
+    Adjustment: 120,
+  },
+  {
+    Service: "Locksmith",
+    Question: "lock type",
+    Option: "standard",
+    Adjustment: 0,
+  },
+  {
+    Service: "Locksmith",
+    Question: "lock type",
+    Option: "high security",
+    Adjustment: 100,
+  },
+  {
+    Service: "Locksmith",
+    Question: "lock type",
+    Option: "smart lock",
+    Adjustment: 100,
+  },
 
   // Cleaning
-  { Service: "Cleaner / Housekeeper", Question: "cleaning type", Option: "basic (up to 3 hours)", Adjustment: 0 },
-  { Service: "Cleaner / Housekeeper", Question: "cleaning type", Option: "deep cleaning (up to 5 hours)", Adjustment: 100 },
-  { Service: "Cleaner / Housekeeper", Question: "cleaning type", Option: "move out (up to 8 hours)", Adjustment: 150 },
+  {
+    Service: "Cleaner / Housekeeper",
+    Question: "cleaning type",
+    Option: "basic (up to 3 hours)",
+    Adjustment: 0,
+  },
+  {
+    Service: "Cleaner / Housekeeper",
+    Question: "cleaning type",
+    Option: "deep cleaning (up to 5 hours)",
+    Adjustment: 100,
+  },
+  {
+    Service: "Cleaner / Housekeeper",
+    Question: "cleaning type",
+    Option: "move out (up to 8 hours)",
+    Adjustment: 150,
+  },
 
   // Painting
-  { Service: "Painter (interior/exterior)", Question: "painting type", Option: "interior", Adjustment: 50 },
-  { Service: "Painter (interior/exterior)", Question: "painting type", Option: "exterior", Adjustment: 150 },
-  { Service: "Painter (interior/exterior)", Question: "job size", Option: "up to 500 sqft", Adjustment: 150 },
-  { Service: "Painter (interior/exterior)", Question: "job size", Option: "500 to 1000 sqft", Adjustment: 450 },
-  { Service: "Painter (interior/exterior)", Question: "job size", Option: "1000 to 1500 sqft", Adjustment: 750 },
-  { Service: "Painter (interior/exterior)", Question: "job size", Option: "1500 to 2000 sqft", Adjustment: 1200 },
-  { Service: "Painter (interior/exterior)", Question: "ceiling height", Option: "up to 8 feet", Adjustment: 50 },
-  { Service: "Painter (interior/exterior)", Question: "ceiling height", Option: "up to 10 feet", Adjustment: 100 },
-  { Service: "Painter (interior/exterior)", Question: "ceiling height", Option: "up to 12 feet", Adjustment: 200 },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "painting type",
+    Option: "interior",
+    Adjustment: 50,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "painting type",
+    Option: "exterior",
+    Adjustment: 150,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "job size",
+    Option: "up to 500 sqft",
+    Adjustment: 150,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "job size",
+    Option: "500 to 1000 sqft",
+    Adjustment: 450,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "job size",
+    Option: "1000 to 1500 sqft",
+    Adjustment: 750,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "job size",
+    Option: "1500 to 2000 sqft",
+    Adjustment: 1200,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "ceiling height",
+    Option: "up to 8 feet",
+    Adjustment: 50,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "ceiling height",
+    Option: "up to 10 feet",
+    Adjustment: 100,
+  },
+  {
+    Service: "Painter (interior/exterior)",
+    Question: "ceiling height",
+    Option: "up to 12 feet",
+    Adjustment: 200,
+  },
 
   // Landscaping
-  { Service: "Landscaper / Lawn Care", Question: "work type", Option: "mowing", Adjustment: 0 },
-  { Service: "Landscaper / Lawn Care", Question: "work type", Option: "trimming", Adjustment: 25 },
-  { Service: "Landscaper / Lawn Care", Question: "work type", Option: "tree removal (less than 6 inch diameter)", Adjustment: 200 },
-  { Service: "Landscaper / Lawn Care", Question: "work type", Option: "hedge removal", Adjustment: 200 },
-  { Service: "Landscaper / Lawn Care", Question: "property size", Option: "small yard", Adjustment: 0 },
-  { Service: "Landscaper / Lawn Care", Question: "property size", Option: "large property", Adjustment: 50 },
-  { Service: "Landscaper / Lawn Care", Question: "property size", Option: "extra large", Adjustment: 100 },
+  {
+    Service: "Landscaper / Lawn Care",
+    Question: "work type",
+    Option: "mowing",
+    Adjustment: 0,
+  },
+  {
+    Service: "Landscaper / Lawn Care",
+    Question: "work type",
+    Option: "trimming",
+    Adjustment: 25,
+  },
+  {
+    Service: "Landscaper / Lawn Care",
+    Question: "work type",
+    Option: "tree removal (less than 6 inch diameter)",
+    Adjustment: 200,
+  },
+  {
+    Service: "Landscaper / Lawn Care",
+    Question: "work type",
+    Option: "hedge removal",
+    Adjustment: 200,
+  },
+  {
+    Service: "Landscaper / Lawn Care",
+    Question: "property size",
+    Option: "small yard",
+    Adjustment: 0,
+  },
+  {
+    Service: "Landscaper / Lawn Care",
+    Question: "property size",
+    Option: "large property",
+    Adjustment: 50,
+  },
+  {
+    Service: "Landscaper / Lawn Care",
+    Question: "property size",
+    Option: "extra large",
+    Adjustment: 100,
+  },
 
-  // Car Detailing (Mobile)  (updated values + sizes: car/suv)
-  { Service: "Car Detailing (mobile)", Question: "package", Option: "interior only", Adjustment: 30 },
-  { Service: "Car Detailing (mobile)", Question: "package", Option: "exterior only", Adjustment: 0 },
-  { Service: "Car Detailing (mobile)", Question: "package", Option: "interior and exterior", Adjustment: 55 },
-  { Service: "Car Detailing (mobile)", Question: "vehicle size", Option: "car", Adjustment: 5 },
-  { Service: "Car Detailing (mobile)", Question: "vehicle size", Option: "suv", Adjustment: 25 },
+  /* ================== AUTO ================== */
+  // Car Detailing (Mobile)
+  {
+    Service: "Car Detailing (mobile)",
+    Question: "package",
+    Option: "interior only",
+    Adjustment: 30,
+  },
+  {
+    Service: "Car Detailing (mobile)",
+    Question: "package",
+    Option: "exterior only",
+    Adjustment: 0,
+  },
+  {
+    Service: "Car Detailing (mobile)",
+    Question: "package",
+    Option: "interior and exterior",
+    Adjustment: 55,
+  },
+
+  {
+    Service: "Car Detailing (mobile)",
+    Question: "vehicle size",
+    Option: "car",
+    Adjustment: 5,
+  },
+  {
+    Service: "Car Detailing (mobile)",
+    Question: "vehicle size",
+    Option: "suv",
+    Adjustment: 25,
+  },
+  {
+    Service: "Car Detailing (mobile)",
+    Question: "vehicle size",
+    Option: "large suv",
+    Adjustment: 35,
+  },
 
   // Roadside Service
-  { Service: "Roadside Service", Question: "issue", Option: "battery", Adjustment: 0 },
-  { Service: "Roadside Service", Question: "issue", Option: "tire", Adjustment: 25 },
-  { Service: "Roadside Service", Question: "issue", Option: "tow", Adjustment: 0 },
-  { Service: "Roadside Service", Question: "vehicle location", Option: "home driveway", Adjustment: 0 },
-  { Service: "Roadside Service", Question: "vehicle location", Option: "highway", Adjustment: 70 },
-  { Service: "Roadside Service", Question: "vehicle location", Option: "remote", Adjustment: 100 },
+  {
+    Service: "Roadside Service",
+    Question: "issue",
+    Option: "battery",
+    Adjustment: 0,
+  },
+  {
+    Service: "Roadside Service",
+    Question: "issue",
+    Option: "tire",
+    Adjustment: 25,
+  },
+  {
+    Service: "Roadside Service",
+    Question: "issue",
+    Option: "tow",
+    Adjustment: 0,
+  },
+  {
+    Service: "Roadside Service",
+    Question: "vehicle location",
+    Option: "home driveway",
+    Adjustment: 0,
+  },
+  {
+    Service: "Roadside Service",
+    Question: "vehicle location",
+    Option: "highway",
+    Adjustment: 70,
+  },
+  {
+    Service: "Roadside Service",
+    Question: "vehicle location",
+    Option: "remote",
+    Adjustment: 100,
+  },
 
   // Mobile Mechanic
-  { Service: "Mobile Mechanic", Question: "issue", Option: "car does not start", Adjustment: 100 },
-  { Service: "Mobile Mechanic", Question: "issue", Option: "oil change", Adjustment: 40 },
-  { Service: "Mobile Mechanic", Question: "issue", Option: "brake replacement", Adjustment: 100 },
+  {
+    Service: "Mobile Mechanic",
+    Question: "issue",
+    Option: "car does not start",
+    Adjustment: 100,
+  },
+  {
+    Service: "Mobile Mechanic",
+    Question: "issue",
+    Option: "oil change",
+    Adjustment: 40,
+  },
+  {
+    Service: "Mobile Mechanic",
+    Question: "issue",
+    Option: "brake replacement",
+    Adjustment: 100,
+  },
 
   // Pest Control
-  { Service: "Pest Control / Exterminator", Question: "pest type", Option: "ants", Adjustment: 50 },
-  { Service: "Pest Control / Exterminator", Question: "pest type", Option: "roaches", Adjustment: 75 },
-  { Service: "Pest Control / Exterminator", Question: "pest type", Option: "rodents", Adjustment: 100 },
-  { Service: "Pest Control / Exterminator", Question: "pest type", Option: "termites", Adjustment: 50 },
-  { Service: "Pest Control / Exterminator", Question: "pest type", Option: "bedbugs", Adjustment: 50 },
-  { Service: "Pest Control / Exterminator", Question: "severity", Option: "mild", Adjustment: 0 },
-  { Service: "Pest Control / Exterminator", Question: "severity", Option: "severe", Adjustment: 0 },
+  {
+    Service: "Pest Control / Exterminator",
+    Question: "pest type",
+    Option: "ants",
+    Adjustment: 50,
+  },
+  {
+    Service: "Pest Control / Exterminator",
+    Question: "pest type",
+    Option: "roaches",
+    Adjustment: 75,
+  },
+  {
+    Service: "Pest Control / Exterminator",
+    Question: "pest type",
+    Option: "rodents",
+    Adjustment: 100,
+  },
+  {
+    Service: "Pest Control / Exterminator",
+    Question: "pest type",
+    Option: "termites",
+    Adjustment: 50,
+  },
+  {
+    Service: "Pest Control / Exterminator",
+    Question: "pest type",
+    Option: "bedbugs",
+    Adjustment: 50,
+  },
+  {
+    Service: "Pest Control / Exterminator",
+    Question: "severity",
+    Option: "mild",
+    Adjustment: 0,
+  },
+  {
+    Service: "Pest Control / Exterminator",
+    Question: "severity",
+    Option: "severe",
+    Adjustment: 0,
+  },
 
   // General Contractor (Consulting/Estimating)
-  { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 3 hours", Adjustment: 0 },
-  { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 5 hours", Adjustment: 300 },
-  { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 8 hours", Adjustment: 500 },
+  {
+    Service: "General Contractor (Consulting/Estimating)",
+    Question: "scope",
+    Option: "up to 3 hours",
+    Adjustment: 0,
+  },
+  {
+    Service: "General Contractor (Consulting/Estimating)",
+    Question: "scope",
+    Option: "up to 5 hours",
+    Adjustment: 300,
+  },
+  {
+    Service: "General Contractor (Consulting/Estimating)",
+    Question: "scope",
+    Option: "up to 8 hours",
+    Adjustment: 500,
+  },
 ];
 
 /* ========================================================================== */
@@ -5347,8 +6149,7 @@ export const coveredDescriptions = {
     "Covers leaks, burst pipes, clogs, and other emergency plumbing issues. Parts replacement and specialty work may incur additional charges.",
   "Roofing":
     "Covers patching leaks, replacing damaged shingles/tiles, and temporary weatherproofing. Full roof replacements not included.",
-  "HVAC":
-    "Covers repair of central AC or heating systems. Includes diagnostics and emergency fixes. Replacement units not included.",
+  "HVAC": "Covers repair of central AC or heating systems. Includes diagnostics and emergency fixes. Replacement units not included.",
   "Electrician":
     "Covers outlet, breaker, and wiring issues. Complex rewiring or panel upgrades may require additional estimates.",
   "Handyman":
@@ -5365,8 +6166,7 @@ export const coveredDescriptions = {
     "Covers surface prep and painting of walls/ceilings or exterior siding.",
   "Landscaper / Lawn Care":
     "Covers mowing, trimming, yard cleanup, and small tree/hedge work.",
-  "Car Detailing (mobile)":
-    "Covers mobile detailing packages and add-ons.",
+  "Car Detailing (mobile)": "Covers mobile detailing packages and add-ons.",
   "Roadside Service":
     "Covers basic roadside assistance such as battery jumps, tire changes, or short tows.",
   "General Contractor (Consulting/Estimating)":
@@ -5393,7 +6193,11 @@ export const BASE_PRICE = {
   "Car Detailing (mobile)": 50,
 };
 
-if (typeof __DEV__ !== "undefined" ? __DEV__ : process.env.NODE_ENV !== "production") {
+if (
+  typeof __DEV__ !== "undefined"
+    ? __DEV__
+    : process.env.NODE_ENV !== "production"
+) {
   BASE_PRICE["Test: $1 Flat (No Fees)"] = 1;
   coveredDescriptions["Test: $1 Flat (No Fees)"] =
     "Developer test checkout: fixed $1, no other fees.";
@@ -5446,19 +6250,24 @@ for (const { Service } of MATRIX) {
   (categoryServices[cat] ??= new Set()).add(Service);
 }
 
-// 2) Category-level service picker (✅ give it a UNIQUE, non-numeric id)
+// 2) Category-level service picker (unique id avoids conflicts)
 for (const [cat, svcSet] of Object.entries(categoryServices)) {
   questions[cat] = [
     {
-      id: "__service_picker__", // <— avoids id collision with service questions
-      question: `Which ${cat.replace(/_/g, " ").toLowerCase()} issue are you experiencing?`,
+      id: "__service_picker__",
+      question: `Which ${cat
+        .replace(/_/g, " ")
+        .toLowerCase()} issue are you experiencing?`,
       type: "multiple",
-      options: Array.from(svcSet).map((svc) => ({ value: svc, label: String(svc) })),
+      options: Array.from(svcSet).map((svc) => ({
+        value: svc,
+        label: String(svc),
+      })),
     },
   ];
 }
 
-// 3) Service-level questions (store SLUGGED keys)
+// 3) Service-level questions (slug keys)
 for (const row of MATRIX) {
   const { Service, Question, Option, Adjustment } = row;
   questions[Service] ??= [];
@@ -5470,13 +6279,14 @@ for (const row of MATRIX) {
   let qObj = questions[Service].find((q) => slug(q.question) === qKey);
   if (!qObj) {
     qObj = {
-      id: questions[Service].length + 1, // starts at 1 per service group (OK now that picker id is unique)
+      id: questions[Service].length + 1,
       question: Question,
       type: "multiple",
       options: [],
     };
     questions[Service].push(qObj);
   }
+
   if (!qObj.options.find((o) => slug(o.value) === oKey)) {
     qObj.options.push({ value: Option, label: String(Option) });
   }
@@ -5488,7 +6298,8 @@ for (const row of MATRIX) {
 /* EXPORTED HELPERS                                                           */
 /* ========================================================================== */
 export const getBasePrice = (serviceOrCategory) => {
-  if (BASE_PRICE[serviceOrCategory] != null) return BASE_PRICE[serviceOrCategory];
+  if (BASE_PRICE[serviceOrCategory] != null)
+    return BASE_PRICE[serviceOrCategory];
   const cat = SERVICE_TO_CATEGORY[serviceOrCategory];
   return cat && BASE_PRICE[cat] ? BASE_PRICE[cat] : 0;
 };
@@ -5499,7 +6310,8 @@ export const getCoveredDescription = (serviceKey) =>
 const resolveToService = (serviceOrCategory, answers = {}) => {
   const raw = String(serviceOrCategory || "");
   if (pricing[raw]) return raw;
-  const picked = answers.service || answers.selectedService || answers.scope || null;
+  const picked =
+    answers.service || answers.selectedService || answers.scope || null;
   if (picked && pricing[picked]) return picked;
   const servicesInCategory = Object.keys(SERVICE_TO_CATEGORY || {}).filter(
     (svc) => (SERVICE_TO_CATEGORY || {})[svc] === raw
@@ -5511,7 +6323,8 @@ const resolveToService = (serviceOrCategory, answers = {}) => {
 export const getQuestions = (serviceOrCategory) => {
   if (questions[serviceOrCategory]) return questions[serviceOrCategory];
   const mappedCategory = SERVICE_TO_CATEGORY[serviceOrCategory];
-  if (mappedCategory && questions[mappedCategory]) return questions[mappedCategory];
+  if (mappedCategory && questions[mappedCategory])
+    return questions[mappedCategory];
   const servicesInCategory = Object.keys(SERVICE_TO_CATEGORY).filter(
     (svc) => SERVICE_TO_CATEGORY[svc] === serviceOrCategory
   );
@@ -5521,15 +6334,29 @@ export const getQuestions = (serviceOrCategory) => {
   return [];
 };
 
-export const getAdjustment = (serviceOrCategory, question, option, answers = {}) => {
+export const getAdjustment = (
+  serviceOrCategory,
+  question,
+  option,
+  answers = {}
+) => {
   const service = resolveToService(serviceOrCategory, answers);
   const qKey = slug(question);
   const oKey = slug(option);
   const value = pricing?.[service]?.[qKey]?.[oKey];
   if (value == null) {
-    if (typeof __DEV__ !== "undefined" ? __DEV__ : process.env.NODE_ENV !== "production") {
+    if (
+      typeof __DEV__ !== "undefined"
+        ? __DEV__
+        : process.env.NODE_ENV !== "production"
+    ) {
       const qAvail = Object.keys(pricing?.[service] || {});
-      console.debug("[pricing miss]", { service, qKey, oKey, availableQuestions: qAvail });
+      console.debug("[pricing miss]", {
+        service,
+        qKey,
+        oKey,
+        availableQuestions: qAvail,
+      });
     }
     return 0;
   }
@@ -5539,12 +6366,22 @@ export const getAdjustment = (serviceOrCategory, question, option, answers = {})
 export const estimateTotal = (serviceOrCategory, answers = {}) => {
   const selectedService = resolveToService(serviceOrCategory, answers);
   const base = getBasePrice(selectedService);
-  const adjustments = Object.entries(answers).reduce((sum, [question, option]) => {
-    if (Array.isArray(option)) {
-      return sum + option.reduce((acc, opt) => acc + getAdjustment(selectedService, question, opt, answers), 0);
-    }
-    return sum + getAdjustment(selectedService, question, option, answers);
-  }, 0);
+  const adjustments = Object.entries(answers).reduce(
+    (sum, [question, option]) => {
+      if (Array.isArray(option)) {
+        return (
+          sum +
+          option.reduce(
+            (acc, opt) =>
+              acc + getAdjustment(selectedService, question, opt, answers),
+            0
+          )
+        );
+      }
+      return sum + getAdjustment(selectedService, question, option, answers);
+    },
+    0
+  );
   return base + adjustments;
 };
 
