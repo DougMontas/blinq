@@ -1770,7 +1770,7 @@ const MATRIX_QKEYS = {
 ----------------------------------------------------------- */
 const SERVICE_TO_QGROUP = {
   // anchors → groups
-  "burst or leaking pipes": ""plumbing"",
+  "burst or leaking pipes": "plumbing",
   "sewer backups or clogged drains": "plumbing",
   "water heater failure": "plumbing",
   "gas leaks": "plumbing",
