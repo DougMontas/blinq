@@ -5271,6 +5271,557 @@
 
 
 // backend/routes/pricing.js
+// import express from "express";
+// import { resolveService } from "../utils/serviceResolver.js";
+// import {
+//   SPV2_SERVICE_ANCHORS,
+//   SERVICE_ALIASES, // ok if unused
+//   SPV2_NAICS_BY_SERVICE,
+// } from "../config/services.js";
+// import { getAdjustments } from "../utils/adjustments.js";
+// import { normalizeDetails } from "../utils/normalizer.js";
+
+// const router = express.Router();
+
+// /* ============================================================================
+//    Smart Estimate v2
+// ============================================================================ */
+
+// const SPV2_CFG = {
+//   location: { rppAlpha: 0.85, acsAlpha: 0.6, clamp: [0.8, 1.3] },
+//   competition: { beta: 0.15, clamp: [0.85, 1.15] },
+//   severityMult: { minor: 1.0, moderate: 1.25, severe: 1.6 },
+//   addOnFees: {
+//     urgent: 30,
+//     chemicalAttempt: 20,
+//     noShutoffAccess: 15,
+//     roofSteep: 35,
+//     securityEmergency: 75,
+//     paintMatch: 125,
+//   },
+//   rails: {
+//     // Defaults
+//     default: [95, 4995],
+
+//     // Core emergencies / trades
+//     "Drywall Repair": [95, 995],
+//     "Appliance Failures": [95, 895],
+//     "Burst or Leaking Pipes": [150, 1495],
+//     "Sewer Backups or Clogged Drains": [150, 1495],
+//     "Roof Leaks or Storm Damage": [250, 2995],
+//     "Water Heater Failure": [250, 2495],
+//     "HVAC System Failure": [200, 1995],
+//     "Select Electrical Issues Below": [150, 1495],
+//     "Broken Windows or Doors": [125, 1495],
+//     "Gas Leaks": [200, 1995],
+//     "Mold or Water Damage Remediation": [750, 4995],
+
+//     // Expanded catalog
+//     "Handyman": [95, 695],
+//     "Locksmith": [95, 595],
+//     "Carpenter (doors/trim/cabinets)": [150, 1295],
+//     "Garage Door Technician": [200, 1495],
+//     "Window & Glass Repair": [150, 1295],
+//     "Gutter Cleaning / Repair": [95, 795],
+//     "Fence Repair / Installer": [200, 1995],
+//     "Deck/Patio Repair & Build": [300, 2995],
+
+//     "Cleaner / Housekeeper": [95, 495],
+//     "Landscaper / Lawn Care": [95, 995],
+//     "Painter (interior/exterior)": [250, 2495],
+//     "Pest Control / Exterminator": [150, 995],
+//     "Irrigation / Sprinkler Tech": [150, 1195],
+//     "Tile & Grout Specialist": [150, 1195],
+//     "Flooring Installer / Repair": [250, 2995],
+//     "Pressure Washing": [95, 795],
+//     "Insulation / Weatherization Tech": [200, 1995],
+//     "Chimney Sweep & Masonry": [150, 1295],
+//     "Basement Waterproofing": [750, 4995],
+//     "Water Damage Mitigation": [500, 3995],
+
+//     "Smart-home / Low-voltage Installer": [150, 1295],
+//     "Security System Installer": [200, 1995],
+//     "IT / Wi-Fi Setup (Home Networking)": [95, 495],
+//     "TV Mounting / Home Theater Installer": [95, 695],
+//     "Solar Installer": [1000, 9995],
+//     "General Contractor / Remodeler": [750, 9995],
+//     "Radon Mitigation / Environmental": [750, 4995],
+
+//     "Masonry / Concrete": [300, 3995],
+//     "Tree Service / Arborist": [250, 2495],
+//     "Pool & Spa Technician": [200, 1495],
+
+//     // Auto / Personal
+//     "Car Mechanic (general)": [95, 695],
+//     "Mobile Mechanic": [95, 895],
+//     "Tow Truck / Roadside Assistance": [75, 495],
+//     "Auto Glass Repair/Replacement": [95, 695],
+//     "Car Detailing (mobile)": [75, 495],
+//     "Mobile Tire Service": [95, 695],
+//     "Barber / Hairdresser": [25, 195],
+
+//     // --- rails alias so "Roadside Service" clamps like Tow ---
+//     "Roadside Service": [75, 495],
+//   },
+
+//   roundTo: 5,
+//   cacheTTLms: 10 * 60 * 1000,
+// };
+
+// const FEE_RATE = 0.07; // 7% platform fee
+// const RUSH_FEE = 100;  // always included
+
+// /* ========= Matrix-service aliasing (for normalizer & adjustments) =========
+//    IMPORTANT: These values MUST match your MATRIX/normalizer service keys.
+// --------------------------------------------------------------------------- */
+// const MATRIX_SERVICE_ALIAS = {
+//   "Tow Truck / Roadside Assistance": "Roadside Service",
+//   "Car Mechanic (general)": "Mobile Mechanic",
+//   "Mobile Mechanic": "Mobile Mechanic",
+//   "Roadside Service": "Roadside Service",
+//   "Car Detailing (mobile)": "Car Detailing (mobile)",
+// };
+
+// /* ======================= Cache & small helpers ======================= */
+// const _spv2_cache = new Map();
+// const _spv2_get = (k) => {
+//   const v = _spv2_cache.get(k);
+//   if (!v) return null;
+//   if (Date.now() - v.t > SPV2_CFG.cacheTTLms) {
+//     _spv2_cache.delete(k);
+//     return null;
+//   }
+//   return v.v;
+// };
+// const _spv2_set = (k, v) => _spv2_cache.set(k, { v, t: Date.now() });
+
+// const _spv2_clamp = (x, [lo, hi]) => Math.max(lo, Math.min(hi, x));
+// const _spv2_roundTo = (x, step) => Math.round(x / step) * step;
+// const _spv2_bumpSeverity = (cur, to) => {
+//   const order = ["minor", "moderate", "severe"];
+//   return order[Math.max(order.indexOf(cur), order.indexOf(to))];
+// };
+
+// async function _spv2_fetchJson(url, label = "req") {
+//   const ctrl = new AbortController();
+//   const to = setTimeout(() => ctrl.abort(), 8000);
+//   try {
+//     const res = await fetch(url, { signal: ctrl.signal });
+//     if (!res.ok) throw new Error(`${label} ${res.status} ${res.statusText}`);
+//     return await res.json();
+//   } finally {
+//     clearTimeout(to);
+//   }
+// }
+
+// /* =================== Free public datasets =================== */
+// async function _spv2_geocodeToFips(addressLine) {
+//   const key = `geocode:${addressLine}`;
+//   const hit = _spv2_get(key);
+//   if (hit) return hit;
+
+//   const base = "https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress";
+//   const url = `${base}?address=${encodeURIComponent(addressLine)}&benchmark=Public_AR_Current&vintage=Current_Current&format=json`;
+//   const json = await _spv2_fetchJson(url, "census-geocoder");
+//   const match = json?.result?.addressMatches?.[0];
+//   const county = match?.geographies?.Counties?.[0];
+//   if (!match || !county?.STATE || !county?.COUNTY) {
+//     throw new Error("Address not found or FIPS missing");
+//   }
+//   const out = {
+//     normalizedAddress: match.matchedAddress,
+//     stateFIPS: county.STATE,
+//     countyFIPS: county.COUNTY,
+//     lat: match.coordinates?.y,
+//     lon: match.coordinates?.x,
+//   };
+//   _spv2_set(key, out);
+//   return out;
+// }
+
+// async function _spv2_getACS(stateFIPS, countyFIPS) {
+//   const key = `acs:${stateFIPS}:${countyFIPS}`;
+//   const hit = _spv2_get(key);
+//   if (hit) return hit;
+
+//   const vars = "B19013_001E,B11001_001E";
+//   const countyURL = `https://api.census.gov/data/2023/acs/acs5?get=NAME,${vars}&for=county:${countyFIPS}&in=state:${stateFIPS}`;
+//   const usURL = `https://api.census.gov/data/2023/acs/acs5?get=${vars}&for=us:*`;
+
+//   const [cArr, uArr] = await Promise.all([
+//     _spv2_fetchJson(countyURL, "acs-county"),
+//     _spv2_fetchJson(usURL, "acs-us"),
+//   ]);
+
+//   const c = cArr?.[1];
+//   const u = uArr?.[1];
+//   const out = {
+//     county: {
+//       name: c?.[0],
+//       medianIncome: Number(c?.[1]),
+//       households: Number(c?.[2]),
+//     },
+//     us: { medianIncome: Number(u?.[0]), households: Number(u?.[1]) },
+//   };
+//   if (!out.county.medianIncome || !out.us.medianIncome) {
+//     throw new Error("ACS income unavailable");
+//   }
+//   _spv2_set(key, out);
+//   return out;
+// }
+
+// async function _spv2_getCBPByNAICS(stateFIPS, countyFIPS, naics) {
+//   const key = `cbp:${stateFIPS}:${countyFIPS}:${naics}`;
+//   const hit = _spv2_get(key);
+//   if (hit) return hit;
+
+//   const countyURL = `https://api.census.gov/data/2023/cbp?get=ESTAB,NAME&for=county:${countyFIPS}&in=state:${stateFIPS}&NAICS2017=${naics}`;
+//   const usURL = `https://api.census.gov/data/2023/cbp?get=ESTAB&for=us:*&NAICS2017=${naics}`;
+
+//   const [cArr, uArr] = await Promise.all([
+//     _spv2_fetchJson(countyURL, "cbp-county"),
+//     _spv2_fetchJson(usURL, "cbp-us"),
+//   ]);
+
+//   const countyEst = Number(cArr?.[1]?.[0]);
+//   const usEst = Number(uArr?.[1]?.[0]);
+
+//   const out = {
+//     ok: Number.isFinite(countyEst) && Number.isFinite(usEst),
+//     county: { name: cArr?.[1]?.[1], establishments: countyEst },
+//     us: { establishments: usEst },
+//     naics,
+//   };
+//   _spv2_set(key, out);
+//   return out;
+// }
+
+// async function _spv2_getCBPPreferTargeted(stateFIPS, countyFIPS, service) {
+//   const targeted = SPV2_NAICS_BY_SERVICE[service] || "238220";
+//   const primary = await _spv2_getCBPByNAICS(stateFIPS, countyFIPS, targeted);
+//   if (primary.ok) return primary;
+//   const fallback = await _spv2_getCBPByNAICS(stateFIPS, countyFIPS, "238220");
+//   return { ...fallback, naics: fallback.naics };
+// }
+
+// async function _spv2_getRPP(stateFIPS) {
+//   const key = `rpp:${stateFIPS}`;
+//   const hit = _spv2_get(key);
+//   if (hit) return hit;
+
+//   const user = process.env.BEA_API_KEY;
+//   if (!user) return null;
+
+//   const url = `https://apps.bea.gov/api/data/?UserID=${encodeURIComponent(
+//     user
+//   )}&method=GetData&datasetname=RegionalIncome&TableName=RPP1&LineCode=1&GeoFips=${stateFIPS}&Year=LAST&ResultFormat=json`;
+
+//   try {
+//     const json = await _spv2_fetchJson(url, "bea-rpp");
+//     const v = Number(json?.BEAAPI?.Results?.Data?.[0]?.DataValue);
+//     if (!v) return null;
+//     const out = { rppIndex: v, multiplier: v / 100 };
+//     _spv2_set(key, out);
+//     return out;
+//   } catch {
+//     return null;
+//   }
+// }
+
+// /* =================== Multipliers =================== */
+// function _spv2_locationMultiplier({ rppMult, countyIncome, usIncome }) {
+//   if (rppMult) {
+//     const m = Math.pow(rppMult, SPV2_CFG.location.rppAlpha);
+//     return _spv2_clamp(m, SPV2_CFG.location.clamp);
+//   }
+//   const ratio = countyIncome / usIncome;
+//   const m = Math.pow(ratio, SPV2_CFG.location.acsAlpha);
+//   return _spv2_clamp(m, SPV2_CFG.location.clamp);
+// }
+
+// function _spv2_competitionMultiplier({ countyEstab, usEstab, countyHH, usHH }) {
+//   const countyPer10k = (countyEstab / Math.max(1, countyHH)) * 10000;
+//   const usPer10k = (usEstab / Math.max(1, usHH)) * 10000;
+//   const ratio = (countyPer10k || 0.0001) / (usPer10k || 0.0001);
+//   const m = Math.pow(ratio, -SPV2_CFG.competition.beta);
+//   return _spv2_clamp(m, SPV2_CFG.competition.clamp);
+// }
+
+// /* =================== Safe defaults =================== */
+// function _spv2_safeDefaults() {
+//   return {
+//     acs: {
+//       county: { medianIncome: 70000, households: 100000 },
+//       us: { medianIncome: 70000, households: 120000000 },
+//     },
+//     cbp: {
+//       county: { establishments: 1, name: "Unknown County" },
+//       us: { establishments: 1 },
+//       naics: "000000",
+//       ok: false,
+//     },
+//     rpp: null,
+//   };
+// }
+
+// /* =================== Questionnaire (uses canonical keys) =================== */
+// function _spv2_computeQuestionnaire(service, details = {}) {
+//   const ent = Object.entries(details).map(([k, v]) => [
+//     String(k).toLowerCase(),
+//     String(v).toLowerCase(),
+//   ]);
+//   const seen = (key, pred = null) =>
+//     ent.some(([k, a]) => k === key && (pred ? pred(a) : true));
+
+//   let severity = "minor";
+//   let mult = 1.0;
+//   let addOns = 0;
+//   const mul = (x) => { mult *= x; };
+//   const add = (x) => { addOns += x; };
+//   const bump = (lvl) => { severity = _spv2_bumpSeverity(severity, lvl); };
+
+//   switch (service) {
+//     /* ── Electrician ─────────────────────────── */
+//     case "Select Electrical Issues Below": {
+//       if (seen("issue.type", a => a.includes("outlet"))) add(75);
+//       if (seen("issue.type", a => a.includes("breaker"))) add(125);
+//       if (seen("scope", a => a.includes("single"))) add(50);
+//       if (seen("scope", a => a.includes("multiple"))) { add(200); bump("moderate"); }
+//       if (seen("access", a => a.includes("panel") || a.includes("attic"))) add(150);
+//       break;
+//     }
+
+//     /* ── Plumbing ────────────────────────────── */
+//     case "Burst or Leaking Pipes": {
+//       if (seen("access", a => /behind|ceiling|floor|unknown/.test(a))) bump("severe");
+//       if (seen("leak.duration", a => /6\+|unknown/.test(a))) bump("severe");
+//       if (seen("leak.active", a => a.includes("yes"))) add(SPV2_CFG.addOnFees.urgent);
+//       if (seen("interior.damage", a => /water-stained|sagging|minor stain/.test(a))) mul(1.12);
+//       if (ent.some(([,a]) => a.includes("unknown"))) mul(1.06);
+//       break;
+//     }
+
+//     /* ── Drain / Sewer ───────────────────────── */
+//     case "Sewer Backups or Clogged Drains": {
+//       if (seen("affected.area", a => /entire|unknown/.test(a))) bump("severe");
+//       if (seen("overflow.type", a => /sewage|toilet|sink/.test(a))) mul(1.15);
+//       if (seen("cleanout.access", a => /no|maybe|not sure/.test(a))) mul(1.10);
+//       if (seen("prior.attempt", a => /liquid|snaked/.test(a))) add(SPV2_CFG.addOnFees.chemicalAttempt);
+//       break;
+//     }
+
+//     /* ── Roofing ─────────────────────────────── */
+//     case "Roof Leaks or Storm Damage": {
+//       if (seen("roof.issue", a => /ceiling drip|skylight|multiple|unknown/.test(a))) bump("severe");
+//       if (seen("roof.material", a => /tile|metal|flat/.test(a))) mul(1.10);
+//       if (seen("roof.pitch", a => /steep|moderate/.test(a))) add(SPV2_CFG.addOnFees.roofSteep);
+//       if (seen("area.size", a => /multiple|whole/.test(a))) mul(1.15);
+//       if (seen("interior.damage", a => /sagging|furniture|stain/.test(a))) mul(1.10);
+//       break;
+//     }
+
+//     /* ── Auto: optional mild multipliers (matrix handles most) ── */
+//     case "Car Detailing (mobile)": {
+//       if (seen("package", a => a.includes("interior and exterior"))) mul(1.05);
+//       if (seen("vehicle.size", a => /suv|large/.test(a))) mul(1.05);
+//       break;
+//     }
+//     case "Mobile Mechanic": {
+//       if (seen("issue", a => a.includes("car does not start"))) bump("moderate");
+//       break;
+//     }
+//     case "Roadside Service":
+//     case "Tow Truck / Roadside Assistance": {
+//       if (seen("vehicle.location", a => a.includes("highway"))) mul(1.10);
+//       if (seen("vehicle.location", a => a.includes("remote"))) mul(1.15);
+//       break;
+//     }
+
+//     default: {
+//       if (ent.some(([,a]) => /unknown|not sure/.test(a))) mul(1.05);
+//     }
+//   }
+
+//   const sevFactor = SPV2_CFG.severityMult[severity] || 1.25;
+//   mult *= sevFactor;
+//   return { severity, multiplier: Number(mult.toFixed(3)), addOns };
+// }
+
+// /* =================== Final & rails =================== */
+// function _spv2_finalize(service, x) {
+//   const rails = SPV2_CFG.rails[service] || SPV2_CFG.rails.default;
+//   const clamped = _spv2_clamp(x, rails);
+//   return _spv2_roundTo(clamped, SPV2_CFG.roundTo);
+// }
+
+// /* =================== Geocode retry helper =================== */
+// async function tryGeocode(addrLine) {
+//   try {
+//     return await _spv2_geocodeToFips(addrLine);
+//   } catch (e1) {
+//     console.warn("⚠️ geocode attempt 1 failed:", e1?.message || e1);
+//     await new Promise((r) => setTimeout(r, 200));
+//     return await _spv2_geocodeToFips(addrLine);
+//   }
+// }
+
+// /* =================== Unified handler =================== */
+// export const estimateHandler = async (req, res) => {
+//   try {
+//     // 0) Parse body safely
+//     let {
+//       service,
+//       address,
+//       address2, // optional apt/suite
+//       city,
+//       zipcode,
+//       details,
+//       answers,
+//       questionnaire,
+//       form,
+//     } = req.body || {};
+
+//     // normalize details shape
+//     let rawDetails = details ?? answers ?? questionnaire ?? form ?? {};
+//     if (typeof rawDetails !== "object" || !rawDetails) rawDetails = {};
+
+//     // 1) Resolve service for anchors/rails
+//     const rawService = service;
+//     let resolvedService = resolveService(service) || rawService;
+
+//     console.log("🔍 Raw service:", rawService);
+//     console.log("🔍 Resolved service:", resolvedService);
+
+//     if (!resolvedService || !(resolvedService in SPV2_SERVICE_ANCHORS)) {
+//       return res.status(400).json({ ok: false, error: "Unknown or missing service" });
+//     }
+
+//     // 2) Use MATRIX-valid service name for normalizer + adjustments.
+//     const matrixService = MATRIX_SERVICE_ALIAS[resolvedService] || resolvedService;
+
+//     // 3) Normalize details (so they mirror MATRIX labels for lookups)
+//     const normalizedDetails = normalizeDetails(matrixService, rawDetails);
+//     console.log("🧩 details (raw):", JSON.stringify(rawDetails));
+//     console.log("🧩 details (norm):", JSON.stringify(normalizedDetails));
+
+//     // 4) Build address line
+//     const addrLine = [
+//       address || "",
+//       address2 ? ` ${address2}` : "",
+//       city ? `, ${city}` : "",
+//       zipcode ? ` ${zipcode}` : "",
+//     ]
+//       .join("")
+//       .replace(/\s+/g, " ")
+//       .trim();
+
+//     if (!addrLine) {
+//       return res.status(400).json({ ok: false, error: "Address required" });
+//     }
+
+//     // 5) Geocode → FIPS (degrade gracefully if it fails)
+//     let geo = {
+//       normalizedAddress: addrLine,
+//       stateFIPS: null,
+//       countyFIPS: null,
+//       lat: null,
+//       lon: null,
+//       degraded: true,
+//     };
+//     try {
+//       const g = await tryGeocode(addrLine);
+//       geo = { ...g, degraded: false };
+//       console.log("🧭 geo:", geo);
+//     } catch (e) {
+//       console.error("❌ geocode failed (continuing with defaults):", e.message);
+//     }
+
+//     // 6) Datasets (fallback if missing FIPS or fetch fails)
+//     let acs, cbp, rpp;
+//     try {
+//       if (!geo.stateFIPS || !geo.countyFIPS) throw new Error("No FIPS");
+//       [acs, cbp, rpp] = await Promise.all([
+//         _spv2_getACS(geo.stateFIPS, geo.countyFIPS),
+//         _spv2_getCBPPreferTargeted(geo.stateFIPS, geo.countyFIPS, resolvedService),
+//         _spv2_getRPP(geo.stateFIPS),
+//       ]);
+//     } catch (e) {
+//       console.warn("⚠️ dataset fallback:", e.message);
+//       ({ acs, cbp, rpp } = _spv2_safeDefaults());
+//     }
+//     if (!acs?.county?.medianIncome || !acs?.us?.medianIncome) {
+//       acs = _spv2_safeDefaults().acs;
+//     }
+//     if (!cbp?.county?.establishments || !cbp?.us?.establishments) {
+//       cbp = _spv2_safeDefaults().cbp;
+//     }
+
+//     // 7) Multipliers + questionnaire + matrix adjustments
+//     const locM = _spv2_locationMultiplier({
+//       rppMult: rpp?.multiplier,
+//       countyIncome: acs.county.medianIncome,
+//       usIncome: acs.us.medianIncome,
+//     });
+//     const compM = _spv2_competitionMultiplier({
+//       countyEstab: cbp.county.establishments,
+//       usEstab: cbp.us.establishments,
+//       countyHH: acs.county.households,
+//       usHH: acs.us.households,
+//     });
+
+//     // Questionnaire uses the resolved service (rails label)
+//     const q = _spv2_computeQuestionnaire(resolvedService, normalizedDetails);
+
+//     // MATRIX adjustments must use MATRIX-valid service name
+//     const matrixAdj = getAdjustments(matrixService, normalizedDetails) || 0;
+
+//     console.log("🧩 matrixAdj:", matrixAdj);
+//     console.log("📊 multipliers:", { locM, compM, q });
+
+//     // 8) Price
+//     const base = SPV2_SERVICE_ANCHORS[resolvedService];
+//     const raw = base * locM * compM * q.multiplier + q.addOns + matrixAdj;
+//     const priceUSD = _spv2_finalize(resolvedService, raw);
+
+//     // 9) Fees & totals
+//     const serviceFeeUSD = RUSH_FEE;
+//     const subtotal = priceUSD + serviceFeeUSD;
+//     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
+//     const estimatedTotal = subtotal + convenienceFee;
+
+//     return res.json({
+//       ok: true,
+//       service: resolvedService,
+//       priceUSD,
+//       serviceFeeUSD,
+//       convenienceFee,
+//       estimatedTotal,
+//       address: geo.normalizedAddress,
+//       lat: geo.lat,
+//       lon: geo.lon,
+//       degraded: geo.degraded === true,
+//       debug: {
+//         base,
+//         locM,
+//         compM,
+//         q,
+//         matrixAdj,
+//         serviceForMatrix: matrixService,
+//         details: normalizedDetails,
+//       },
+//     });
+//   } catch (err) {
+//     console.error("[SmartPriceV2] fatal:", err);
+//     return res.status(500).json({ ok: false, error: err.message || String(err) });
+//   }
+// };
+
+// router.post("/v2/estimate", estimateHandler);
+// router.post("/estimate", estimateHandler);
+
+// export default router;
+
+
 import express from "express";
 import { resolveService } from "../utils/serviceResolver.js";
 import {
@@ -5371,10 +5922,9 @@ const SPV2_CFG = {
 const FEE_RATE = 0.07; // 7% platform fee
 const RUSH_FEE = 100;  // always included
 
-/* ========= Matrix-service aliasing (for normalizer & adjustments) =========
-   IMPORTANT: These values MUST match your MATRIX/normalizer service keys.
---------------------------------------------------------------------------- */
+/* ========= MATRIX service aliasing for normalizer & adjustments ========= */
 const MATRIX_SERVICE_ALIAS = {
+  "Handyman (general fixes)": "Handyman", // <<< IMPORTANT FIX
   "Tow Truck / Roadside Assistance": "Roadside Service",
   "Car Mechanic (general)": "Mobile Mechanic",
   "Mobile Mechanic": "Mobile Mechanic",
@@ -5620,7 +6170,21 @@ function _spv2_computeQuestionnaire(service, details = {}) {
       break;
     }
 
-    /* ── Auto: optional mild multipliers (matrix handles most) ── */
+    /* ── Handyman ────────────────────────────── */
+    case "Handyman":
+    case "Handyman (general fixes)": {
+      // canonical keys expected from normalizer (e.g. "job.length", "job.type")
+      if (seen("job.length", a => a.includes("up to 3"))) add(50);
+      if (seen("job.length", a => a.includes("up to 5"))) { add(75); bump("moderate"); }
+      if (seen("job.length", a => a.includes("up to 8"))) { add(100); bump("moderate"); }
+
+      if (seen("job.type", a => a.includes("maintenance"))) { add(25); /* base effort */ }
+      if (seen("job.type", a => a.includes("installation"))) { add(50); mul(1.05); }
+      if (seen("job.type", a => a.includes("repair"))) { add(35); mul(1.05); }
+      break;
+    }
+
+    /* ── Auto (light nudges; dollars come from MATRIX) ── */
     case "Car Detailing (mobile)": {
       if (seen("package", a => a.includes("interior and exterior"))) mul(1.05);
       if (seen("vehicle.size", a => /suv|large/.test(a))) mul(1.05);
