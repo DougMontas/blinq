@@ -6185,21 +6185,53 @@ function _spv2_computeQuestionnaire(service, details = {}) {
     }
 
     /* ── Auto (light nudges; dollars come from MATRIX) ── */
-    case "Car Detailing (mobile)": {
-      if (seen("package", a => a.includes("interior and exterior"))) mul(1.05);
-      if (seen("vehicle.size", a => /suv|large/.test(a))) mul(1.05);
-      break;
-    }
-    case "Mobile Mechanic": {
-      if (seen("issue", a => a.includes("car does not start"))) bump("moderate");
-      break;
-    }
-    case "Roadside Service":
-    case "Tow Truck / Roadside Assistance": {
-      if (seen("vehicle.location", a => a.includes("highway"))) mul(1.10);
-      if (seen("vehicle.location", a => a.includes("remote"))) mul(1.15);
-      break;
-    }
+    // case "Car Detailing (mobile)": {
+    //   if (seen("package", a => a.includes("interior and exterior"))) mul(1.05);
+    //   if (seen("vehicle.size", a => /suv|large/.test(a))) mul(1.05);
+    //   break;
+    // }
+    // case "Mobile Mechanic": {
+    //   if (seen("issue", a => a.includes("car does not start"))) bump("moderate");
+    //   break;
+    // }
+    // case "Roadside Service":
+    // case "Tow Truck / Roadside Assistance": {
+    //   if (seen("vehicle.location", a => a.includes("highway"))) mul(1.10);
+    //   if (seen("vehicle.location", a => a.includes("remote"))) mul(1.15);
+    //   break;
+    // }
+
+    /* ── Auto (light nudges; dollars come from MATRIX) ── */
+case "Car Detailing (mobile)": {
+  const keyIs = (k, ...aliases) => aliases.includes(k);
+  const has = (keys, pred) =>
+    ent.some(([k, a]) => keys.includes(k) && (pred ? pred(a) : true));
+
+  // Accept "interior and exterior", "interior & exterior", "interior/exterior"
+  const BOTH_RE = /\binterior\s*(and|&|\/)\s*exterior\b/;
+
+  if (has(["package"], a => BOTH_RE.test(a))) {
+    // small premium for the full service; dollars still come from MATRIX
+    mul(1.06);
+  }
+
+  // read both normalized styles: "vehicle.size" and "vehicle size"
+  const SIZE_KEYS = ["vehicle.size", "vehicle size"];
+  if (has(SIZE_KEYS, a => /\b(suv|truck|van)\b/.test(a))) mul(1.05);
+  if (has(SIZE_KEYS, a => /\b(large|xl|full|third\s*row|7|8)\b/.test(a))) mul(1.03);
+  break;
+}
+case "Mobile Mechanic": {
+  if (seen("issue", a => a.includes("car does not start"))) bump("moderate");
+  break;
+}
+case "Roadside Service":
+case "Tow Truck / Roadside Assistance": {
+  if (seen("vehicle.location", a => a.includes("highway"))) mul(1.10);
+  if (seen("vehicle.location", a => a.includes("remote")))  mul(1.15);
+  break;
+}
+
 
     default: {
       if (ent.some(([,a]) => /unknown|not sure/.test(a))) mul(1.05);
