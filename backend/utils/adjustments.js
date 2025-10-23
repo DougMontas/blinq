@@ -410,7 +410,101 @@
 // export default { getAdjustments };
 
 
-// backend/utils/adjustments.js
+// // backend/utils/adjustments.js
+// import { MATRIX } from "../config/matrix.js";
+// import {
+//   normalizeQuestion,
+//   normalizeAnswer,
+//   normalizeDetails,
+// } from "./normalizer.js";
+// import { resolveService } from "./serviceResolver.js";
+
+// /* -------------------------- service aliases -------------------------- */
+// const SERVICE_ALIAS = {
+//   "Handyman (general fixes)": "Handyman",
+//   "Tow Truck / Roadside Assistance": "Roadside Service",
+//   "Car Mechanic (general)": "Mobile Mechanic",
+// };
+
+// /* ----------------------------- helpers ------------------------------ */
+// const slug = (s) =>
+//   String(s ?? "")
+//     .trim()
+//     .toLowerCase()
+//     .replace(/\s+/g, " ")
+//     .replace(/[^a-z0-9]+/g, "_")
+//     .replace(/^_+|_+$/g, "");
+
+// const key = (svc, q, o) => `${svc}::${q}::${o}`;
+
+// const unwrap = (v) => {
+//   if (Array.isArray(v)) return v.map(unwrap);
+//   if (v && typeof v === "object") return "value" in v ? unwrap(v.value) : "";
+//   return v == null ? "" : String(v);
+// };
+
+// const sanitizeDetails = (details = {}) => {
+//   const out = {};
+//   for (const [k, v] of Object.entries(details || {})) {
+//     const u = unwrap(v);
+//     out[k] = Array.isArray(u) ? u.map(String) : String(u);
+//   }
+//   return out;
+// };
+
+// /* -------------------------- build lookup --------------------------- */
+// const BUILD = (() => {
+//   const byKey = new Map();
+//   const bySlug = new Map();
+
+//   for (const row of MATRIX) {
+//     const svc = String(row.Service);
+//     const qCanon = normalizeQuestion(svc, row.Question);
+//     const oCanon = normalizeAnswer(svc, qCanon, row.Option);
+//     const adj = Number(row.Adjustment) || 0;
+
+//     byKey.set(key(svc, qCanon, oCanon), adj);
+//     bySlug.set(key(svc, slug(qCanon), slug(oCanon)), adj);
+//   }
+//   return { byKey, bySlug };
+// })();
+
+// /* -------------------------- main function -------------------------- */
+// export function getAdjustments(service, details = {}) {
+//   const svcInput = SERVICE_ALIAS[service] || service;
+//   const svc = resolveService(svcInput) || String(svcInput);
+
+//   const clean = sanitizeDetails(details);
+//   const canonDetails = normalizeDetails(svc, clean); // { [canonQ]: canonOpt, plus mirrors }
+
+//   let total = 0;
+
+//   for (const [qRaw, valRaw] of Object.entries(canonDetails)) {
+//     const q = String(qRaw ?? "").toLowerCase().trim();
+//     if (!q) continue;
+
+//     const vals = Array.isArray(valRaw) ? valRaw : [valRaw];
+//     for (const v0 of vals) {
+//       const v = String(v0 ?? "").toLowerCase().trim();
+//       if (!v || v === "other") continue;
+
+//       const k1 = key(svc, q, v);
+//       if (BUILD.byKey.has(k1)) { total += BUILD.byKey.get(k1); continue; }
+
+//       const k2 = key(svc, slug(q), slug(v));
+//       if (BUILD.bySlug.has(k2)) { total += BUILD.bySlug.get(k2); continue; }
+
+//       // optional debug
+//       // if (process.env.NODE_ENV !== "production") console.debug("[adjustments miss]", { svc, q, v });
+//     }
+//   }
+
+//   return total;
+// }
+
+// export default { getAdjustments };
+
+
 import { MATRIX } from "../config/matrix.js";
 import {
   normalizeQuestion,
@@ -420,11 +514,22 @@ import {
 import { resolveService } from "./serviceResolver.js";
 
 /* -------------------------- service aliases -------------------------- */
-const SERVICE_ALIAS = {
-  "Handyman (general fixes)": "Handyman",
-  "Tow Truck / Roadside Assistance": "Roadside Service",
-  "Car Mechanic (general)": "Mobile Mechanic",
-};
+/* Build from MATRIX to avoid omissions. Keeps your explicit cross-maps. */
+const SERVICE_ALIAS = (() => {
+  // 1) your explicit cross-service aliases:
+  const map = {
+    "Handyman (general fixes)": "Handyman",
+    "Tow Truck / Roadside Assistance": "Roadside Service",
+    "Car Mechanic (general)": "Mobile Mechanic",
+  };
+
+  // 2) identity-map every Service that appears in MATRIX
+  for (const row of MATRIX) {
+    const svc = row && row.Service;
+    if (svc && !(svc in map)) map[svc] = svc;
+  }
+  return map;
+})();
 
 /* ----------------------------- helpers ------------------------------ */
 const slug = (s) =>
@@ -471,9 +576,11 @@ const BUILD = (() => {
 
 /* -------------------------- main function -------------------------- */
 export function getAdjustments(service, details = {}) {
+  // resolve via alias → resolver → canonical service name
   const svcInput = SERVICE_ALIAS[service] || service;
   const svc = resolveService(svcInput) || String(svcInput);
 
+  // 1) sanitize then 2) normalize so keys/values match BUILD canon
   const clean = sanitizeDetails(details);
   const canonDetails = normalizeDetails(svc, clean); // { [canonQ]: canonOpt, plus mirrors }
 
@@ -489,10 +596,16 @@ export function getAdjustments(service, details = {}) {
       if (!v || v === "other") continue;
 
       const k1 = key(svc, q, v);
-      if (BUILD.byKey.has(k1)) { total += BUILD.byKey.get(k1); continue; }
+      if (BUILD.byKey.has(k1)) {
+        total += BUILD.byKey.get(k1);
+        continue;
+      }
 
       const k2 = key(svc, slug(q), slug(v));
-      if (BUILD.bySlug.has(k2)) { total += BUILD.bySlug.get(k2); continue; }
+      if (BUILD.bySlug.has(k2)) {
+        total += BUILD.bySlug.get(k2);
+        continue;
+      }
 
       // optional debug
       // if (process.env.NODE_ENV !== "production") console.debug("[adjustments miss]", { svc, q, v });
