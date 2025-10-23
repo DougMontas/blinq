@@ -6392,7 +6392,7 @@ export const estimateHandler = async (req, res) => {
       ok: true,
       service: resolvedService,
       priceUSD,
-      serviceFeeUSD,
+      // serviceFeeUSD,
       convenienceFee,
       estimatedTotal,
       address: geo.normalizedAddress,
