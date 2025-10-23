@@ -6385,7 +6385,7 @@ export const estimateHandler = async (req, res) => {
     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
     const estimatedTotal = subtotal + convenienceFee;
 
-    console.log("price >>>>>>>>>>>>>>>>>","base:", base, "raw:", raw, "priceUsd:", priceUSD, "convenienceFee:", convenienceFee,"estimatedTotal:",estimatedTotal )
+    console.log("price >>>>>>>>>>>>>>>>>","base:", base, "raw:", raw, "priceUsd:", priceUSD, "serviceFeeUSD:",serviceFeeUSD, "convenienceFee:", convenienceFee,"estimatedTotal:",estimatedTotal )
 
     return res.json({
       ok: true,
