@@ -5920,7 +5920,7 @@ const SPV2_CFG = {
 };
 
 const FEE_RATE = 0.07; // 7% platform fee
-const RUSH_FEE = 100;  // always included
+const RUSH_FEE = 0;  // always included
 
 /* ========= MATRIX service aliasing for normalizer & adjustments ========= */
 const MATRIX_SERVICE_ALIAS = {
