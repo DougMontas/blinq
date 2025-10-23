@@ -6382,7 +6382,8 @@ export const estimateHandler = async (req, res) => {
     // 9) Fees & totals
     const serviceFeeUSD = 0;
     // const serviceFeeUSD = RUSH_FEE;
-    const subtotal = priceUSD + serviceFeeUSD;
+    const subtotal = priceUSD
+    // const subtotal = priceUSD + serviceFeeUSD;
     const convenienceFee = Number((subtotal * FEE_RATE).toFixed(2));
     const estimatedTotal = subtotal + convenienceFee;
 
