@@ -862,7 +862,7 @@
 
 
 // backend/utils/adjustments.js
-import { MATRIX, serviceAlias } from "../config/matrix.js";
+import { MATRIX, serviceAlias } from "../utils/matrix.js";
 import { normalizeQuestion, normalizeAnswer, normalizeDetails } from "./normalizer.js";
 import { resolveService } from "./serviceResolver.js";
 
