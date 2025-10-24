@@ -1,7 +1,11 @@
 // backend/utils/matrix.js
-// Re-export everything from the backend copy of serviceMatrix.js
+// Barrel that re-exports everything from serviceMatrix.js and also exposes
+// a default that is safe even if serviceMatrix.js has no default export.
+
+// Re-export all named exports (e.g. MATRIX, questions, pricing, etc.)
 export * from "./serviceMatrix.js";
 
-// Keep default import compatibility
-import matrixModule from "./serviceMatrix.js";
-export default matrixModule;
+// Provide a safe default export: the namespace object.
+// This avoids runtime errors if serviceMatrix.js has no default export.
+import * as MatrixModule from "./serviceMatrix.js";
+export default MatrixModule;
