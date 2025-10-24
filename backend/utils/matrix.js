@@ -10,5 +10,5 @@
 export * from "./matrix.js";
 
 // Keep default import compatibility (some places do `import MATRIX from ...`)
-import { MATRIX } from "./matrix.js";
+import { MATRIX } from "./serviceMatrix.js";
 export default MATRIX;
