@@ -1,3 +1,3 @@
 // backend/utils/matrix.js
-export * from "../../frontend/utils/serviceMatrix.js";
-export * from "./serviceMatrix.js";
+export * from "../../App/frontend/utils/serviceMatrix.js";
+// export * from "./serviceMatrix.js";
