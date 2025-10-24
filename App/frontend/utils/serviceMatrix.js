@@ -8236,10 +8236,13 @@
   // export default matrixModule;
   
 
-  /* ========================================================================== */
-/* MATRIX                                                                     */
-/* ========================================================================== */
+  /* =============================================================================
+   serviceMatrix.js  (FRONTEND)
+   - Single source for MATRIX-driven questions/pricing + helpers
+   - Exposes named exports and a default namespace to avoid import shape breakage
+============================================================================= */
 
+/* ============================== MATRIX ==================================== */
 export const MATRIX = [
   /* ================== CORE TRADES ================== */
   // Plumbing
@@ -8369,10 +8372,7 @@ export const MATRIX = [
   { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 8 hours", Adjustment: 500 },
 ];
 
-/* ========================================================================== */
-/* HELPERS                                                                    */
-/* ========================================================================== */
-
+/* ============================= HELPERS ==================================== */
 const slug = (s) =>
   String(s || "")
     .trim()
@@ -8381,143 +8381,164 @@ const slug = (s) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-/* ========================================================================== */
-/* ARTIFACT BUILDER                                                           */
-/* ========================================================================== */
-
-export function buildArtifacts(matrix = MATRIX) {
-  const questions = {};
-  const pricing = {};
-
-  // UI → MATRIX service name aliases (keep small and explicit)
-  const serviceAlias = {
-    "Handyman (general fixes)": "Handyman",
-    "Tow Truck / Roadside Assistance": "Roadside Service",
-    "Car Mechanic (general)": "Mobile Mechanic",
-    "Consulting / Estimating": "General Contractor (Consulting/Estimating)",
-  };
-
-  // Identity-map any service present in MATRIX (avoids omissions)
-  for (const row of matrix) {
-    const svc = row?.Service;
-    if (svc && !(svc in serviceAlias)) serviceAlias[svc] = svc;
-  }
-
-  // Build service-level questions + pricing
-  for (const row of matrix) {
-    const { Service, Question, Option, Adjustment } = row;
-
-    questions[Service] ??= [];
-    pricing[Service] ??= {};
-
-    const qKey = slug(Question);
-    const oKey = slug(Option);
-
-    let qObj = questions[Service].find((q) => slug(q.question) === qKey);
-    if (!qObj) {
-      qObj = {
-        id: questions[Service].length + 1,
-        question: Question,
-        type: "multiple",
-        options: [],
-      };
-      questions[Service].push(qObj);
-    }
-
-    if (!qObj.options.find((o) => slug(o.value) === oKey)) {
-      qObj.options.push({ value: Option, label: String(Option) });
-    }
-
-    (pricing[Service][qKey] ??= {})[oKey] = Number(Adjustment) || 0;
-  }
-
-  // Category map (editable but consistent with your current usage)
-  const serviceToCategory = {
-    Plumbing: "Plumbing",
-    Roofing: "Roofing",
-    HVAC: "HVAC",
-    Electrician: "Electrician",
-    Handyman: "Handyman",
-    Locksmith: "Locksmith",
-    "Cleaner / Housekeeper": "Cleaning",
-    "Mobile Mechanic": "Auto",
-    "Pest Control / Exterminator": "Pest Control",
-    "Painter (interior/exterior)": "Painting",
-    "Landscaper / Lawn Care": "Landscaping",
-    "Car Detailing (mobile)": "Auto",
-    "Roadside Service": "Auto",
-    "General Contractor (Consulting/Estimating)": "Consulting/Estimating",
-  };
-
-  // Build category → services and add a category-level "service picker" question
-  const categoryServices = {};
-  for (const { Service } of matrix) {
-    const cat = serviceToCategory[Service] || "Odd Jobs";
-    (categoryServices[cat] ??= new Set()).add(Service);
-  }
-  for (const [cat, svcSet] of Object.entries(categoryServices)) {
-    questions[cat] = [
-      {
-        id: "__service_picker__",
-        question: `Which ${cat.replace(/_/g, " ").toLowerCase()} issue are you experiencing?`,
-        type: "multiple",
-        options: Array.from(svcSet).map((svc) => ({ value: svc, label: String(svc) })),
-      },
-    ];
-  }
-
-  // Base prices (category/service anchor used by FE previews)
-  const basePrice = {
-    Plumbing: 175,
-    Roofing: 250,
-    HVAC: 200,
-    Electrician: 250,
-    Handyman: 125,
-    Locksmith: 120,
-    "Cleaner / Housekeeper": 125,
-    "Roadside Service": 100,
-    "Mobile Mechanic": 125,
-    "Pest Control / Exterminator": 150,
-    "Painter (interior/exterior)": 200,
-    "Landscaper / Lawn Care": 50,
-    "General Contractor (Consulting/Estimating)": 0,
-    "Car Detailing (mobile)": 50,
-  };
-
-  return { questions, pricing, serviceAlias, serviceToCategory, basePrice };
-}
-
-/* ========================================================================== */
-/* PREBUILT ARTIFACTS + SAFE HELPERS                                          */
-/* ========================================================================== */
-
-export const ART = buildArtifacts(MATRIX);
-export const questions = ART.questions;
-export const pricing = ART.pricing;
-export const serviceAlias = ART.serviceAlias;
-export const SERVICE_TO_CATEGORY = ART.serviceToCategory;
-export const BASE_PRICE = ART.basePrice;
-
-export const getQuestionsSafe = (key) =>
-  (questions && questions[key]) ? questions[key] : [];
-
-export const getCategoryPicker = (category) => {
-  const arr = getQuestionsSafe(category);
-  return Array.isArray(arr)
-    ? arr.find((q) => q.id === "__service_picker__") || null
-    : null;
+/* ======================= COVERED DESCRIPTIONS ============================= */
+export const coveredDescriptions = {
+  "Plumbing":
+    "Covers leaks, burst pipes, clogs, and other emergency plumbing issues. Parts replacement and specialty work may incur additional charges.",
+  "Roofing":
+    "Covers patching leaks, replacing damaged shingles/tiles, and temporary weatherproofing. Full roof replacements not included.",
+  "HVAC":
+    "Covers repair of central AC or heating systems. Includes diagnostics and emergency fixes. Replacement units not included.",
+  "Electrician":
+    "Covers outlet, breaker, and wiring issues. Complex rewiring or panel upgrades may require additional estimates.",
+  "Handyman":
+    "Covers small household projects and repairs. Larger remodel or specialty work may require contractor services.",
+  "Locksmith":
+    "Covers standard home and auto lockouts. Specialty locks, smart locks, or rekeying may add extra costs.",
+  "Cleaner / Housekeeper":
+    "Covers basic, deep, or move-in/out home cleaning. Supplies and equipment included. Specialty cleaning may cost extra.",
+  "Mobile Mechanic":
+    "Covers on-site diagnostics and light repairs. Major repairs may require a shop.",
+  "Pest Control / Exterminator":
+    "Covers inspection and treatment for ants, roaches, rodents, termites, and bedbugs.",
+  "Painter (interior/exterior)":
+    "Covers surface prep and painting of walls/ceilings or exterior siding.",
+  "Landscaper / Lawn Care":
+    "Covers mowing, trimming, yard cleanup, and small tree/hedge work.",
+  "Car Detailing (mobile)":
+    "Covers mobile detailing packages and add-ons.",
+  "Roadside Service":
+    "Covers basic roadside assistance such as battery jumps, tire changes, or short tows.",
+  "General Contractor (Consulting/Estimating)":
+    "Covers onsite consulting/estimating time blocks only.",
 };
 
-/* Optional default so `import matrix from ...` continues to work where used */
-const matrixModule = {
+export const getCoveredDescription = (serviceKey) =>
+  coveredDescriptions[serviceKey] || "";
+
+/* ======================= SERVICE → CATEGORY =============================== */
+export const SERVICE_TO_CATEGORY = {
+  "Plumbing": "Plumbing",
+  "Roofing": "Roofing",
+  "HVAC": "HVAC",
+  "Electrician": "Electrician",
+  "Handyman": "Handyman",
+  "Locksmith": "Locksmith",
+  "Cleaner / Housekeeper": "Cleaning",
+  "Mobile Mechanic": "Auto",
+  "Pest Control / Exterminator": "Pest Control",
+  "Painter (interior/exterior)": "Painting",
+  "Landscaper / Lawn Care": "Landscaping",
+  "Car Detailing (mobile)": "Auto",
+  "Roadside Service": "Auto",
+  "General Contractor (Consulting/Estimating)": "Consulting/Estimating",
+};
+
+/* ============================ BASE PRICES ================================= */
+export const BASE_PRICE = {
+  "Plumbing": 175,
+  "Roofing": 250,
+  "HVAC": 200,
+  "Electrician": 250,
+  "Handyman": 125,
+  "Locksmith": 120,
+  "Cleaner / Housekeeper": 125,
+  "Roadside Service": 100,
+  "Mobile Mechanic": 125,
+  "Pest Control / Exterminator": 150,
+  "Painter (interior/exterior)": 200,
+  "Landscaper / Lawn Care": 50,
+  "General Contractor (Consulting/Estimating)": 0,
+  "Car Detailing (mobile)": 50,
+};
+
+export const getBasePrice = (serviceOrCategory) => {
+  if (BASE_PRICE[serviceOrCategory] != null) return BASE_PRICE[serviceOrCategory];
+  const cat = SERVICE_TO_CATEGORY[serviceOrCategory];
+  return cat && BASE_PRICE[cat] ? BASE_PRICE[cat] : 0;
+};
+
+/* =================== BUILD QUESTIONS & PRICING TABLES ===================== */
+export const questions = {};
+export const pricing = {};
+
+// category → services (for category pickers)
+const categoryServices = {};
+for (const { Service } of MATRIX) {
+  const cat = SERVICE_TO_CATEGORY[Service] || "Other";
+  (categoryServices[cat] ??= new Set()).add(Service);
+}
+
+// category-level chooser entry
+for (const [cat, svcs] of Object.entries(categoryServices)) {
+  questions[cat] = [
+    {
+      id: "__service_picker__",
+      question: `Which ${cat.replace(/_/g, " ").toLowerCase()} issue are you experiencing?`,
+      type: "multiple",
+      options: Array.from(svcs).map((svc) => ({ value: svc, label: String(svc) })),
+    },
+  ];
+}
+
+// service-level questions & pricing (slugged keys)
+for (const row of MATRIX) {
+  const { Service, Question, Option, Adjustment } = row;
+  questions[Service] ??= [];
+  pricing[Service] ??= {};
+
+  const qKey = slug(Question);
+  const oKey = slug(Option);
+
+  let q = questions[Service].find((qq) => slug(qq.question) === qKey);
+  if (!q) {
+    q = { id: questions[Service].length + 1, question: Question, type: "multiple", options: [] };
+    questions[Service].push(q);
+  }
+  if (!q.options.find((o) => slug(o.value) === oKey)) {
+    q.options.push({ value: Option, label: String(Option) });
+  }
+  (pricing[Service][qKey] ??= {})[oKey] = Number(Adjustment) || 0;
+}
+
+/* ============================ CLIENT HELPERS ============================== */
+export const getQuestions = (serviceOrCategory) => {
+  if (questions[serviceOrCategory]) return questions[serviceOrCategory];
+  const mapped = SERVICE_TO_CATEGORY[serviceOrCategory];
+  if (mapped && questions[mapped]) return questions[mapped];
+  const servicesInCat = Object.keys(SERVICE_TO_CATEGORY).filter(
+    (svc) => SERVICE_TO_CATEGORY[svc] === serviceOrCategory
+  );
+  if (servicesInCat.length) return servicesInCat.flatMap((svc) => questions[svc] || []);
+  return [];
+};
+
+export const getAdjustment = (service, question, option) => {
+  const qKey = slug(question);
+  const oKey = slug(option);
+  const v = pricing?.[service]?.[qKey]?.[oKey];
+  return v == null ? 0 : v;
+};
+
+// Convenience for components (null-safe)
+export const getQuestionsSafe = (key) => Array.isArray(questions[key]) ? questions[key] : [];
+export const getCategoryPicker = (category) =>
+  getQuestionsSafe(category).find((q) => q.id === "__service_picker__") || null;
+
+/* ============================== DEFAULT =================================== */
+// Provide a safe default export (namespace object)
+const ServiceMatrixNS = {
   MATRIX,
   questions,
   pricing,
-  serviceAlias,
-  SERVICE_TO_CATEGORY,
+  coveredDescriptions,
+  getCoveredDescription,
   BASE_PRICE,
-  buildArtifacts,
+  getBasePrice,
+  SERVICE_TO_CATEGORY,
+  getQuestions,
   getQuestionsSafe,
   getCategoryPicker,
+  getAdjustment,
 };
-export default matrixModule;
+export default ServiceMatrixNS;
