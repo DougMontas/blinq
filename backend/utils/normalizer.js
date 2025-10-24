@@ -3017,6 +3017,7 @@ const SERVICE_TO_QGROUP = {
 
   "general contractor (consulting/estimating)":
     "general contractor (consulting/estimating)",
+    "consulting / estimating": "general contractor (consulting/estimating)",
 };
 
 /* ────────────────────────────────────────────────────────────────────────────
