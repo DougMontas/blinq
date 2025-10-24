@@ -1,5 +1,7 @@
-export * from "./serviceMatrix.js";   // ✅ re-export named exports, including MATRIX
+// backend/utils/matrix.js
+// Re-export everything from the backend copy of serviceMatrix.js
+export * from "./serviceMatrix.js";
 
-// Keep default import compatibility (some places do `import MATRIX from ...`)
-import { MATRIX } from "./serviceMatrix.js";
-export default MATRIX;
+// Keep default import compatibility
+import matrixModule from "./serviceMatrix.js";
+export default matrixModule;
