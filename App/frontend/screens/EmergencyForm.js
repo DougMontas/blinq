@@ -6230,6 +6230,7 @@
 
 //testing new
 
+
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View,
@@ -6364,10 +6365,15 @@ export default function EmergencyForm() {
     return out;
   }, [answers, otherAnswers, serviceQuestions]);
 
-  const serviceFeeUSD = Math.max(100, beta?.serviceFeeUSD ?? 0);
+  //Rush fee section
+  const serviceFeeUSD = 0;
+  //adjustment to fee
+  // const serviceFeeUSD = Math.max(100, beta?.serviceFeeUSD ?? 0);
   const smartPriceUSD = beta?.priceUSD ?? 0;
+  const feeBaseUSD = smartPriceUSD; 
+  const convFee = Number((feeBaseUSD * FEE_RATE).toFixed(2));
   const subtotal = smartPriceUSD + serviceFeeUSD;
-  const convFee = Number((subtotal * FEE_RATE).toFixed(2));
+  // const convFee = Number((subtotal * FEE_RATE).toFixed(2));
   const grandTotal = Number((subtotal + convFee).toFixed(2));
 
   const handleServiceSelect = (svc) => {
@@ -6497,7 +6503,7 @@ export default function EmergencyForm() {
 
         baseAmount: smartPriceUSD,
         adjustmentAmount: 0,
-        rushFee: serviceFeeUSD,
+        rushFee: 0,
         convenienceFee: convFee,
         estimatedTotal: grandTotal,
 
@@ -6792,26 +6798,27 @@ export default function EmergencyForm() {
                   </Text>
                 </View>
 
-                <View style={styles.priceRow}>
+                {/* <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>
                     Emergency/On-Demand Fee
                   </Text>
                   <Text style={styles.priceValue}>
                     {`$${Math.max(100, beta?.serviceFeeUSD ?? 0).toFixed(2)}`}
                   </Text>
-                </View>
+                </View> */}
 
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>
                     BlinqFix Fee ({(FEE_RATE * 100).toFixed(0)}%)
                   </Text>
                   <Text style={styles.priceValue}>
-                    $
-                    {(
+                    
+                    {/* {(
                       ((beta?.priceUSD ?? 0) +
                         Math.max(100, beta?.serviceFeeUSD ?? 0)) *
                       FEE_RATE
-                    ).toFixed(2)}
+                    ).toFixed(2)} */}
+                    ${convFee.toFixed(2)}
                   </Text>
                 </View>
 
