@@ -852,8 +852,110 @@
 
 // export default { getAdjustments };
 
+// // backend/utils/adjustments.js
+// import { MATRIX } from "./matrix.js";
+// import {
+//   normalizeQuestion,
+//   normalizeAnswer,
+//   normalizeDetails,
+// } from "./normalizer.js";
+// import { resolveService } from "./serviceResolver.js";
+
+// /* build strict + slug lookups from MATRIX once */
+// const slug = (s) =>
+//   String(s || "")
+//     .trim()
+//     .toLowerCase()
+//     .replace(/\s+/g, " ")
+//     .replace(/[^a-z0-9]+/g, "_")
+//     .replace(/^_+|_+$/g, "");
+
+// const KEY = (svc, q, o) => `${svc}::${q}::${o}`;
+// const BUILD = (() => {
+//   const byKey = new Map();
+//   const bySlug = new Map();
+//   for (const row of MATRIX) {
+//     const svc = row.Service;
+//     const qCanon = normalizeQuestion(svc, row.Question);
+//     const oCanon = normalizeAnswer(svc, qCanon, row.Option);
+//     const adj = Number(row.Adjustment) || 0;
+//     byKey.set(KEY(svc, qCanon, oCanon), adj);
+//     bySlug.set(KEY(svc, slug(qCanon), slug(oCanon)), adj);
+//   }
+//   return { byKey, bySlug };
+// })();
+
+// const unwrap = (v) =>
+//   Array.isArray(v)
+//     ? v.map(unwrap)
+//     : v && typeof v === "object"
+//     ? "value" in v
+//       ? unwrap(v.value)
+//       : ""
+//     : v == null
+//     ? ""
+//     : String(v);
+
+// const sanitize = (obj = {}) => {
+//   const out = {};
+//   for (const [k, v] of Object.entries(obj)) {
+//     const u = unwrap(v);
+//     out[k] = Array.isArray(u) ? u.map(String) : String(u);
+//   }
+//   return out;
+// };
+
+// export function getAdjustments(service, details = {}) {
+//   // 1) resolve → then force to a MATRIX service via alias
+//   const ri =
+//     serviceAlias[service] ||
+//     serviceAlias[String(service || "").toLowerCase()] ||
+//     service;
+//   const resolved = resolveService(ri) || String(ri);
+//   const svc =
+//     serviceAlias[resolved] ||
+//     serviceAlias[String(resolved).toLowerCase()] ||
+//     resolved;
+
+//   // 2) normalize details with that service context
+//   const canon = normalizeDetails(svc, sanitize(details));
+
+//   // 3) sum adjustments
+//   let total = 0;
+//   for (const [qRaw, vRaw] of Object.entries(canon)) {
+//     const qCanon = normalizeQuestion(svc, qRaw);
+//     if (!qCanon) continue;
+
+//     const vals = Array.isArray(vRaw) ? vRaw : [vRaw];
+//     for (const v0 of vals) {
+//       const oCanon = normalizeAnswer(svc, qCanon, v0);
+//       const opt = String(oCanon || "")
+//         .toLowerCase()
+//         .trim();
+//       if (!opt || opt === "other") continue;
+
+//       const k1 = KEY(svc, qCanon, opt);
+//       if (BUILD.byKey.has(k1)) {
+//         total += BUILD.byKey.get(k1);
+//         continue;
+//       }
+
+//       const k2 = KEY(svc, slug(qCanon), slug(opt));
+//       if (BUILD.bySlug.has(k2)) {
+//         total += BUILD.bySlug.get(k2);
+//         continue;
+//       }
+//     }
+//   }
+//   return total;
+// }
+
+// export default { getAdjustments };
+
+
 // backend/utils/adjustments.js
-import { MATRIX } from "./matrix.js";
+
+import { MATRIX, serviceAlias as EXPORTED_SERVICE_ALIAS } from "../utils/matrix.js";
 import {
   normalizeQuestion,
   normalizeAnswer,
@@ -861,92 +963,152 @@ import {
 } from "./normalizer.js";
 import { resolveService } from "./serviceResolver.js";
 
-/* build strict + slug lookups from MATRIX once */
+/* -------------------------- service aliases -------------------------- */
+/**
+ * Build from MATRIX to avoid omissions and merge with any alias map that
+ * serviceMatrix exports. Also keep explicit cross-maps here.
+ */
+const SERVICE_ALIAS = (() => {
+  const map = Object.create(null);
+
+  // 1) Merge any alias map exported by serviceMatrix (if present)
+  if (EXPORTED_SERVICE_ALIAS && typeof EXPORTED_SERVICE_ALIAS === "object") {
+    for (const [k, v] of Object.entries(EXPORTED_SERVICE_ALIAS)) {
+      map[k] = v;
+      // convenience: case-insensitive
+      if (typeof k === "string") map[k.toLowerCase()] = v;
+    }
+  }
+
+  // 2) Explicit cross-service renames we rely on
+  const explicit = {
+    "Handyman (general fixes)": "Handyman",
+    "Tow Truck / Roadside Assistance": "Roadside Service",
+    "Car Mechanic (general)": "Mobile Mechanic",
+    "Consulting / Estimating": "General Contractor (Consulting/Estimating)",
+  };
+  for (const [k, v] of Object.entries(explicit)) {
+    map[k] = v;
+    map[k.toLowerCase()] = v;
+  }
+
+  // 3) Identity-map every service that appears in MATRIX (with lowercase)
+  for (const row of MATRIX) {
+    const svc = row && row.Service;
+    if (!svc) continue;
+    if (!(svc in map)) map[svc] = svc;
+    const low = svc.toLowerCase();
+    if (!(low in map)) map[low] = svc;
+  }
+
+  return map;
+})();
+
+/* ----------------------------- helpers ------------------------------ */
 const slug = (s) =>
-  String(s || "")
+  String(s ?? "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-const KEY = (svc, q, o) => `${svc}::${q}::${o}`;
-const BUILD = (() => {
-  const byKey = new Map();
-  const bySlug = new Map();
-  for (const row of MATRIX) {
-    const svc = row.Service;
-    const qCanon = normalizeQuestion(svc, row.Question);
-    const oCanon = normalizeAnswer(svc, qCanon, row.Option);
-    const adj = Number(row.Adjustment) || 0;
-    byKey.set(KEY(svc, qCanon, oCanon), adj);
-    bySlug.set(KEY(svc, slug(qCanon), slug(oCanon)), adj);
-  }
-  return { byKey, bySlug };
-})();
+const key = (svc, q, o) => `${svc}::${q}::${o}`;
 
-const unwrap = (v) =>
-  Array.isArray(v)
-    ? v.map(unwrap)
-    : v && typeof v === "object"
-    ? "value" in v
-      ? unwrap(v.value)
-      : ""
-    : v == null
-    ? ""
-    : String(v);
+const unwrap = (v) => {
+  if (Array.isArray(v)) return v.map(unwrap);
+  if (v && typeof v === "object") return "value" in v ? unwrap(v.value) : "";
+  return v == null ? "" : String(v);
+};
 
-const sanitize = (obj = {}) => {
+const sanitizeDetails = (details = {}) => {
   const out = {};
-  for (const [k, v] of Object.entries(obj)) {
+  for (const [k, v] of Object.entries(details || {})) {
     const u = unwrap(v);
     out[k] = Array.isArray(u) ? u.map(String) : String(u);
   }
   return out;
 };
 
+/* -------------------------- build lookup --------------------------- */
+/** Store two lookup styles:
+ *  - byKey uses canonical (normalized) question/answer keys
+ *  - bySlug is a looser fallback using slugged canonical keys
+ */
+const BUILD = (() => {
+  const byKey = new Map();
+  const bySlug = new Map();
+
+  for (const row of MATRIX) {
+    const svc = String(row.Service);
+    const qCanon = normalizeQuestion(svc, row.Question);
+    const oCanon = normalizeAnswer(svc, qCanon, row.Option);
+    const adj = Number(row.Adjustment) || 0;
+
+    byKey.set(key(svc, qCanon, oCanon), adj);
+    bySlug.set(key(svc, slug(qCanon), slug(oCanon)), adj);
+  }
+  return { byKey, bySlug };
+})();
+
+/* -------------------------- main function -------------------------- */
 export function getAdjustments(service, details = {}) {
-  // 1) resolve → then force to a MATRIX service via alias
-  const ri =
-    serviceAlias[service] ||
-    serviceAlias[String(service || "").toLowerCase()] ||
+  // 1) map incoming service to a MATRIX service (tolerant of casing)
+  const svcAlias =
+    SERVICE_ALIAS[service] ||
+    SERVICE_ALIAS[String(service || "").toLowerCase()] ||
     service;
-  const resolved = resolveService(ri) || String(ri);
+
+  // 2) let the app’s resolver do its thing…
+  const resolved = resolveService(svcAlias) || String(svcAlias);
+
+  // 3) …then FORCE it back to a MATRIX service name for lookups
   const svc =
-    serviceAlias[resolved] ||
-    serviceAlias[String(resolved).toLowerCase()] ||
+    SERVICE_ALIAS[resolved] ||
+    SERVICE_ALIAS[String(resolved).toLowerCase()] ||
     resolved;
 
-  // 2) normalize details with that service context
-  const canon = normalizeDetails(svc, sanitize(details));
+  // 4) sanitize + normalize (adds canonical + mirrored MATRIX keys)
+  const clean = sanitizeDetails(details);
+  const canonDetails = normalizeDetails(svc, clean);
 
-  // 3) sum adjustments
   let total = 0;
-  for (const [qRaw, vRaw] of Object.entries(canon)) {
+
+  for (const [qRaw, valRaw] of Object.entries(canonDetails)) {
+    // canonicalize the question
     const qCanon = normalizeQuestion(svc, qRaw);
     if (!qCanon) continue;
 
-    const vals = Array.isArray(vRaw) ? vRaw : [vRaw];
-    for (const v0 of vals) {
-      const oCanon = normalizeAnswer(svc, qCanon, v0);
-      const opt = String(oCanon || "")
-        .toLowerCase()
-        .trim();
-      if (!opt || opt === "other") continue;
+    // support arrays and scalars
+    const vals = Array.isArray(valRaw) ? valRaw : [valRaw];
 
-      const k1 = KEY(svc, qCanon, opt);
+    for (const v0 of vals) {
+      // canonicalize the option
+      const vCanon = normalizeAnswer(svc, qCanon, v0);
+      const v = String(vCanon ?? "").toLowerCase().trim();
+      if (!v || v === "other") continue;
+
+      // 1) strict canonical match
+      const k1 = key(svc, qCanon, v);
       if (BUILD.byKey.has(k1)) {
         total += BUILD.byKey.get(k1);
         continue;
       }
 
-      const k2 = KEY(svc, slug(qCanon), slug(opt));
+      // 2) slug fallback (helps with minor punctuation/spacing drift)
+      const k2 = key(svc, slug(qCanon), slug(v));
       if (BUILD.bySlug.has(k2)) {
         total += BUILD.bySlug.get(k2);
         continue;
       }
+
+      // Optional trace for debugging misses:
+      // if (process.env.NODE_ENV !== "production") {
+      //   console.debug("[adjustments miss]", { svc, qRaw, qCanon, v0, v });
+      // }
     }
   }
+
   return total;
 }
 
