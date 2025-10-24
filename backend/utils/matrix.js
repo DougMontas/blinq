@@ -7,9 +7,8 @@
 // import { MATRIX } from "../../frontend/utils/serviceMatrix.js";
 // export default MATRIX;
 
-
-export * from "./serviceMatrix.js";
+export * from "./matrix.js";
 
 // Keep default import compatibility (some places do `import MATRIX from ...`)
-import { MATRIX } from "./serviceMatrix.js";
+import { MATRIX } from "./matrix.js";
 export default MATRIX;
