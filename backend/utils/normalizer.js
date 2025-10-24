@@ -3089,7 +3089,9 @@ export const QUESTION_ALIASES = {
     [/^severity/i, "severity"],
   ],
 
-  "general contractor (consulting/estimating)": [[/^scope$/i, "scope"]],
+  "general contractor (consulting/estimating)": [
+    [/^scope$/i, "scope"]
+  ],
 
   "locksmith": [
     [/^lockout$/i, "lockout"],

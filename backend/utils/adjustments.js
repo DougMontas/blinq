@@ -633,6 +633,7 @@ const SERVICE_ALIAS = (() => {
     "Handyman (general fixes)": "Handyman",
     "Tow Truck / Roadside Assistance": "Roadside Service",
     "Car Mechanic (general)": "Mobile Mechanic",
+    "Consulting / Estimating": "General Contractor (Consulting/Estimating)",
   };
   for (const row of MATRIX) {
     const svc = row && row.Service;
