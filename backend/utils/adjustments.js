@@ -40,7 +40,6 @@
 //   return total;
 // }
 
-
 // backend/utils/adjustments.js current working
 // import { MATRIX } from "../config/matrix.js"; // <-- ensure this path points to your backend copy
 // import { normalizeQuestion, normalizeAnswer, normalizeDetails } from "./normalizer.js";
@@ -81,7 +80,6 @@
 //   }
 //   return total;
 // }
-
 
 //new testing
 
@@ -173,7 +171,6 @@
 
 //   return total;
 // }
-
 
 // backend/utils/adjustments.js
 
@@ -309,7 +306,6 @@
 
 // export default { getAdjustments };
 
-
 // // backend/utils/adjustments.js
 // import { MATRIX } from "../config/matrix.js";
 // import {
@@ -409,7 +405,6 @@
 
 // export default { getAdjustments };
 
-
 // // backend/utils/adjustments.js
 // import { MATRIX } from "../config/matrix.js";
 // import {
@@ -503,7 +498,6 @@
 // }
 
 // export default { getAdjustments };
-
 
 // import { MATRIX } from "../config/matrix.js";
 // import {
@@ -616,7 +610,6 @@
 // }
 
 // export default { getAdjustments };
-
 
 // import { MATRIX } from "../config/matrix.js";
 // import {
@@ -741,7 +734,6 @@
 
 // export default { getAdjustments };
 
-
 // import { MATRIX } from "../config/matrix.js";
 // import {
 //   normalizeQuestion,
@@ -860,10 +852,13 @@
 
 // export default { getAdjustments };
 
-
 // backend/utils/adjustments.js
-import { MATRIX, serviceAlias } from "../utils/matrix.js";
-import { normalizeQuestion, normalizeAnswer, normalizeDetails } from "./normalizer.js";
+import { MATRIX, serviceAlias } from "./matrix.js";
+import {
+  normalizeQuestion,
+  normalizeAnswer,
+  normalizeDetails,
+} from "./normalizer.js";
 import { resolveService } from "./serviceResolver.js";
 
 /* build strict + slug lookups from MATRIX once */
@@ -890,9 +885,16 @@ const BUILD = (() => {
   return { byKey, bySlug };
 })();
 
-const unwrap = (v) => (Array.isArray(v) ? v.map(unwrap)
-  : v && typeof v === "object" ? ("value" in v ? unwrap(v.value) : "")
-  : v == null ? "" : String(v));
+const unwrap = (v) =>
+  Array.isArray(v)
+    ? v.map(unwrap)
+    : v && typeof v === "object"
+    ? "value" in v
+      ? unwrap(v.value)
+      : ""
+    : v == null
+    ? ""
+    : String(v);
 
 const sanitize = (obj = {}) => {
   const out = {};
@@ -905,9 +907,15 @@ const sanitize = (obj = {}) => {
 
 export function getAdjustments(service, details = {}) {
   // 1) resolve → then force to a MATRIX service via alias
-  const ri = serviceAlias[service] || serviceAlias[String(service || "").toLowerCase()] || service;
+  const ri =
+    serviceAlias[service] ||
+    serviceAlias[String(service || "").toLowerCase()] ||
+    service;
   const resolved = resolveService(ri) || String(ri);
-  const svc = serviceAlias[resolved] || serviceAlias[String(resolved).toLowerCase()] || resolved;
+  const svc =
+    serviceAlias[resolved] ||
+    serviceAlias[String(resolved).toLowerCase()] ||
+    resolved;
 
   // 2) normalize details with that service context
   const canon = normalizeDetails(svc, sanitize(details));
@@ -921,14 +929,22 @@ export function getAdjustments(service, details = {}) {
     const vals = Array.isArray(vRaw) ? vRaw : [vRaw];
     for (const v0 of vals) {
       const oCanon = normalizeAnswer(svc, qCanon, v0);
-      const opt = String(oCanon || "").toLowerCase().trim();
+      const opt = String(oCanon || "")
+        .toLowerCase()
+        .trim();
       if (!opt || opt === "other") continue;
 
       const k1 = KEY(svc, qCanon, opt);
-      if (BUILD.byKey.has(k1)) { total += BUILD.byKey.get(k1); continue; }
+      if (BUILD.byKey.has(k1)) {
+        total += BUILD.byKey.get(k1);
+        continue;
+      }
 
       const k2 = KEY(svc, slug(qCanon), slug(opt));
-      if (BUILD.bySlug.has(k2)) { total += BUILD.bySlug.get(k2); continue; }
+      if (BUILD.bySlug.has(k2)) {
+        total += BUILD.bySlug.get(k2);
+        continue;
+      }
     }
   }
   return total;
