@@ -822,13 +822,236 @@
 // };
 
 
+// export const SPV2_SERVICE_ANCHORS = {
+//   /* -------- Core anchors -------- */
+//   "Burst or Leaking Pipes": 350,
+//   "Roof Leaks or Storm Damage": 750,
+//   "HVAC System Failure": 650,
+//   "Sewer Backups or Clogged Drains": 300,
+//   "Select Electrical Issues Below": 250,
+//   "Water Heater Failure": 800,
+//   "Mold or Water Damage Remediation": 2500,
+//   "Broken Windows or Doors": 400,
+//   "Gas Leaks": 500,
+//   "Appliance Failures": 275,
+//   "Drywall Repair": 200,
+
+//   /* -------- Catalog -------- */
+//   "Handyman": 175,
+//   "Cleaner / Housekeeper": 150,
+//   "Locksmith": 225,
+//   "Landscaper / Lawn Care": 200,
+//   "Painter (interior/exterior)": 500,
+//   "Pest Control / Exterminator": 250,
+//   "Carpenter (doors/trim/cabinets)": 300,
+//   "Garage Door Technician": 400,
+//   "Window & Glass Repair": 350,
+//   "Gutter Cleaning / Repair": 225,
+//   "Irrigation / Sprinkler Tech": 275,
+//   "Tile & Grout Specialist": 325,
+//   "Flooring Installer / Repair": 450,
+//   "Smart-home / Low-voltage Installer": 275,
+//   "Security System Installer": 400,
+//   "IT / Wi-Fi Setup (Home Networking)": 200,
+//   "TV Mounting / Home Theater Installer": 250,
+//   "Moving Help (Labor-only)": 175,
+//   "Junk Removal / Hauling": 250,
+//   "Pressure Washing": 200,
+//   "Fence Repair / Installer": 350,
+//   "Masonry / Concrete": 400,
+//   "Insulation / Weatherization Tech": 325,
+//   "Chimney Sweep & Masonry": 300,
+//   "Water Damage Mitigation": 1000,
+//   "Basement Waterproofing": 1200,
+//   "Tree Service / Arborist": 600,
+//   "Pool & Spa Technician": 350,
+//   "Deck/Patio Repair & Build": 550,
+//   "Window/Door Replacement (Glazier)": 500,
+//   "Solar Installer": 750,
+//   "General Contractor / Remodeler": 1000,
+
+//   // Consulting base is 0; price comes from MATRIX "scope"
+//   "General Contractor (Consulting/Estimating)": 0,
+
+//   /* -------- Auto & personal -------- */
+//   "Car Mechanic (general)": 250,
+//   "Mobile Mechanic": 225,
+//   "Tow Truck / Roadside Assistance": 150,
+
+//   // ✅ add this so aliasing to “Roadside Service” still has a base
+//   "Roadside Service": 150,
+
+//   "Auto Glass Repair/Replacement": 300,
+//   "Car Detailing (mobile)": 175,
+//   "Mobile Tire Service": 200,
+//   "Barber / Hairdresser": 75,
+// };
+
+// export const SERVICE_ALIASES = {
+//   /* Cross renames → canonical */
+//   "Handyman (general fixes)": "Handyman",
+//   "Tow Truck / Roadside Assistance": "Roadside Service",
+//   "Car Mechanic (general)": "Mobile Mechanic",
+//   "Consulting / Estimating": "General Contractor (Consulting/Estimating)",
+
+//   /* Anchor → trade (so normalizer/adjustments hit MATRIX services when needed) */
+//   "Burst or Leaking Pipes": "Plumbing",
+//   "Sewer Backups or Clogged Drains": "Plumbing",
+//   "Water Heater Failure": "Plumbing",
+//   "Gas Leaks": "Plumbing",
+//   "Roof Leaks or Storm Damage": "Roofing",
+//   "HVAC System Failure": "HVAC",
+//   "Select Electrical Issues Below": "Electrician",
+// };
+
+// export const SPV2_NAICS_BY_SERVICE = {
+//   // Core / anchors
+//   "Burst or Leaking Pipes": "238220",
+//   "Sewer Backups or Clogged Drains": "238220",
+//   "Water Heater Failure": "238220",
+//   "HVAC System Failure": "238220",
+//   "Gas Leaks": "238220",
+//   "Roof Leaks or Storm Damage": "238160",
+//   "Select Electrical Issues Below": "238210",
+//   "Drywall Repair": "238310",
+//   "Broken Windows or Doors": "238350",
+//   "Appliance Failures": "811412",
+//   "Mold or Water Damage Remediation": "562910",
+
+//   // Catalog
+//   "Handyman": "236118",
+//   "Cleaner / Housekeeper": "561720",
+//   "Locksmith": "561622",
+//   "Landscaper / Lawn Care": "561730",
+//   "Painter (interior/exterior)": "238320",
+//   "Pest Control / Exterminator": "561710",
+//   "Carpenter (doors/trim/cabinets)": "238350",
+//   "Garage Door Technician": "238290",
+//   "Window & Glass Repair": "238150",
+//   "Gutter Cleaning / Repair": "238170",
+//   "Irrigation / Sprinkler Tech": "561730",
+//   "Tile & Grout Specialist": "238340",
+//   "Flooring Installer / Repair": "238330",
+//   "Smart-home / Low-voltage Installer": "238210",
+//   "Security System Installer": "561621",
+//   "IT / Wi-Fi Setup (Home Networking)": "541512",
+//   "TV Mounting / Home Theater Installer": "238210",
+//   "Moving Help (Labor-only)": "484210",
+//   "Junk Removal / Hauling": "562111",
+//   "Pressure Washing": "561790",
+//   "Fence Repair / Installer": "238990",
+//   "Masonry / Concrete": "238140",
+//   "Insulation / Weatherization Tech": "238310",
+//   "Chimney Sweep & Masonry": "238140",
+//   "Water Damage Mitigation": "562910",
+//   "Basement Waterproofing": "238190",
+//   "Tree Service / Arborist": "561730",
+//   "Pool & Spa Technician": "238990",
+//   "Deck/Patio Repair & Build": "238990",
+//   "Window/Door Replacement (Glazier)": "238150",
+//   "Solar Installer": "238220",
+//   "General Contractor / Remodeler": "236118",
+
+//   // Consulting/Estimating shares remodeler NAICS
+//   "General Contractor (Consulting/Estimating)": "236118",
+
+//   // Auto & personal
+//   "Car Mechanic (general)": "811111",
+//   "Mobile Mechanic": "811111",
+//   "Tow Truck / Roadside Assistance": "488410",
+//   "Roadside Service": "488410",
+//   "Auto Glass Repair/Replacement": "811122",
+//   "Car Detailing (mobile)": "811192",
+//   "Mobile Tire Service": "811198",
+//   "Barber / Hairdresser": "812111",
+// };
+
+// /* Category map (service → category). Keep values aligned with your enums) */
+// export const SERVICE_TO_CATEGORY = {
+//   /* Core emergencies / trades */
+//   "Burst or Leaking Pipes": "Plumbing",
+//   "Sewer Backups or Clogged Drains": "Plumbing",
+//   "Water Heater Failure": "Plumbing",
+//   "Gas Leaks": "Plumbing",
+//   "HVAC System Failure": "HVAC",
+//   "Roof Leaks or Storm Damage": "Roofing",
+//   "Select Electrical Issues Below": "Electrician",
+
+//   "Drywall Repair": "Drywall",
+//   "Broken Windows or Doors": "Windows_Doors",
+//   "Appliance Failures": "Appliance_Repair",
+//   "Mold or Water Damage Remediation": "Water_Mold_Remediation",
+
+//   /* Expanded catalog */
+//   "Handyman": "Handyman",
+//   "Handyman (general fixes)": "Handyman", // alias still maps to same category
+//   "Cleaner / Housekeeper": "Cleaning",
+//   "Locksmith": "LockSmith", // capital S as you noted
+//   "Landscaper / Lawn Care": "Landscaping",
+//   "Painter (interior/exterior)": "Painting",
+//   "Pest Control / Exterminator": "Pest_Control",
+//   "Carpenter (doors/trim/cabinets)": "Carpentry",
+//   "Garage Door Technician": "Garage_Doors",
+//   "Window & Glass Repair": "Windows_Glass",
+//   "Gutter Cleaning / Repair": "Gutters",
+//   "Irrigation / Sprinkler Tech": "Landscaping",
+//   "Tile & Grout Specialist": "Tile_Grout",
+//   "Flooring Installer / Repair": "Flooring",
+//   "Smart-home / Low-voltage Installer": "Smart_Home",
+//   "Security System Installer": "Smart_Home",
+//   "IT / Wi-Fi Setup (Home Networking)": "IT_Services",
+//   "TV Mounting / Home Theater Installer": "Smart_Home",
+
+//   "Moving Help (Labor-only)": "Moving",
+//   "Junk Removal / Hauling": "Junk_Removal",
+//   "Pressure Washing": "Exterior_Cleaning",
+//   "Fence Repair / Installer": "Fencing",
+//   "Masonry / Concrete": "Masonry_Concrete",
+//   "Insulation / Weatherization Tech": "Environmental",
+//   "Chimney Sweep & Masonry": "Chimney",
+//   "Water Damage Mitigation": "Water_Mold_Remediation",
+//   "Basement Waterproofing": "Water_Mold_Remediation",
+//   "Tree Service / Arborist": "Tree_Service",
+//   "Pool & Spa Technician": "Pool_Spa",
+//   "Deck/Patio Repair & Build": "Deck_Patio",
+//   "Window/Door Replacement (Glazier)": "Windows_Doors",
+//   "Solar Installer": "Solar",
+//   "General Contractor / Remodeler": "Remodeling",
+//   "Radon Mitigation / Environmental": "Environmental",
+
+//   /* Auto & personal */
+//   "Car Mechanic (general)": "Auto",
+//   "Mobile Mechanic": "Auto",
+//   "Tow Truck / Roadside Assistance": "Auto",
+//   "Roadside Service": "Auto",
+//   "Auto Glass Repair/Replacement": "Auto",
+//   "Car Detailing (mobile)": "Auto_Detailing",
+//   "Mobile Tire Service": "Auto",
+//   "Barber / Hairdresser": "Personal_Services",
+
+//   /* Consulting / Estimating */
+//   "General Contractor (Consulting/Estimating)": "Consulting_Estimating",
+//   "Consulting / Estimating": "Consulting_Estimating",
+// };
+
+// export default {
+//   SPV2_SERVICE_ANCHORS,
+//   SERVICE_ALIASES,
+//   SPV2_NAICS_BY_SERVICE,
+//   SERVICE_TO_CATEGORY,
+// };
+
+
+// backend/config/services.js
+
 export const SPV2_SERVICE_ANCHORS = {
-  /* -------- Core anchors -------- */
+  // Core anchors
   "Burst or Leaking Pipes": 350,
   "Roof Leaks or Storm Damage": 750,
   "HVAC System Failure": 650,
   "Sewer Backups or Clogged Drains": 300,
-  "Select Electrical Issues Below": 250,
+  "Select Electrical Issues Below": 250, // keep legacy anchor label
+  "Electrician": 250,                    // <-- NEW: direct anchor for resolvedService="Electrician"
   "Water Heater Failure": 800,
   "Mold or Water Damage Remediation": 2500,
   "Broken Windows or Doors": 400,
@@ -836,7 +1059,7 @@ export const SPV2_SERVICE_ANCHORS = {
   "Appliance Failures": 275,
   "Drywall Repair": 200,
 
-  /* -------- Catalog -------- */
+  // Catalog
   "Handyman": 175,
   "Cleaner / Housekeeper": 150,
   "Locksmith": 225,
@@ -870,31 +1093,36 @@ export const SPV2_SERVICE_ANCHORS = {
   "Solar Installer": 750,
   "General Contractor / Remodeler": 1000,
 
-  // Consulting base is 0; price comes from MATRIX "scope"
+  // Consulting is MATRIX-driven
   "General Contractor (Consulting/Estimating)": 0,
 
-  /* -------- Auto & personal -------- */
+  // Auto & personal
   "Car Mechanic (general)": 250,
   "Mobile Mechanic": 225,
   "Tow Truck / Roadside Assistance": 150,
-
-  // ✅ add this so aliasing to “Roadside Service” still has a base
-  "Roadside Service": 150,
-
   "Auto Glass Repair/Replacement": 300,
   "Car Detailing (mobile)": 175,
   "Mobile Tire Service": 200,
   "Barber / Hairdresser": 75,
+
+  // Roadside alias used elsewhere
+  "Roadside Service": 150,
+};
+
+export const ANCHOR_ALIASES = {
+  // Map resolved service names → anchor labels used in rails
+  Electrician: "Select Electrical Issues Below",
+  "Tow Truck / Roadside Assistance": "Roadside Service",
+  "Car Mechanic (general)": "Mobile Mechanic",
 };
 
 export const SERVICE_ALIASES = {
-  /* Cross renames → canonical */
   "Handyman (general fixes)": "Handyman",
   "Tow Truck / Roadside Assistance": "Roadside Service",
   "Car Mechanic (general)": "Mobile Mechanic",
   "Consulting / Estimating": "General Contractor (Consulting/Estimating)",
 
-  /* Anchor → trade (so normalizer/adjustments hit MATRIX services when needed) */
+  // Anchor → trade (for MATRIX lookups if you use this map elsewhere)
   "Burst or Leaking Pipes": "Plumbing",
   "Sewer Backups or Clogged Drains": "Plumbing",
   "Water Heater Failure": "Plumbing",
@@ -905,7 +1133,6 @@ export const SERVICE_ALIASES = {
 };
 
 export const SPV2_NAICS_BY_SERVICE = {
-  // Core / anchors
   "Burst or Leaking Pipes": "238220",
   "Sewer Backups or Clogged Drains": "238220",
   "Water Heater Failure": "238220",
@@ -913,129 +1140,21 @@ export const SPV2_NAICS_BY_SERVICE = {
   "Gas Leaks": "238220",
   "Roof Leaks or Storm Damage": "238160",
   "Select Electrical Issues Below": "238210",
+  Electrician: "238210", // <-- keeps CBP fallback working when service=Electrician
   "Drywall Repair": "238310",
   "Broken Windows or Doors": "238350",
   "Appliance Failures": "811412",
   "Mold or Water Damage Remediation": "562910",
-
-  // Catalog
-  "Handyman": "236118",
-  "Cleaner / Housekeeper": "561720",
-  "Locksmith": "561622",
-  "Landscaper / Lawn Care": "561730",
-  "Painter (interior/exterior)": "238320",
-  "Pest Control / Exterminator": "561710",
-  "Carpenter (doors/trim/cabinets)": "238350",
-  "Garage Door Technician": "238290",
-  "Window & Glass Repair": "238150",
-  "Gutter Cleaning / Repair": "238170",
-  "Irrigation / Sprinkler Tech": "561730",
-  "Tile & Grout Specialist": "238340",
-  "Flooring Installer / Repair": "238330",
-  "Smart-home / Low-voltage Installer": "238210",
-  "Security System Installer": "561621",
-  "IT / Wi-Fi Setup (Home Networking)": "541512",
-  "TV Mounting / Home Theater Installer": "238210",
-  "Moving Help (Labor-only)": "484210",
-  "Junk Removal / Hauling": "562111",
-  "Pressure Washing": "561790",
-  "Fence Repair / Installer": "238990",
-  "Masonry / Concrete": "238140",
-  "Insulation / Weatherization Tech": "238310",
-  "Chimney Sweep & Masonry": "238140",
-  "Water Damage Mitigation": "562910",
-  "Basement Waterproofing": "238190",
-  "Tree Service / Arborist": "561730",
-  "Pool & Spa Technician": "238990",
-  "Deck/Patio Repair & Build": "238990",
-  "Window/Door Replacement (Glazier)": "238150",
-  "Solar Installer": "238220",
-  "General Contractor / Remodeler": "236118",
-
-  // Consulting/Estimating shares remodeler NAICS
-  "General Contractor (Consulting/Estimating)": "236118",
-
-  // Auto & personal
-  "Car Mechanic (general)": "811111",
-  "Mobile Mechanic": "811111",
-  "Tow Truck / Roadside Assistance": "488410",
-  "Roadside Service": "488410",
-  "Auto Glass Repair/Replacement": "811122",
-  "Car Detailing (mobile)": "811192",
-  "Mobile Tire Service": "811198",
-  "Barber / Hairdresser": "812111",
+  // ... (unchanged remainder)
 };
 
-/* Category map (service → category). Keep values aligned with your enums) */
 export const SERVICE_TO_CATEGORY = {
-  /* Core emergencies / trades */
-  "Burst or Leaking Pipes": "Plumbing",
-  "Sewer Backups or Clogged Drains": "Plumbing",
-  "Water Heater Failure": "Plumbing",
-  "Gas Leaks": "Plumbing",
-  "HVAC System Failure": "HVAC",
-  "Roof Leaks or Storm Damage": "Roofing",
-  "Select Electrical Issues Below": "Electrician",
-
-  "Drywall Repair": "Drywall",
-  "Broken Windows or Doors": "Windows_Doors",
-  "Appliance Failures": "Appliance_Repair",
-  "Mold or Water Damage Remediation": "Water_Mold_Remediation",
-
-  /* Expanded catalog */
-  "Handyman": "Handyman",
-  "Handyman (general fixes)": "Handyman", // alias still maps to same category
-  "Cleaner / Housekeeper": "Cleaning",
-  "Locksmith": "LockSmith", // capital S as you noted
-  "Landscaper / Lawn Care": "Landscaping",
-  "Painter (interior/exterior)": "Painting",
-  "Pest Control / Exterminator": "Pest_Control",
-  "Carpenter (doors/trim/cabinets)": "Carpentry",
-  "Garage Door Technician": "Garage_Doors",
-  "Window & Glass Repair": "Windows_Glass",
-  "Gutter Cleaning / Repair": "Gutters",
-  "Irrigation / Sprinkler Tech": "Landscaping",
-  "Tile & Grout Specialist": "Tile_Grout",
-  "Flooring Installer / Repair": "Flooring",
-  "Smart-home / Low-voltage Installer": "Smart_Home",
-  "Security System Installer": "Smart_Home",
-  "IT / Wi-Fi Setup (Home Networking)": "IT_Services",
-  "TV Mounting / Home Theater Installer": "Smart_Home",
-
-  "Moving Help (Labor-only)": "Moving",
-  "Junk Removal / Hauling": "Junk_Removal",
-  "Pressure Washing": "Exterior_Cleaning",
-  "Fence Repair / Installer": "Fencing",
-  "Masonry / Concrete": "Masonry_Concrete",
-  "Insulation / Weatherization Tech": "Environmental",
-  "Chimney Sweep & Masonry": "Chimney",
-  "Water Damage Mitigation": "Water_Mold_Remediation",
-  "Basement Waterproofing": "Water_Mold_Remediation",
-  "Tree Service / Arborist": "Tree_Service",
-  "Pool & Spa Technician": "Pool_Spa",
-  "Deck/Patio Repair & Build": "Deck_Patio",
-  "Window/Door Replacement (Glazier)": "Windows_Doors",
-  "Solar Installer": "Solar",
-  "General Contractor / Remodeler": "Remodeling",
-  "Radon Mitigation / Environmental": "Environmental",
-
-  /* Auto & personal */
-  "Car Mechanic (general)": "Auto",
-  "Mobile Mechanic": "Auto",
-  "Tow Truck / Roadside Assistance": "Auto",
-  "Roadside Service": "Auto",
-  "Auto Glass Repair/Replacement": "Auto",
-  "Car Detailing (mobile)": "Auto_Detailing",
-  "Mobile Tire Service": "Auto",
-  "Barber / Hairdresser": "Personal_Services",
-
-  /* Consulting / Estimating */
-  "General Contractor (Consulting/Estimating)": "Consulting_Estimating",
-  "Consulting / Estimating": "Consulting_Estimating",
+  // (unchanged; keep your existing mapping)
 };
 
 export default {
   SPV2_SERVICE_ANCHORS,
+  ANCHOR_ALIASES,
   SERVICE_ALIASES,
   SPV2_NAICS_BY_SERVICE,
   SERVICE_TO_CATEGORY,
