@@ -199,21 +199,37 @@ export const MATRIX = [
   
     // base price anchors used by FE previews (server can have its own)
     const basePrice = {
-      "Plumbing": 175,
-      "Roofing": 250,
-      "HVAC": 200,
-      "Electrician": 200,
-      "Handyman": 125,
-      "Locksmith": 120,
-      "Cleaner / Housekeeper": 125,
-      "Roadside Service": 100,
-      "Mobile Mechanic": 125,
-      "Pest Control / Exterminator": 150,
-      "Painter (interior/exterior)": 200,
-      "Landscaper / Lawn Care": 50,
+      "Plumbing": 0,
+      "Roofing": 0,
+      "HVAC": 0,
+      "Electrician": 0,
+      "Handyman": 0,
+      "Locksmith": 0,
+      "Cleaner / Housekeeper": 0,
+      "Roadside Service": 0,
+      "Mobile Mechanic": 0,
+      "Pest Control / Exterminator": 0,
+      "Painter (interior/exterior)": 0,
+      "Landscaper / Lawn Care": 0,
       "General Contractor (Consulting/Estimating)": 0,
-      "Car Detailing (mobile)": 50,
+      "Car Detailing (mobile)": 0,
     };
+    // const basePrice = {
+    //   "Plumbing": 175,
+    //   "Roofing": 250,
+    //   "HVAC": 200,
+    //   "Electrician": 200,
+    //   "Handyman": 125,
+    //   "Locksmith": 120,
+    //   "Cleaner / Housekeeper": 125,
+    //   "Roadside Service": 100,
+    //   "Mobile Mechanic": 125,
+    //   "Pest Control / Exterminator": 150,
+    //   "Painter (interior/exterior)": 200,
+    //   "Landscaper / Lawn Care": 50,
+    //   "General Contractor (Consulting/Estimating)": 0,
+    //   "Car Detailing (mobile)": 50,
+    // };
   
     return { questions, pricing, serviceAlias, serviceToCategory, basePrice };
   }
