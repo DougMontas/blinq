@@ -306,11 +306,11 @@ export const MATRIX = [
     { Service: "Handyman", Question: "project type", Option: "repair", Adjustment: 35 },
   
     // Locksmith
-    { Service: "Locksmith", Question: "lockout", Option: "home lockout", Adjustment: 100 },
-    { Service: "Locksmith", Question: "lockout", Option: "car lockout", Adjustment: 120 },
-    { Service: "Locksmith", Question: "lock type", Option: "standard", Adjustment: 0 },
-    { Service: "Locksmith", Question: "lock type", Option: "high security", Adjustment: 100 },
-    { Service: "Locksmith", Question: "lock type", Option: "smart lock", Adjustment: 100 },
+    { Service: "Locksmith", Question: "lockout", Option: "home lockout", Adjustment: 10 },
+    { Service: "Locksmith", Question: "lockout", Option: "car lockout", Adjustment: 5 },
+    { Service: "Locksmith", Question: "lock type", Option: "standard", Adjustment: 5 },
+    { Service: "Locksmith", Question: "lock type", Option: "high security", Adjustment: 10 },
+    { Service: "Locksmith", Question: "lock type", Option: "smart lock", Adjustment: 15 },
   
     // Cleaning
     { Service: "Cleaner / Housekeeper", Question: "cleaning type", Option: "basic (up to 3 hours)", Adjustment: 0 },
@@ -357,13 +357,13 @@ export const MATRIX = [
     { Service: "Mobile Mechanic", Question: "issue", Option: "brake replacement", Adjustment: 100 },
   
     // Pest
-    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "ants", Adjustment: 50 },
-    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "roaches", Adjustment: 75 },
-    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "rodents", Adjustment: 100 },
-    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "termites", Adjustment: 50 },
-    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "bedbugs", Adjustment: 50 },
-    { Service: "Pest Control / Exterminator", Question: "severity", Option: "mild", Adjustment: 0 },
-    { Service: "Pest Control / Exterminator", Question: "severity", Option: "severe", Adjustment: 0 },
+    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "ants", Adjustment: 5 },
+    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "roaches", Adjustment: 15 },
+    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "rodents", Adjustment: 15 },
+    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "termites", Adjustment: 10 },
+    { Service: "Pest Control / Exterminator", Question: "pest type", Option: "bedbugs", Adjustment: 10 },
+    { Service: "Pest Control / Exterminator", Question: "severity", Option: "mild", Adjustment: 5 },
+    { Service: "Pest Control / Exterminator", Question: "severity", Option: "severe", Adjustment: 10 },
   
     // Consulting / Estimating
     { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 3 hours", Adjustment: 200 },
@@ -444,7 +444,7 @@ export const MATRIX = [
       "Landscaper / Lawn Care": "Landscaping",
       "Car Detailing (mobile)": "Auto",
       "Roadside Service": "Auto",
-      "General Contractor (Consulting/Estimating)": "Consulting/Estimating",
+      "General Contractor":"General Contractor (Consulting/Estimating)",
     };
   
     // Build category → services map
