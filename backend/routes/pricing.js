@@ -8336,7 +8336,7 @@ const SPV2_CFG = {
 
     // Expanded catalog
     "Handyman (general fixes)": [95, 695],
-    Locksmith: [95, 595],
+    "Locksmith": [95, 595],
     "Carpenter (doors/trim/cabinets)": [150, 1295],
     "Garage Door Technician": [200, 1495],
     "Window & Glass Repair": [150, 1295],

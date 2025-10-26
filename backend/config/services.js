@@ -1121,7 +1121,10 @@ export const SERVICE_ALIASES = {
   "Tow Truck / Roadside Assistance": "Roadside Service",
   "Car Mechanic (general)": "Mobile Mechanic",
   "General Contractor": "General Contractor (Consulting/Estimating)",
-
+  "Consulting / Estimating": "General Contractor (Consulting/Estimating)",
+  // (optional, keep these for future-proofing)
+  "general contractor": "General Contractor (Consulting/Estimating)",
+  "consulting/estimating": "General Contractor (Consulting/Estimating)",
   // Anchor → trade (for MATRIX lookups if you use this map elsewhere)
   "Burst or Leaking Pipes": "Plumbing",
   "Sewer Backups or Clogged Drains": "Plumbing",
