@@ -8329,7 +8329,7 @@ const SPV2_CFG = {
     "Water Heater Failure": [250, 2495],
     "HVAC System Failure": [200, 1995],
     "Select Electrical Issues Below": [150, 1495],
-    "Electrician": [150, 1495], // <- ensure Electrician also has rails
+    "Electrician": [150, 1495], 
     "Broken Windows or Doors": [125, 1495],
     "Gas Leaks": [200, 1995],
     "Mold or Water Damage Remediation": [750, 4995],
