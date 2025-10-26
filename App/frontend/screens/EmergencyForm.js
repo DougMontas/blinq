@@ -6231,6 +6231,1832 @@
 //testing new
 
 
+// import React, { useState, useMemo, useEffect, useRef } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   Alert,
+//   StyleSheet,
+//   Animated,
+//   Pressable,
+//   KeyboardAvoidingView,
+//   ScrollView,
+//   Platform,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { useRoute, useNavigation } from "@react-navigation/native";
+// import {
+//   MapPin,
+//   CreditCard,
+//   Shield,
+//   Clock,
+//   CheckCircle,
+//   ArrowLeft,
+//   Zap,
+// } from "lucide-react-native";
+
+// import questionsData, { getCoveredDescription } from "../utils/serviceMatrix.js";
+// import api from "../api/client";
+// import * as Notifications from "expo-notifications";
+// import * as Device from "expo-device";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// const FEE_RATE = 0.07; // 7% BlinqFix fee
+// const L = (...args) => console.log("🚑 [EmergencyForm]", ...args);
+
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldShowAlert: true,
+//     shouldPlaySound: true,
+//     shouldSetBadge: false,
+//   }),
+// });
+
+// export function HoverableCard({ style, onPress, children }) {
+//   const scale = useRef(new Animated.Value(1)).current;
+//   const elevation = useRef(new Animated.Value(2)).current;
+
+//   const animate = (toScale, toElev) => {
+//     Animated.parallel([
+//       Animated.spring(scale, {
+//         toValue: toScale,
+//         friction: 6,
+//         useNativeDriver: false,
+//       }),
+//       Animated.timing(elevation, {
+//         toValue: toElev,
+//         duration: 200,
+//         useNativeDriver: false,
+//       }),
+//     ]).start();
+//   };
+
+//   return (
+//     <Pressable
+//       onPress={onPress}
+//       onPressIn={() => animate(0.97, 8)}
+//       onPressOut={() => animate(1, 2)}
+//       {...(Platform.OS === "web"
+//         ? {
+//             onHoverIn: () => animate(1.03, 12),
+//             onHoverOut: () => animate(1, 2),
+//           }
+//         : {})}
+//     >
+//       <Animated.View
+//         style={[
+//           style,
+//           {
+//             transform: [{ scale }],
+//             shadowColor: "#000",
+//             shadowOffset: { width: 0, height: elevation },
+//             shadowOpacity: 0.15,
+//             shadowRadius: elevation,
+//             elevation,
+//           },
+//         ]}
+//       >
+//         {children}
+//       </Animated.View>
+//     </Pressable>
+//   );
+// }
+
+// export default function EmergencyForm() {
+//   const route = useRoute();
+//   const params = route?.params || {};
+//   const category = params.category;
+//   const subcategory = params.subcategory;
+//   const navigation = useNavigation();
+
+//   const [address, setAddress] = useState("");
+//   const [city, setCity] = useState("");
+//   const [zipcode, setZipcode] = useState("");
+//   const [aptSuite, setAptSuite] = useState("");
+
+//   const [selectedService, setSelected] = useState(subcategory || "");
+//   const [answers, setAnswers] = useState({});
+//   const [otherAnswers, setOtherAnswers] = useState({});
+//   const [submitting, setSubmitting] = useState(false);
+
+//   // Smart (beta) estimate state
+//   const [beta, setBeta] = useState(null);
+//   const [betaLoading, setBetaLoading] = useState(false);
+//   const [betaError, setBetaError] = useState("");
+
+//   const categoryQuestion = (questionsData.questions[category] || [])[0] || null;
+//   const serviceQuestions = selectedService
+//     ? questionsData.questions[selectedService] || []
+//     : [];
+
+//   const detailsForBeta = useMemo(() => {
+//     const out = {};
+//     serviceQuestions.forEach((q) => {
+//       const val = answers[q.id];
+//       if (!val) return;
+//       if (val === "Other") {
+//         const txt = (otherAnswers[q.id] || "").trim();
+//         if (txt) out[q.question] = txt;
+//       } else {
+//         out[q.question] = val;
+//       }
+//     });
+//     return out;
+//   }, [answers, otherAnswers, serviceQuestions]);
+
+//   //Rush fee section
+//   const serviceFeeUSD = 0;
+//   //adjustment to fee
+//   // const serviceFeeUSD = Math.max(100, beta?.serviceFeeUSD ?? 0);
+//   const smartPriceUSD = beta?.priceUSD ?? 0;
+//   const feeBaseUSD = smartPriceUSD; 
+//   const convFee = Number((feeBaseUSD * FEE_RATE).toFixed(2));
+//   const subtotal = smartPriceUSD + serviceFeeUSD;
+//   // const convFee = Number((subtotal * FEE_RATE).toFixed(2));
+//   const grandTotal = Number((subtotal + convFee).toFixed(2));
+
+//   const handleServiceSelect = (svc) => {
+//     setSelected(svc);
+//     setAnswers({});
+//     setOtherAnswers({});
+//     setBeta(null);
+//     setBetaError("");
+//   };
+
+//   const handleAnswerChange = (qId, val) => {
+//     setAnswers((prev) => ({ ...prev, [qId]: val }));
+//   };
+//   const handleOtherChange = (qId, val) => {
+//     setOtherAnswers((prev) => ({ ...prev, [qId]: val }));
+//   };
+
+//   const fetchCoordinates = async () => {
+//     try {
+//       const query = encodeURIComponent(`${address}, ${city}, ${zipcode}`);
+//       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+//       const res = await fetch(url);
+//       const json = await res.json();
+//       const loc = json.results[0]?.geometry?.location;
+//       return loc ? [loc.lng, loc.lat] : null;
+//     } catch (e) {
+//       return null;
+//     }
+//   };
+
+//   const registerPushToken = async () => {
+//     if (Device.isDevice) {
+//       const { status: existingStatus } =
+//         await Notifications.getPermissionsAsync();
+//       let finalStatus = existingStatus;
+//       if (existingStatus !== "granted") {
+//         const { status } = await Notifications.requestPermissionsAsync();
+//         finalStatus = status;
+//       }
+//       if (finalStatus !== "granted") return;
+
+//       const token = (await Notifications.getExpoPushTokenAsync()).data;
+//       await AsyncStorage.setItem("expoPushToken", token);
+//     }
+//   };
+
+//   // Debounced call to Smart Estimate API
+//   useEffect(() => {
+//     if (!selectedService) return;
+//     if (!address.trim() || !city.trim() || !zipcode.trim()) return;
+
+//     let cancelled = false;
+//     const t = setTimeout(async () => {
+//       try {
+//         setBetaLoading(true);
+//         setBetaError("");
+
+//         const resp = await api.post("/routes/pricing/v2/estimate", {
+//           service: selectedService,
+//           address,
+//           address2: aptSuite || undefined, // include Apt/Suite for backend
+//           city,
+//           zipcode,
+//           details: detailsForBeta,
+//         });
+
+//         if (cancelled) return;
+//         const data = resp?.data || {};
+//         if (!data.ok) {
+//           setBeta(null);
+//           setBetaError(data.error || "Could not fetch estimate");
+//         } else {
+//           setBeta(data);
+//         }
+//       } catch (err) {
+//         if (!cancelled) {
+//           setBeta(null);
+//           setBetaError("Could not fetch estimate");
+//         }
+//       } finally {
+//         if (!cancelled) setBetaLoading(false);
+//       }
+//     }, 350);
+
+//     return () => {
+//       cancelled = true;
+//       clearTimeout(t);
+//     };
+//   }, [selectedService, address, aptSuite, city, zipcode, detailsForBeta]);
+
+//   const handleSubmit = async () => {
+//     if (!address.trim() || !city.trim() || !zipcode.trim()) {
+//       return Alert.alert("Info", "Please enter address, city, and zip code.");
+//     }
+//     if (!selectedService) {
+//       return Alert.alert("Info", "Please choose your specific issue.");
+//     }
+//     if (!beta || betaLoading) {
+//       return Alert.alert(
+//         "Info",
+//         "Getting your smart estimate. Please wait a moment."
+//       );
+//     }
+
+//     setSubmitting(true);
+//     try {
+//       const coords = await fetchCoordinates();
+//       if (!coords) {
+//         Alert.alert(
+//           "Error",
+//           "Failed to get coordinates. Please check your address."
+//         );
+//         setSubmitting(false);
+//         return;
+//       }
+
+//       await registerPushToken();
+
+//       const payload = {
+//         category,
+//         service: selectedService,
+//         address,
+//         address2: aptSuite || undefined,
+//         serviceCity: city,
+//         serviceZipcode: zipcode,
+//         details: detailsForBeta,
+
+//         baseAmount: smartPriceUSD,
+//         adjustmentAmount: 0,
+//         rushFee: 0,
+//         convenienceFee: convFee,
+//         estimatedTotal: grandTotal,
+
+//         coveredDescription: getCoveredDescription(selectedService),
+//         smartEstimateV2: { ...beta },
+//         location: { type: "Point", coordinates: coords },
+//       };
+
+//       const resp = await api.post("/jobs", payload);
+
+//       const createdJob = resp?.data?.job || resp?.data;
+//       const createdJobId = createdJob?._id || createdJob?.id;
+
+//       if (!createdJobId) throw new Error("No job id returned");
+
+//       await AsyncStorage.setItem("activeJobId", String(createdJobId));
+//       await AsyncStorage.setItem("lastCreatedJobId", String(createdJobId));
+
+//       navigation.navigate("PaymentScreen", { jobId: String(createdJobId) });
+//     } catch (err) {
+//       Alert.alert("Error", "Submission failed – please try again.");
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   const cancelEstimate = () => navigation.goBack();
+
+//   const description = useMemo(() => {
+//     return selectedService ? getCoveredDescription(selectedService) : "";
+//   }, [selectedService]);
+
+//   // Remove the chooser from the per-service list.
+//   // IMPORTANT: IDs are local to each question list; don't compare cross-group IDs.
+//   const filteredServiceQuestions = useMemo(() => {
+//     if (!serviceQuestions?.length) return [];
+//     const catText = categoryQuestion?.question?.trim()?.toLowerCase();
+
+//     return serviceQuestions.filter((q) => {
+//       const sameText =
+//         catText && q.question?.trim()?.toLowerCase() === catText;
+//       const isChooser =
+//         q?.type === "service" || q?.kind === "service" || q?.isServiceChooser;
+//       return !(sameText || isChooser);
+//     });
+//   }, [serviceQuestions, categoryQuestion?.question]);
+
+//   return (
+//     <LinearGradient
+//       colors={["#0f172a", "#1e3a8a", "#312e81"]}
+//       style={styles.container}
+//     >
+//       <KeyboardAvoidingView
+//         style={{ flex: 1 }}
+//         behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         keyboardVerticalOffset={100}
+//       >
+//         <ScrollView
+//           contentContainerStyle={styles.scrollContent}
+//           keyboardShouldPersistTaps="handled"
+//         >
+//           {/* Header */}
+//           <View style={styles.header}>
+//             <Pressable
+//               onPress={() => navigation.goBack()}
+//               style={styles.backButton}
+//             >
+//               <ArrowLeft color="#fff" size={24} />
+//             </Pressable>
+//             <View style={styles.headerBadge}>
+//               <Zap color="#facc15" size={16} />
+//               <Text style={styles.headerBadgeText}>Emergency Request</Text>
+//             </View>
+//             <Text style={styles.title}>{category} Emergency Form</Text>
+//             <Text style={styles.subtitle}>
+//               Get connected with a professional in minutes
+//             </Text>
+//           </View>
+
+//           {/* Location Section */}
+//           <View style={styles.card}>
+//             <View style={styles.cardHeader}>
+//               <MapPin color="#60a5fa" size={24} />
+//               <Text style={styles.cardTitle}>Service Location</Text>
+//             </View>
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.label}>Address *</Text>
+//               <TextInput
+//                 style={styles.input}
+//                 placeholder="Enter your address"
+//                 placeholderTextColor="#94a3b8"
+//                 value={address}
+//                 onChangeText={setAddress}
+//               />
+//             </View>
+//             <View style={styles.inputGroup}>
+//               <View style={styles.inputContainer}>
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Apt 4B, Suite 210, Unit #7…"
+//                   placeholderTextColor="#94a3b8"
+//                   value={aptSuite}
+//                   onChangeText={setAptSuite}
+//                   autoCapitalize="characters"
+//                 />
+//               </View>
+//             </View>
+
+//             <View style={styles.inputRow}>
+//               <View style={[styles.inputGroup, { flex: 2 }]}>
+//                 <Text style={styles.label}>City *</Text>
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Enter city"
+//                   placeholderTextColor="#94a3b8"
+//                   value={city}
+//                   onChangeText={setCity}
+//                 />
+//               </View>
+//               <View style={[styles.inputGroup, { flex: 1 }]}>
+//                 <Text style={styles.label}>Zip Code *</Text>
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="12345"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="numeric"
+//                   value={zipcode}
+//                   onChangeText={setZipcode}
+//                 />
+//               </View>
+//             </View>
+//           </View>
+
+//           {/* Service Selection – show only BEFORE a service is chosen */}
+//           {!subcategory && !selectedService && categoryQuestion && (
+//             <View style={styles.card}>
+//               <View style={styles.cardHeader}>
+//                 <Shield color="#4ade80" size={24} />
+//                 <Text style={styles.cardTitle}>Select Your Issue</Text>
+//               </View>
+
+//               <Text style={styles.questionText}>
+//                 {categoryQuestion.question}
+//               </Text>
+
+//               <View style={styles.optionsContainer}>
+//                 {categoryQuestion.options.map((opt) => {
+//                   const value = opt.value ?? opt;
+//                   const label = opt.label ?? opt;
+//                   const isSelected = selectedService === value;
+
+//                   return (
+//                     <HoverableCard
+//                       key={value}
+//                       style={[
+//                         styles.optionCard,
+//                         isSelected && styles.optionCardSelected,
+//                       ]}
+//                       onPress={() => handleServiceSelect(value)}
+//                     >
+//                       <Text
+//                         style={[
+//                           styles.optionText,
+//                           isSelected && styles.optionTextSelected,
+//                         ]}
+//                       >
+//                         {label}
+//                       </Text>
+//                       {isSelected && <CheckCircle color="#22c55e" size={20} />}
+//                     </HoverableCard>
+//                   );
+//                 })}
+//               </View>
+//             </View>
+//           )}
+
+//           {/* Service Questions – ONLY non-chooser questions (remount on service change) */}
+//           {selectedService && (
+//             <View key={selectedService}>
+//               {filteredServiceQuestions.map((q) => {
+//                 const selectedVal = answers[q.id] || "";
+
+//                 return (
+//                   <View key={q.id} style={styles.card}>
+//                     <Text style={styles.questionText}>{q.question}</Text>
+
+//                     <View style={styles.optionsContainer}>
+//                       {q.options.map((opt) => (
+//                         <HoverableCard
+//                           key={opt.value}
+//                           style={[
+//                             styles.optionCard,
+//                             selectedVal === opt.value &&
+//                               styles.optionCardSelected,
+//                           ]}
+//                           onPress={() => handleAnswerChange(q.id, opt.value)}
+//                         >
+//                           <Text
+//                             style={[
+//                               styles.optionText,
+//                               selectedVal === opt.value &&
+//                                 styles.optionTextSelected,
+//                             ]}
+//                           >
+//                             {opt.value}
+//                           </Text>
+//                           {selectedVal === opt.value && (
+//                             <CheckCircle color="#22c55e" size={20} />
+//                           )}
+//                         </HoverableCard>
+//                       ))}
+
+//                       {!q.options.some((o) => o.value === "Other") && (
+//                         <HoverableCard
+//                           style={[
+//                             styles.optionCard,
+//                             selectedVal === "Other" &&
+//                               styles.optionCardSelected,
+//                           ]}
+//                           onPress={() => handleAnswerChange(q.id, "Other")}
+//                         >
+//                           <Text
+//                             style={[
+//                               styles.optionText,
+//                               selectedVal === "Other" &&
+//                                 styles.optionTextSelected,
+//                             ]}
+//                           >
+//                             Other
+//                           </Text>
+//                           {selectedVal === "Other" && (
+//                             <CheckCircle color="#22c55e" size={20} />
+//                           )}
+//                         </HoverableCard>
+//                       )}
+//                     </View>
+
+//                     {selectedVal === "Other" && (
+//                       <TextInput
+//                         style={[styles.input, styles.otherInput]}
+//                         placeholder="Please specify..."
+//                         placeholderTextColor="#94a3b8"
+//                         value={otherAnswers[q.id] || ""}
+//                         onChangeText={(txt) => handleOtherChange(q.id, txt)}
+//                       />
+//                     )}
+//                   </View>
+//                 );
+//               })}
+//             </View>
+//           )}
+
+//           {/* Price Summary */}
+//           {selectedService && (
+//             <View style={styles.summaryCard}>
+//               <LinearGradient
+//                 colors={["rgba(34, 197, 94, 0.1)", "rgba(16, 185, 129, 0.1)"]}
+//                 style={styles.summaryGradient}
+//               >
+//                 <View style={styles.cardHeader}>
+//                   <CreditCard color="#22c55e" size={24} />
+//                   <Text style={styles.summaryTitle}>Price Summary</Text>
+//                 </View>
+
+//                 {betaLoading && (
+//                   <Text
+//                     style={{
+//                       color: "#e0e7ff",
+//                       textAlign: "center",
+//                       marginBottom: 8,
+//                     }}
+//                   >
+//                     Calculating smart price…
+//                   </Text>
+//                 )}
+//                 {!!betaError && (
+//                   <Text
+//                     style={{
+//                       color: "#fecaca",
+//                       textAlign: "center",
+//                       marginBottom: 8,
+//                     }}
+//                   >
+//                     {betaError}
+//                   </Text>
+//                 )}
+
+//                 <View style={styles.priceRow}>
+//                   <Text style={styles.priceLabel}>Smart Price</Text>
+//                   <Text style={styles.priceValue}>
+//                     ${(beta?.priceUSD ?? 0).toFixed(2)}
+//                   </Text>
+//                 </View>
+
+//                 {/* <View style={styles.priceRow}>
+//                   <Text style={styles.priceLabel}>
+//                     Emergency/On-Demand Fee
+//                   </Text>
+//                   <Text style={styles.priceValue}>
+//                     {`$${Math.max(100, beta?.serviceFeeUSD ?? 0).toFixed(2)}`}
+//                   </Text>
+//                 </View> */}
+
+//                 <View style={styles.priceRow}>
+//                   <Text style={styles.priceLabel}>
+//                     BlinqFix Fee ({(FEE_RATE * 100).toFixed(0)}%)
+//                   </Text>
+//                   <Text style={styles.priceValue}>
+                    
+//                     {/* {(
+//                       ((beta?.priceUSD ?? 0) +
+//                         Math.max(100, beta?.serviceFeeUSD ?? 0)) *
+//                       FEE_RATE
+//                     ).toFixed(2)} */}
+//                     ${convFee.toFixed(2)}
+//                   </Text>
+//                 </View>
+
+//                 <View style={styles.divider} />
+
+//                 <View style={styles.totalRow}>
+//                   <Text style={styles.totalLabel}>Estimated Total</Text>
+//                   <Text style={styles.totalValue}>
+//                     ${grandTotal.toFixed(2)}
+//                   </Text>
+//                 </View>
+
+//                 <View style={styles.coveredSection}>
+//                   <Text style={styles.coveredTitle}>What's Covered</Text>
+//                   <Text style={styles.coveredText}>
+//                     {getCoveredDescription(selectedService)}
+//                   </Text>
+//                 </View>
+
+//                 <View style={styles.guaranteeBadge}>
+//                   <Shield color="#22c55e" size={16} />
+//                   <Text style={styles.guaranteeText}>
+//                     100% On-Demand Guaranteed
+//                   </Text>
+//                 </View>
+//               </LinearGradient>
+//             </View>
+//           )}
+
+//           {/* Action Buttons */}
+//           <View style={styles.actionContainer}>
+//             <HoverableCard style={styles.primaryButton} onPress={handleSubmit}>
+//               <LinearGradient
+//                 colors={["#22c55e", "#16a34a"]}
+//                 style={styles.buttonGradient}
+//               >
+//                 <CreditCard color="#fff" size={20} />
+//                 <Text style={styles.primaryButtonText}>
+//                   {submitting ? "Processing..." : "Pay & Book Service"}
+//                 </Text>
+//               </LinearGradient>
+//             </HoverableCard>
+
+//             <HoverableCard
+//               style={styles.secondaryButton}
+//               onPress={cancelEstimate}
+//             >
+//               <Text style={styles.secondaryButtonText}>Cancel Estimate</Text>
+//             </HoverableCard>
+//           </View>
+
+//           {/* Trust Indicators */}
+//           <View style={styles.trustSection}>
+//             <View style={styles.trustItem}>
+//               <Clock color="#60a5fa" size={16} />
+//               <Text style={styles.trustText}>Under 30 min response</Text>
+//             </View>
+//             <View style={styles.trustItem}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Licensed & Insured</Text>
+//             </View >
+//             <View style={styles.trustItem}>
+//               <CheckCircle color="#c084fc" size={16} />
+//               <Text style={styles.trustText}>Quality Guaranteed</Text>
+//             </View>
+//           </View>
+//         </ScrollView>
+//       </KeyboardAvoidingView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+//   header: {
+//     alignItems: "center",
+//     paddingTop: 60,
+//     paddingBottom: 32,
+//     position: "relative",
+//   },
+//   backButton: {
+//     position: "absolute",
+//     borderRadius: 99,
+//     borderColor: "white",
+//     borderStyle: "solid",
+//     width: 44,
+//     height: 44,
+//     top: 60,
+//     left: 0,
+//     padding: 8,
+//   },
+//   headerBadge: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.1)",
+//     paddingHorizontal: 16,
+//     paddingVertical: 8,
+//     borderRadius: 20,
+//     marginBottom: 16,
+//   },
+//   headerBadgeText: { color: "#fff", marginLeft: 8, fontWeight: "500" },
+//   title: {
+//     fontSize: 32,
+//     fontWeight: "900",
+//     color: "#fff",
+//     textAlign: "center",
+//     marginBottom: 8,
+//   },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   card: {
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 16,
+//     padding: 20,
+//     marginBottom: 20,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.1)",
+//   },
+//   cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
+//   cardTitle: {
+//     fontSize: 20,
+//     fontWeight: "bold",
+//     color: "#fff",
+//     marginLeft: 12,
+//   },
+//   inputGroup: { marginBottom: 16 },
+//   inputRow: { flexDirection: "row", gap: 12 },
+//   label: { fontSize: 16, fontWeight: "600", color: "#e0e7ff", marginBottom: 8 },
+//   input: {
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//     borderRadius: 12,
+//     padding: 16,
+//     fontSize: 16,
+//     color: "#fff",
+//   },
+//   questionText: {
+//     fontSize: 18,
+//     fontWeight: "600",
+//     color: "#fff",
+//     marginBottom: 16,
+//     textAlign: "center",
+//   },
+//   optionsContainer: { gap: 12 },
+//   optionCard: {
+//     backgroundColor: "green", // keeping your visual debug; change back if desired
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//     borderRadius: 12,
+//     padding: 16,
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//   },
+//   optionCardSelected: {
+//     backgroundColor: "rgba(255,255,255,0.4)",
+//     borderColor: "#22c55e",
+//   },
+//   optionText: { fontSize: 16, color: "#e0e7ff", flex: 1 },
+//   optionTextSelected: { color: "#fff", fontWeight: "600" },
+//   otherInput: { marginTop: 12 },
+//   summaryCard: { marginBottom: 20, borderRadius: 16, overflow: "hidden" },
+//   summaryGradient: { padding: 20 },
+//   summaryTitle: {
+//     fontSize: 22,
+//     fontWeight: "bold",
+//     color: "#fff",
+//     marginLeft: 12,
+//   },
+//   priceRow: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     paddingVertical: 8,
+//   },
+//   priceLabel: { fontSize: 16, color: "#e0e7ff" },
+//   priceValue: { fontSize: 16, fontWeight: "600", color: "#fff" },
+//   divider: {
+//     height: 1,
+//     backgroundColor: "rgba(255,255,255,0.2)",
+//     marginVertical: 12,
+//   },
+//   totalRow: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     paddingVertical: 12,
+//   },
+//   totalLabel: { fontSize: 20, fontWeight: "bold", color: "#fff" },
+//   totalValue: { fontSize: 24, fontWeight: "900", color: "#22c55e" },
+//   coveredSection: {
+//     marginTop: 20,
+//     padding: 16,
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//   },
+//   coveredTitle: {
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     color: "#fff",
+//     marginBottom: 8,
+//   },
+//   coveredText: { fontSize: 14, color: "#e0e7ff", lineHeight: 20 },
+//   guaranteeBadge: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     marginTop: 16,
+//     padding: 12,
+//     backgroundColor: "rgba(34, 197, 94, 0.2)",
+//     borderRadius: 8,
+//   },
+//   guaranteeText: { color: "#22c55e", fontWeight: "600", marginLeft: 8 },
+//   actionContainer: { gap: 12, marginBottom: 32 },
+//   primaryButton: { borderRadius: 16, overflow: "hidden" },
+//   buttonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     paddingHorizontal: 24,
+//     gap: 12,
+//   },
+//   primaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   secondaryButton: {
+//     backgroundColor: "rgba(255, 0, 0, 0.9)",
+//     borderWidth: 2,
+//     borderColor: "rgba(239, 68, 68, 0.3)",
+//     borderRadius: 16,
+//     paddingVertical: 16,
+//     alignItems: "center",
+//   },
+//   secondaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   trustSection: {
+//     flexDirection: "column",
+//     justifyContent: "space-around",
+//     alignItems: "center",
+//     paddingVertical: 16,
+//     gap: 8,
+//   },
+//   trustItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+//   trustText: { color: "#e0e7ff", fontSize: 16, fontWeight: "500" },
+// });
+
+// // screens/EmergencyForm.js
+// import React, { useState, useMemo, useEffect, useRef } from "react";
+// import {
+//   View,
+//   Text,
+//   TextInput,
+//   Alert,
+//   StyleSheet,
+//   Animated,
+//   Pressable,
+//   KeyboardAvoidingView,
+//   ScrollView,
+//   Platform,
+// } from "react-native";
+// import { LinearGradient } from "expo-linear-gradient";
+// import { useRoute, useNavigation } from "@react-navigation/native";
+// import {
+//   MapPin,
+//   CreditCard,
+//   Shield,
+//   Clock,
+//   CheckCircle,
+//   ArrowLeft,
+//   Zap,
+// } from "lucide-react-native";
+
+// import api from "../api/client";
+// import * as Notifications from "expo-notifications";
+// import * as Device from "expo-device";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// /** ──────────────────────────────────────────────────────────────────────────
+//  *  Logging helper
+//  *  ───────────────────────────────────────────────────────────────────────── */
+// const L = (...args) => console.log("🚑 [EmergencyForm]", ...args);
+// const FEE_RATE = 0.07;
+
+// /** ──────────────────────────────────────────────────────────────────────────
+//  *  Import matrix module in a way that tolerates any export shape
+//  *  - Some builds export default, others named.
+//  *  - Some rename things; some don’t export SERVICE_TO_CATEGORY/BASE_PRICE.
+//  *  We normalize everything here & rebuild if missing.
+//  *  ───────────────────────────────────────────────────────────────────────── */
+// import * as matrixAll from "../utils/serviceMatrix.js";
+// let matrixDefault = undefined;
+// try {
+//   // If there is a default export, “import * as” still carries it as .default
+//   matrixDefault = matrixAll?.default;
+// } catch {} // ignore
+
+// // Prefer explicit named exports, then default, then {}.
+// const matrixNS = {
+//   ...(matrixDefault || {}),
+//   ...matrixAll,
+// };
+
+// const rawMATRIX = Array.isArray(matrixNS.MATRIX) ? matrixNS.MATRIX : [];
+// const rawQuestions = matrixNS.questions || {};
+// const rawPricing = matrixNS.pricing || {};
+// const rawServiceToCategory = matrixNS.SERVICE_TO_CATEGORY || {};
+// const rawGetCoveredDescription =
+//   matrixNS.getCoveredDescription || (() => "");
+
+// /** ──────────────────────────────────────────────────────────────────────────
+//  *  Local builders: if questions/pricing are missing, rebuild from MATRIX
+//  *  ───────────────────────────────────────────────────────────────────────── */
+// const slug = (s) =>
+//   String(s || "")
+//     .trim()
+//     .toLowerCase()
+//     .replace(/\s+/g, " ")
+//     .replace(/[^a-z0-9]+/g, "_")
+//     .replace(/^_+|_+$/g, "");
+
+// function buildArtifactsFromMatrix(matrix, svcToCat) {
+//   const questions = {};
+//   const pricing = {};
+//   const categoryServices = {};
+
+//   // Category inference: prefer provided svcToCat. If missing, infer.
+//   const serviceToCategory = Object.keys(svcToCat || {}).length
+//     ? svcToCat
+//     : (() => {
+//         const out = {};
+//         for (const row of matrix) {
+//           const svc = row?.Service;
+//           if (!svc) continue;
+//           const catGuess = svc.includes("(") ? svc.split("(")[0].trim() : svc;
+//           out[svc] = catGuess;
+//         }
+//         return out;
+//       })();
+
+//   for (const { Service } of matrix) {
+//     const cat = serviceToCategory[Service] || "General";
+//     if (!categoryServices[cat]) categoryServices[cat] = new Set();
+//     categoryServices[cat].add(Service);
+//   }
+
+//   // Category chooser (ID = 1)
+//   for (const [cat, svcSet] of Object.entries(categoryServices)) {
+//     questions[cat] = [
+//       {
+//         id: 1,
+//         question: `Which ${cat.toLowerCase()} issue are you experiencing?`,
+//         type: "multiple",
+//         options: Array.from(svcSet).map((svc) => ({
+//           value: svc,
+//           label: String(svc),
+//         })),
+//         isServiceChooser: true,
+//       },
+//     ];
+//   }
+
+//   // Service-level questions + pricing
+//   for (const row of matrix) {
+//     const { Service, Question, Option, Adjustment } = row;
+//     questions[Service] ??= [];
+//     pricing[Service] ??= {};
+//     const qKey = slug(Question);
+//     const oKey = slug(Option);
+
+//     let qObj = questions[Service].find((q) => slug(q.question) === qKey);
+//     if (!qObj) {
+//       qObj = {
+//         id: questions[Service].length + 1,
+//         question: Question,
+//         type: "multiple",
+//         options: [],
+//       };
+//       questions[Service].push(qObj);
+//     }
+//     if (!qObj.options.find((o) => slug(o.value) === oKey)) {
+//       qObj.options.push({ value: Option, label: String(Option) });
+//     }
+//     pricing[Service][qKey] ??= {};
+//     pricing[Service][qKey][oKey] = Number(Adjustment) || 0;
+//   }
+
+//   return { questions, pricing, serviceToCategory };
+// }
+
+// // If the module didn’t export questions/pricing/services cleanly, fix it here
+// const { questions, pricing, serviceToCategory } = (() => {
+//   // Complete services present in rawQuestions?
+//   const servicesInQuestions = Object.keys(rawQuestions);
+//   const looksComplete =
+//     servicesInQuestions.length > 0 ||
+//     Object.keys(rawPricing).length > 0;
+
+//   if (looksComplete) {
+//     // keep what we have; fill missing maps for reliability
+//     const svcToCat =
+//       Object.keys(rawServiceToCategory).length > 0
+//         ? rawServiceToCategory
+//         : buildArtifactsFromMatrix(rawMATRIX, {}).serviceToCategory;
+
+//     return {
+//       questions: rawQuestions,
+//       pricing: rawPricing,
+//       serviceToCategory: svcToCat,
+//     };
+//   }
+
+//   // Rebuild fully from MATRIX
+//   return buildArtifactsFromMatrix(rawMATRIX, rawServiceToCategory);
+// })();
+
+// // Covered description
+// const getCoveredDescription = (svc) => rawGetCoveredDescription(svc) || "";
+
+// /** ──────────────────────────────────────────────────────────────────────────
+//  *  Helpers for category/service detection
+//  *  ───────────────────────────────────────────────────────────────────────── */
+// const ALL_CATEGORIES = Object.keys(questions).filter(
+//   (k) => Array.isArray(questions[k]) && questions[k][0]?.isServiceChooser
+// );
+
+// function looksLikeCategory(label) {
+//   if (!label) return false;
+//   const isDirect = ALL_CATEGORIES.some((c) => slug(c) === slug(label));
+//   const prebuilt = questions[label];
+//   const hasChooser = prebuilt?.[0]?.isServiceChooser;
+//   return Boolean(isDirect || hasChooser);
+// }
+
+// function servicesForCategory(label) {
+//   if (!label) return [];
+//   // direct
+//   const direct = questions[label];
+//   if (Array.isArray(direct) && direct[0]?.isServiceChooser) {
+//     return (direct[0]?.options || []).map((o) => o.value ?? o);
+//   }
+//   // from map
+//   const hit = Object.keys(serviceToCategory).filter(
+//     (svc) => serviceToCategory[svc] && slug(serviceToCategory[svc]) === slug(label)
+//   );
+//   return hit;
+// }
+
+// /** ──────────────────────────────────────────────────────────────────────────
+//  *  Notifications handler
+//  *  ───────────────────────────────────────────────────────────────────────── */
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldShowAlert: true,
+//     shouldPlaySound: true,
+//     shouldSetBadge: false,
+//   }),
+// });
+
+// /** ──────────────────────────────────────────────────────────────────────────
+//  *  Tiny UI piece
+//  *  ───────────────────────────────────────────────────────────────────────── */
+// function HoverableCard({ style, onPress, children }) {
+//   const scale = useRef(new Animated.Value(1)).current;
+//   const elevation = useRef(new Animated.Value(2)).current;
+//   const animate = (toScale, toElev) => {
+//     Animated.parallel([
+//       Animated.spring(scale, {
+//         toValue: toScale,
+//         friction: 6,
+//         useNativeDriver: false,
+//       }),
+//       Animated.timing(elevation, {
+//         toValue: toElev,
+//         duration: 200,
+//         useNativeDriver: false,
+//       }),
+//     ]).start();
+//   };
+//   return (
+//     <Pressable
+//       onPress={onPress}
+//       onPressIn={() => animate(0.97, 8)}
+//       onPressOut={() => animate(1, 2)}
+//       {...(Platform.OS === "web"
+//         ? { onHoverIn: () => animate(1.03, 12), onHoverOut: () => animate(1, 2) }
+//         : {})}
+//     >
+//       <Animated.View
+//         style={[
+//           style,
+//           {
+//             transform: [{ scale }],
+//             shadowColor: "#000",
+//             shadowOffset: { width: 0, height: elevation },
+//             shadowOpacity: 0.15,
+//             shadowRadius: elevation,
+//             elevation,
+//           },
+//         ]}
+//       >
+//         {children}
+//       </Animated.View>
+//     </Pressable>
+//   );
+// }
+
+// /** ──────────────────────────────────────────────────────────────────────────
+//  *  Screen
+//  *  ───────────────────────────────────────────────────────────────────────── */
+// export default function EmergencyForm() {
+//   const route = useRoute();
+//   const params = route?.params || {};
+//   const categoryParam = params.category; // may be a category OR a service
+//   const subcategory = params.subcategory;
+//   const navigation = useNavigation();
+
+//   // Decide if categoryParam represents a category or a service
+//   const isCategory = looksLikeCategory(categoryParam);
+//   const initialService = subcategory || (!isCategory ? categoryParam : "");
+
+//   // Deep logs for troubleshooting
+//   L("BOOT",
+//     {
+//       paramCategory: categoryParam,
+//       isCategory,
+//       subcategory,
+//       initialService,
+//     },
+//     "\nMATRIX rows:", rawMATRIX.length,
+//     "\nquestions keys:", Object.keys(questions).slice(0, 12),
+//     "\nservices in SERVICE_TO_CATEGORY:", Object.keys(serviceToCategory).slice(0, 12)
+//   );
+
+//   // Form state
+//   const [address, setAddress] = useState("");
+//   const [city, setCity] = useState("");
+//   const [zipcode, setZipcode] = useState("");
+//   const [aptSuite, setAptSuite] = useState("");
+
+//   const [selectedService, setSelectedService] = useState(initialService);
+//   const [answers, setAnswers] = useState({});
+//   const [otherAnswers, setOtherAnswers] = useState({});
+//   const [submitting, setSubmitting] = useState(false);
+
+//   // Smart (beta) estimate state
+//   const [beta, setBeta] = useState(null);
+//   const [betaLoading, setBetaLoading] = useState(false);
+//   const [betaError, setBetaError] = useState("");
+
+//   // Build the category chooser question from the normalized questions map
+//   const categoryQuestion = useMemo(() => {
+//     if (!isCategory) return null;
+
+//     // Prefer the prebuilt chooser sitting under the category key
+//     const prebuilt = (questions[categoryParam] || [])[0];
+//     if (prebuilt?.isServiceChooser && prebuilt?.options?.length) return prebuilt;
+
+//     // Otherwise synthesize from mapping
+//     const svcList = servicesForCategory(categoryParam);
+//     if (!svcList.length) return null;
+
+//     return {
+//       id: 1,
+//       question: `Which ${String(categoryParam).toLowerCase()} issue are you experiencing?`,
+//       type: "multiple",
+//       options: svcList.map((svc) => ({ value: svc, label: String(svc) })),
+//       isServiceChooser: true,
+//     };
+//   }, [isCategory, categoryParam]);
+
+//   // Service-level questions
+//   const serviceQuestions = useMemo(() => {
+//     if (!selectedService) return [];
+//     const arr = questions[selectedService] || [];
+//     // Sometimes you only saw 1 question because the array was empty/undefined.
+//     // Log the fallback list of services that DO have questions.
+//     if (!Array.isArray(arr) || arr.length === 0) {
+//       const withQs = Object.keys(questions).filter(
+//         (k) => Array.isArray(questions[k]) && questions[k].length > 0 && !questions[k][0]?.isServiceChooser
+//       );
+//       L("⚠️ No service questions for:", selectedService, "\nAvailable services with questions (sample):", withQs.slice(0, 10));
+//       return [];
+//     }
+//     return arr;
+//   }, [selectedService]);
+
+//   // Build "details" for SmartPriceV2
+//   const detailsForBeta = useMemo(() => {
+//     const out = {};
+//     serviceQuestions.forEach((q) => {
+//       const val = answers[q.id];
+//       if (!val) return;
+//       if (val === "Other") {
+//         const txt = (otherAnswers[q.id] || "").trim();
+//         if (txt) out[q.question] = txt;
+//       } else {
+//         out[q.question] = val;
+//       }
+//     });
+//     return out;
+//   }, [answers, otherAnswers, serviceQuestions]);
+
+//   // Fees
+//   const serviceFeeUSD = 0;
+//   const smartPriceUSD = beta?.priceUSD ?? 0;
+//   const convFee = Number(((smartPriceUSD + serviceFeeUSD) * FEE_RATE).toFixed(2));
+//   const grandTotal = Number((smartPriceUSD + serviceFeeUSD + convFee).toFixed(2));
+
+//   const handleServiceSelect = (svc) => {
+//     setSelectedService(svc);
+//     setAnswers({});
+//     setOtherAnswers({});
+//     setBeta(null);
+//     setBetaError("");
+//     L("🟢 Service selected:", svc);
+//   };
+
+//   const handleAnswerChange = (qId, val) => {
+//     setAnswers((prev) => ({ ...prev, [qId]: val }));
+//   };
+//   const handleOtherChange = (qId, val) => {
+//     setOtherAnswers((prev) => ({ ...prev, [qId]: val }));
+//   };
+
+//   const fetchCoordinates = async () => {
+//     try {
+//       const query = encodeURIComponent(`${address}, ${city}, ${zipcode}`);
+//       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+//       const res = await fetch(url);
+//       const json = await res.json();
+//       const loc = json.results[0]?.geometry?.location;
+//       return loc ? [loc.lng, loc.lat] : null;
+//     } catch {
+//       return null;
+//     }
+//   };
+
+//   const registerPushToken = async () => {
+//     if (Device.isDevice) {
+//       const { status: existingStatus } =
+//         await Notifications.getPermissionsAsync();
+//       let finalStatus = existingStatus;
+//       if (existingStatus !== "granted") {
+//         const { status } = await Notifications.requestPermissionsAsync();
+//         finalStatus = status;
+//       }
+//       if (finalStatus !== "granted") return;
+
+//       const token = (await Notifications.getExpoPushTokenAsync()).data;
+//       await AsyncStorage.setItem("expoPushToken", token);
+//     }
+//   };
+
+//   // Debounced call to Smart Estimate API
+//   useEffect(() => {
+//     if (!selectedService) return;
+//     if (!address.trim() || !city.trim() || !zipcode.trim()) return;
+
+//     let cancelled = false;
+//     const t = setTimeout(async () => {
+//       try {
+//         setBetaLoading(true);
+//         setBetaError("");
+
+//         L("🔎 Fetching smart estimate", {
+//           service: selectedService,
+//           address,
+//           city,
+//           zipcode,
+//           details: detailsForBeta,
+//         });
+
+//         const resp = await api.post("/routes/pricing/v2/estimate", {
+//           service: selectedService,
+//           address,
+//           address2: aptSuite || undefined,
+//           city,
+//           zipcode,
+//           details: detailsForBeta,
+//         });
+
+//         if (cancelled) return;
+//         const data = resp?.data || {};
+//         if (!data.ok) {
+//           L("❌ Smart estimate error payload:", data);
+//           setBeta(null);
+//           setBetaError(data.error || "Could not fetch estimate");
+//         } else {
+//           L("✅ Smart estimate ok:", {
+//             base: data?.debug?.base,
+//             anchorKey: data?.debug?.anchorKey,
+//             matrixAdj: data?.debug?.matrixAdj,
+//             priceUSD: data.priceUSD,
+//           });
+//           setBeta(data);
+//         }
+//       } catch (err) {
+//         if (!cancelled) {
+//           L("❌ Smart estimate request failed:", String(err?.message || err));
+//           setBeta(null);
+//           setBetaError("Could not fetch estimate");
+//         }
+//       } finally {
+//         if (!cancelled) setBetaLoading(false);
+//       }
+//     }, 350);
+
+//     return () => {
+//       cancelled = true;
+//       clearTimeout(t);
+//     };
+//   }, [selectedService, address, aptSuite, city, zipcode, detailsForBeta]);
+
+//   // Extra debug
+//   useEffect(() => {
+//     console.log("selectedService:", selectedService);
+//     console.log("questions[selectedService]:", questions[selectedService]);
+//     if (isCategory) {
+//       console.log("categoryQuestion:", categoryQuestion);
+//       console.log("services for category:", servicesForCategory(categoryParam));
+//     }
+//   }, [selectedService, isCategory, categoryParam, categoryQuestion]);
+
+//   const handleSubmit = async () => {
+//     if (!address.trim() || !city.trim() || !zipcode.trim()) {
+//       return Alert.alert("Info", "Please enter address, city, and zip code.");
+//     }
+//     if (!selectedService) {
+//       return Alert.alert("Info", "Please choose your specific issue.");
+//     }
+//     if (!beta || betaLoading) {
+//       return Alert.alert("Info", "Getting your smart estimate. Please wait a moment.");
+//     }
+
+//     setSubmitting(true);
+//     try {
+//       const coords = await fetchCoordinates();
+//       if (!coords) {
+//         Alert.alert("Error", "Failed to get coordinates. Please check your address.");
+//         setSubmitting(false);
+//         return;
+//       }
+
+//       await registerPushToken();
+
+//       const payload = {
+//         category: isCategory
+//           ? categoryParam
+//           : (serviceToCategory?.[selectedService] || categoryParam || ""),
+//         service: selectedService,
+//         address,
+//         address2: aptSuite || undefined,
+//         serviceCity: city,
+//         serviceZipcode: zipcode,
+//         details: detailsForBeta,
+
+//         baseAmount: smartPriceUSD,
+//         adjustmentAmount: 0,
+//         rushFee: 0,
+//         convenienceFee: convFee,
+//         estimatedTotal: grandTotal,
+
+//         coveredDescription: getCoveredDescription(selectedService),
+//         smartEstimateV2: { ...beta },
+//         location: { type: "Point", coordinates: coords },
+//       };
+
+//       const resp = await api.post("/jobs", payload);
+
+//       const createdJob = resp?.data?.job || resp?.data;
+//       const createdJobId = createdJob?._id || createdJob?.id;
+//       if (!createdJobId) throw new Error("No job id returned");
+
+//       await AsyncStorage.setItem("activeJobId", String(createdJobId));
+//       await AsyncStorage.setItem("lastCreatedJobId", String(createdJobId));
+
+//       navigation.navigate("PaymentScreen", { jobId: String(createdJobId) });
+//     } catch (err) {
+//       Alert.alert("Error", "Submission failed – please try again.");
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   const cancelEstimate = () => navigation.goBack();
+
+//   // Filter OUT the category chooser from service questions
+//   const filteredServiceQuestions = useMemo(() => {
+//     if (!serviceQuestions?.length) return [];
+//     const catText = categoryQuestion?.question?.trim()?.toLowerCase();
+
+//     return serviceQuestions.filter((q) => {
+//       const sameText = catText && q.question?.trim()?.toLowerCase() === catText;
+//       const isChooser =
+//         q?.type === "service" || q?.kind === "service" || q?.isServiceChooser;
+//       return !(sameText || isChooser);
+//     });
+//   }, [serviceQuestions, categoryQuestion?.question]);
+
+//   return (
+//     <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
+//       <KeyboardAvoidingView
+//         style={{ flex: 1 }}
+//         behavior={Platform.OS === "ios" ? "padding" : "height"}
+//         keyboardVerticalOffset={100}
+//       >
+//         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+//           {/* Header */}
+//           <View style={styles.header}>
+//             <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+//               <ArrowLeft color="#fff" size={24} />
+//             </Pressable>
+//             <View style={styles.headerBadge}>
+//               <Zap color="#facc15" size={16} />
+//               <Text style={styles.headerBadgeText}>Emergency Request</Text>
+//             </View>
+//             <Text style={styles.title}>
+//               {isCategory ? `${categoryParam} Emergency Form` : `Emergency Form`}
+//             </Text>
+//             <Text style={styles.subtitle}>Get connected with a professional in minutes</Text>
+//           </View>
+
+//           {/* Location */}
+//           <View style={styles.card}>
+//             <View style={styles.cardHeader}>
+//               <MapPin color="#60a5fa" size={24} />
+//               <Text style={styles.cardTitle}>Service Location</Text>
+//             </View>
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.label}>Address *</Text>
+//               <TextInput
+//                 style={styles.input}
+//                 placeholder="Enter your address"
+//                 placeholderTextColor="#94a3b8"
+//                 value={address}
+//                 onChangeText={setAddress}
+//               />
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <View style={styles.inputContainer}>
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Apt 4B, Suite 210, Unit #7…"
+//                   placeholderTextColor="#94a3b8"
+//                   value={aptSuite}
+//                   onChangeText={setAptSuite}
+//                   autoCapitalize="characters"
+//                 />
+//               </View>
+//             </View>
+
+//             <View style={styles.inputRow}>
+//               <View style={[styles.inputGroup, { flex: 2 }]}>
+//                 <Text style={styles.label}>City *</Text>
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="Enter city"
+//                   placeholderTextColor="#94a3b8"
+//                   value={city}
+//                   onChangeText={setCity}
+//                 />
+//               </View>
+//               <View style={[styles.inputGroup, { flex: 1 }]}>
+//                 <Text style={styles.label}>Zip Code *</Text>
+//                 <TextInput
+//                   style={styles.input}
+//                   placeholder="12345"
+//                   placeholderTextColor="#94a3b8"
+//                   keyboardType="numeric"
+//                   value={zipcode}
+//                   onChangeText={setZipcode}
+//                 />
+//               </View>
+//             </View>
+//           </View>
+
+//           {/* Category chooser (only when we truly have a category & no service yet) */}
+//           {isCategory && !selectedService && categoryQuestion && (
+//             <View style={styles.card}>
+//               <View style={styles.cardHeader}>
+//                 <Shield color="#4ade80" size={24} />
+//                 <Text style={styles.cardTitle}>Select Your Issue</Text>
+//               </View>
+
+//               <Text style={styles.questionText}>{categoryQuestion.question}</Text>
+
+//               <View style={styles.optionsContainer}>
+//                 {categoryQuestion.options.map((opt) => {
+//                   const value = opt.value ?? opt;
+//                   const label = opt.label ?? opt;
+//                   const isSel = selectedService === value;
+
+//                   return (
+//                     <HoverableCard
+//                       key={String(value)}
+//                       style={[styles.optionCard, isSel && styles.optionCardSelected]}
+//                       onPress={() => handleServiceSelect(value)}
+//                     >
+//                       <Text style={[styles.optionText, isSel && styles.optionTextSelected]}>
+//                         {label}
+//                       </Text>
+//                       {isSel && <CheckCircle color="#22c55e" size={20} />}
+//                     </HoverableCard>
+//                   );
+//                 })}
+//               </View>
+//             </View>
+//           )}
+
+//           {/* Service questions */}
+//           {selectedService && (
+//             <View key={selectedService}>
+//               {filteredServiceQuestions.map((q) => {
+//                 const selectedVal = answers[q.id] || "";
+//                 return (
+//                   <View key={q.id} style={styles.card}>
+//                     <Text style={styles.questionText}>{q.question}</Text>
+
+//                     <View style={styles.optionsContainer}>
+//                       {q.options.map((opt) => {
+//                         const value = opt.value ?? opt;
+//                         const isSel = selectedVal === value;
+//                         return (
+//                           <HoverableCard
+//                             key={String(value)}
+//                             style={[styles.optionCard, isSel && styles.optionCardSelected]}
+//                             onPress={() => handleAnswerChange(q.id, value)}
+//                           >
+//                             <Text style={[styles.optionText, isSel && styles.optionTextSelected]}>
+//                               {String(value)}
+//                             </Text>
+//                             {isSel && <CheckCircle color="#22c55e" size={20} />}
+//                           </HoverableCard>
+//                         );
+//                       })}
+
+//                       {!q.options.some((o) => (o.value ?? o) === "Other") && (
+//                         <HoverableCard
+//                           style={[styles.optionCard, selectedVal === "Other" && styles.optionCardSelected]}
+//                           onPress={() => handleAnswerChange(q.id, "Other")}
+//                         >
+//                           <Text
+//                             style={[
+//                               styles.optionText,
+//                               selectedVal === "Other" && styles.optionTextSelected,
+//                             ]}
+//                           >
+//                             Other
+//                           </Text>
+//                           {selectedVal === "Other" && <CheckCircle color="#22c55e" size={20} />}
+//                         </HoverableCard>
+//                       )}
+//                     </View>
+
+//                     {selectedVal === "Other" && (
+//                       <TextInput
+//                         style={[styles.input, styles.otherInput]}
+//                         placeholder="Please specify..."
+//                         placeholderTextColor="#94a3b8"
+//                         value={otherAnswers[q.id] || ""}
+//                         onChangeText={(txt) => handleOtherChange(q.id, txt)}
+//                       />
+//                     )}
+//                   </View>
+//                 );
+//               })}
+//             </View>
+//           )}
+
+//           {/* Price Summary */}
+//           {selectedService && (
+//             <View style={styles.summaryCard}>
+//               <LinearGradient
+//                 colors={["rgba(34, 197, 94, 0.1)", "rgba(16, 185, 129, 0.1)"]}
+//                 style={styles.summaryGradient}
+//               >
+//                 <View style={styles.cardHeader}>
+//                   <CreditCard color="#22c55e" size={24} />
+//                   <Text style={styles.summaryTitle}>Price Summary</Text>
+//                 </View>
+
+//                 {betaLoading && (
+//                   <Text style={{ color: "#e0e7ff", textAlign: "center", marginBottom: 8 }}>
+//                     Calculating smart price…
+//                   </Text>
+//                 )}
+//                 {!!betaError && (
+//                   <Text style={{ color: "#fecaca", textAlign: "center", marginBottom: 8 }}>
+//                     {betaError}
+//                   </Text>
+//                 )}
+
+//                 <View style={styles.priceRow}>
+//                   <Text style={styles.priceLabel}>Smart Price</Text>
+//                   <Text style={styles.priceValue}>${(beta?.priceUSD ?? 0).toFixed(2)}</Text>
+//                 </View>
+
+//                 <View style={styles.priceRow}>
+//                   <Text style={styles.priceLabel}>
+//                     BlinqFix Fee ({(FEE_RATE * 100).toFixed(0)}%)
+//                   </Text>
+//                   <Text style={styles.priceValue}>${convFee.toFixed(2)}</Text>
+//                 </View>
+
+//                 <View style={styles.divider} />
+
+//                 <View style={styles.totalRow}>
+//                   <Text style={styles.totalLabel}>Estimated Total</Text>
+//                   <Text style={styles.totalValue}>${grandTotal.toFixed(2)}</Text>
+//                 </View>
+
+//                 <View style={styles.coveredSection}>
+//                   <Text style={styles.coveredTitle}>What's Covered</Text>
+//                   <Text style={styles.coveredText}>
+//                     {getCoveredDescription(selectedService)}
+//                   </Text>
+//                 </View>
+
+//                 <View style={styles.guaranteeBadge}>
+//                   <Shield color="#22c55e" size={16} />
+//                   <Text style={styles.guaranteeText}>100% On-Demand Guaranteed</Text>
+//                 </View>
+//               </LinearGradient>
+//             </View>
+//           )}
+
+//           {/* Actions */}
+//           <View style={styles.actionContainer}>
+//             <HoverableCard style={styles.primaryButton} onPress={handleSubmit}>
+//               <LinearGradient colors={["#22c55e", "#16a34a"]} style={styles.buttonGradient}>
+//                 <CreditCard color="#fff" size={20} />
+//                 <Text style={styles.primaryButtonText}>
+//                   {submitting ? "Processing..." : "Pay & Book Service"}
+//                 </Text>
+//               </LinearGradient>
+//             </HoverableCard>
+
+//             <HoverableCard style={styles.secondaryButton} onPress={cancelEstimate}>
+//               <Text style={styles.secondaryButtonText}>Cancel Estimate</Text>
+//             </HoverableCard>
+//           </View>
+
+//           {/* Trust */}
+//           <View style={styles.trustSection}>
+//             <View style={styles.trustItem}>
+//               <Clock color="#60a5fa" size={16} />
+//               <Text style={styles.trustText}>Under 30 min response</Text>
+//             </View>
+//             <View style={styles.trustItem}>
+//               <Shield color="#22c55e" size={16} />
+//               <Text style={styles.trustText}>Licensed & Insured</Text>
+//             </View>
+//             <View style={styles.trustItem}>
+//               <CheckCircle color="#c084fc" size={16} />
+//               <Text style={styles.trustText}>Quality Guaranteed</Text>
+//             </View>
+//           </View>
+//         </ScrollView>
+//       </KeyboardAvoidingView>
+//     </LinearGradient>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1 },
+//   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+//   header: {
+//     alignItems: "center",
+//     paddingTop: 60,
+//     paddingBottom: 32,
+//     position: "relative",
+//   },
+//   backButton: {
+//     position: "absolute",
+//     borderRadius: 99,
+//     borderColor: "white",
+//     borderStyle: "solid",
+//     width: 44,
+//     height: 44,
+//     top: 60,
+//     left: 0,
+//     padding: 8,
+//   },
+//   headerBadge: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "rgba(255,255,255,0.1)",
+//     paddingHorizontal: 16,
+//     paddingVertical: 8,
+//     borderRadius: 20,
+//     marginBottom: 16,
+//   },
+//   headerBadgeText: { color: "#fff", marginLeft: 8, fontWeight: "500" },
+//   title: {
+//     fontSize: 32,
+//     fontWeight: "900",
+//     color: "#fff",
+//     textAlign: "center",
+//     marginBottom: 8,
+//   },
+//   subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+//   card: {
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 16,
+//     padding: 20,
+//     marginBottom: 20,
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.1)",
+//   },
+//   cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
+//   cardTitle: {
+//     fontSize: 20,
+//     fontWeight: "bold",
+//     color: "#fff",
+//     marginLeft: 12,
+//   },
+//   inputGroup: { marginBottom: 16 },
+//   inputRow: { flexDirection: "row", gap: 12 },
+//   label: { fontSize: 16, fontWeight: "600", color: "#e0e7ff", marginBottom: 8 },
+//   input: {
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//     borderRadius: 12,
+//     padding: 16,
+//     fontSize: 16,
+//     color: "#fff",
+//   },
+//   questionText: {
+//     fontSize: 18,
+//     fontWeight: "600",
+//     color: "#fff",
+//     marginBottom: 16,
+//     textAlign: "center",
+//   },
+//   optionsContainer: { gap: 12 },
+//   optionCard: {
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderWidth: 1,
+//     borderColor: "rgba(255,255,255,0.2)",
+//     borderRadius: 12,
+//     padding: 16,
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//   },
+//   optionCardSelected: {
+//     backgroundColor: "rgba(255,255,255,0.2)",
+//     borderColor: "#22c55e",
+//   },
+//   optionText: { fontSize: 16, color: "#e0e7ff", flex: 1 },
+//   optionTextSelected: { color: "#fff", fontWeight: "600" },
+//   otherInput: { marginTop: 12 },
+//   summaryCard: { marginBottom: 20, borderRadius: 16, overflow: "hidden" },
+//   summaryGradient: { padding: 20 },
+//   summaryTitle: {
+//     fontSize: 22,
+//     fontWeight: "bold",
+//     color: "#fff",
+//     marginLeft: 12,
+//   },
+//   priceRow: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     paddingVertical: 8,
+//   },
+//   priceLabel: { fontSize: 16, color: "#e0e7ff" },
+//   priceValue: { fontSize: 16, fontWeight: "600", color: "#fff" },
+//   divider: {
+//     height: 1,
+//     backgroundColor: "rgba(255,255,255,0.2)",
+//     marginVertical: 12,
+//   },
+//   totalRow: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//     paddingVertical: 12,
+//   },
+//   totalLabel: { fontSize: 20, fontWeight: "bold", color: "#fff" },
+//   totalValue: { fontSize: 24, fontWeight: "900", color: "#22c55e" },
+//   coveredSection: {
+//     marginTop: 20,
+//     padding: 16,
+//     backgroundColor: "rgba(255,255,255,0.05)",
+//     borderRadius: 12,
+//   },
+//   coveredTitle: {
+//     fontSize: 16,
+//     fontWeight: "bold",
+//     color: "#fff",
+//     marginBottom: 8,
+//   },
+//   coveredText: { fontSize: 14, color: "#e0e7ff", lineHeight: 20 },
+//   guaranteeBadge: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     marginTop: 16,
+//     padding: 12,
+//     backgroundColor: "rgba(34, 197, 94, 0.2)",
+//     borderRadius: 8,
+//   },
+//   guaranteeText: { color: "#22c55e", fontWeight: "600", marginLeft: 8 },
+//   actionContainer: { gap: 12, marginBottom: 32 },
+//   primaryButton: { borderRadius: 16, overflow: "hidden" },
+//   buttonGradient: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     justifyContent: "center",
+//     paddingVertical: 18,
+//     paddingHorizontal: 24,
+//     gap: 12,
+//   },
+//   primaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   secondaryButton: {
+//     backgroundColor: "rgba(239, 68, 68, 0.15)",
+//     borderWidth: 2,
+//     borderColor: "rgba(239, 68, 68, 0.35)",
+//     borderRadius: 16,
+//     paddingVertical: 16,
+//     alignItems: "center",
+//   },
+//   secondaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+//   trustSection: {
+//     flexDirection: "column",
+//     justifyContent: "space-around",
+//     alignItems: "center",
+//     paddingVertical: 16,
+//     gap: 8,
+//   },
+//   trustItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+//   trustText: { color: "#e0e7ff", fontSize: 16, fontWeight: "500" },
+// });
+// screens/EmergencyForm.js
+
+
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View,
@@ -6256,15 +8082,167 @@ import {
   Zap,
 } from "lucide-react-native";
 
-import questionsData, { getCoveredDescription } from "../utils/serviceMatrix.js";
 import api from "../api/client";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const FEE_RATE = 0.07; // 7% BlinqFix fee
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Diagnostics + fee
+ * ────────────────────────────────────────────────────────────────────────── */
+const FEE_RATE = 0.07;
 const L = (...args) => console.log("🚑 [EmergencyForm]", ...args);
 
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Import MATRIX only; always (re)build artifacts here to guarantee completeness
+ * ────────────────────────────────────────────────────────────────────────── */
+import * as matrixAll from "../utils/serviceMatrix.js";
+const rawMATRIX = Array.isArray(matrixAll.MATRIX) ? matrixAll.MATRIX : [];
+
+// Optional helpers from the matrix file (covered descriptions)
+const rawGetCoveredDescription =
+  matrixAll.getCoveredDescription ||
+  ((svc) => (matrixAll.coveredDescriptions?.[svc] ?? ""));
+
+// Optional map if present (used as a hint for category grouping)
+const rawSvcToCat =
+  matrixAll.SERVICE_TO_CATEGORY || matrixAll.serviceToCategory || {};
+
+/* Build questions/pricing/serviceToCategory from MATRIX every time */
+const slug = (s) =>
+  String(s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+function buildArtifactsFromMatrix(matrix, svcToCatHint = {}) {
+  const questions = {};
+  const pricing = {};
+  const categoryServices = {};
+
+  // 1) service → category (hint or infer)
+  const serviceToCategory =
+    Object.keys(svcToCatHint).length > 0
+      ? { ...svcToCatHint }
+      : (() => {
+          const out = {};
+          for (const row of matrix) {
+            const svc = row?.Service;
+            if (!svc) continue;
+            const catGuess = svc.includes("(") ? svc.split("(")[0].trim() : svc;
+            out[svc] = catGuess;
+          }
+          return out;
+        })();
+
+  // 2) category → services
+  for (const { Service } of matrix) {
+    const cat = serviceToCategory[Service] || "General";
+    (categoryServices[cat] ??= new Set()).add(Service);
+  }
+
+  // 3) category chooser
+  for (const [cat, svcSet] of Object.entries(categoryServices)) {
+    questions[cat] = [
+      {
+        id: 1,
+        question: `Which ${cat.toLowerCase()} issue are you experiencing?`,
+        type: "multiple",
+        options: Array.from(svcSet).map((svc) => ({ value: svc, label: String(svc) })),
+        isServiceChooser: true,
+      },
+    ];
+  }
+
+  // 4) service questions + pricing
+  for (const row of matrix) {
+    const { Service, Question, Option, Adjustment } = row;
+    (questions[Service] ??= []);
+    (pricing[Service] ??= {});
+
+    const qKey = slug(Question);
+    const oKey = slug(Option);
+
+    let qObj = questions[Service].find((q) => slug(q.question) === qKey);
+    if (!qObj) {
+      qObj = {
+        id: questions[Service].length + 1,
+        question: Question,
+        type: "multiple",
+        options: [],
+      };
+      questions[Service].push(qObj);
+    }
+    if (!qObj.options.find((o) => slug(o.value ?? o) === oKey)) {
+      qObj.options.push({ value: Option, label: String(Option) });
+    }
+    (pricing[Service][qKey] ??= {})[oKey] = Number(Adjustment) || 0;
+  }
+
+  if (__DEV__) {
+    const counts = Object.fromEntries(
+      Object.entries(questions)
+        .filter(([k]) => !questions[k][0]?.isServiceChooser)
+        .map(([k, v]) => [k, v.length])
+    );
+    L("🧩 Built artifacts", {
+      matrixRows: matrix.length,
+      services: Object.keys(counts).length,
+      questionCounts: counts,
+    });
+  }
+
+  return { questions, pricing, serviceToCategory };
+}
+
+const { questions, pricing, serviceToCategory } = buildArtifactsFromMatrix(
+  rawMATRIX,
+  rawSvcToCat
+);
+
+/* Covered description with fallback to category, then default text */
+const coveredFor = (service) => {
+  const direct = rawGetCoveredDescription(service);
+  if (direct) return direct;
+  const cat = serviceToCategory[service];
+  if (cat) {
+    const byCat = rawGetCoveredDescription(cat);
+    if (byCat) return byCat;
+  }
+  return "Includes on-site diagnosis and typical labor for the selected issue. Parts, specialty materials, or non-standard scope may add cost.";
+};
+
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Category helpers
+ * ────────────────────────────────────────────────────────────────────────── */
+const ALL_CATEGORIES = Object.keys(questions).filter(
+  (k) => Array.isArray(questions[k]) && questions[k][0]?.isServiceChooser
+);
+
+function looksLikeCategory(label) {
+  if (!label) return false;
+  const isDirect = ALL_CATEGORIES.some((c) => slug(c) === slug(label));
+  const prebuilt = questions[label];
+  const hasChooser = prebuilt?.[0]?.isServiceChooser;
+  return Boolean(isDirect || hasChooser);
+}
+
+function servicesForCategory(label) {
+  if (!label) return [];
+  const direct = questions[label];
+  if (Array.isArray(direct) && direct[0]?.isServiceChooser) {
+    return (direct[0]?.options || []).map((o) => o.value ?? o);
+  }
+  return Object.keys(serviceToCategory).filter(
+    (svc) => slug(serviceToCategory[svc]) === slug(label)
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Notifications
+ * ────────────────────────────────────────────────────────────────────────── */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -6273,35 +8251,25 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export function HoverableCard({ style, onPress, children }) {
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Small UI helper
+ * ────────────────────────────────────────────────────────────────────────── */
+function HoverableCard({ style, onPress, children }) {
   const scale = useRef(new Animated.Value(1)).current;
   const elevation = useRef(new Animated.Value(2)).current;
-
   const animate = (toScale, toElev) => {
     Animated.parallel([
-      Animated.spring(scale, {
-        toValue: toScale,
-        friction: 6,
-        useNativeDriver: false,
-      }),
-      Animated.timing(elevation, {
-        toValue: toElev,
-        duration: 200,
-        useNativeDriver: false,
-      }),
+      Animated.spring(scale, { toValue: toScale, friction: 6, useNativeDriver: false }),
+      Animated.timing(elevation, { toValue: toElev, duration: 200, useNativeDriver: false }),
     ]).start();
   };
-
   return (
     <Pressable
       onPress={onPress}
       onPressIn={() => animate(0.97, 8)}
       onPressOut={() => animate(1, 2)}
       {...(Platform.OS === "web"
-        ? {
-            onHoverIn: () => animate(1.03, 12),
-            onHoverOut: () => animate(1, 2),
-          }
+        ? { onHoverIn: () => animate(1.03, 12), onHoverOut: () => animate(1, 2) }
         : {})}
     >
       <Animated.View
@@ -6323,61 +8291,126 @@ export function HoverableCard({ style, onPress, children }) {
   );
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Screen
+ * ────────────────────────────────────────────────────────────────────────── */
 export default function EmergencyForm() {
   const route = useRoute();
   const params = route?.params || {};
-  const category = params.category;
-  const subcategory = params.subcategory;
   const navigation = useNavigation();
 
+  const categoryParam = params.category; // may be category or service
+  const subcategory = params.subcategory;
+
+  const isCategory = looksLikeCategory(categoryParam);
+  const initialService = subcategory || (!isCategory ? categoryParam : "");
+
+  L("BOOT", {
+    categoryParam,
+    isCategory,
+    subcategory,
+    initialService,
+    matrixRows: rawMATRIX.length,
+  });
+
+  // Location fields
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [zipcode, setZipcode] = useState("");
   const [aptSuite, setAptSuite] = useState("");
 
-  const [selectedService, setSelected] = useState(subcategory || "");
+  // Q&A state
+  const [selectedService, setSelectedService] = useState(initialService);
   const [answers, setAnswers] = useState({});
   const [otherAnswers, setOtherAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Smart (beta) estimate state
+  // Pricing state
   const [beta, setBeta] = useState(null);
   const [betaLoading, setBetaLoading] = useState(false);
   const [betaError, setBetaError] = useState("");
 
-  const categoryQuestion = (questionsData.questions[category] || [])[0] || null;
-  const serviceQuestions = selectedService
-    ? questionsData.questions[selectedService] || []
-    : [];
+  /* Category question (chooser) */
+  const categoryQuestion = useMemo(() => {
+    if (!isCategory) return null;
 
+    const prebuilt = (questions[categoryParam] || [])[0];
+    if (prebuilt?.isServiceChooser && prebuilt?.options?.length) return prebuilt;
+
+    const svcList = servicesForCategory(categoryParam);
+    if (!svcList.length) return null;
+
+    return {
+      id: 1,
+      question: `Which ${String(categoryParam).toLowerCase()} issue are you experiencing?`,
+      type: "multiple",
+      options: svcList.map((svc) => ({ value: svc, label: String(svc) })),
+      isServiceChooser: true,
+    };
+  }, [isCategory, categoryParam]);
+
+  /* Service-level questions for currently picked service */
+  const serviceQuestions = useMemo(() => {
+    if (!selectedService) return [];
+    return questions[selectedService] || [];
+  }, [selectedService]);
+
+  /* Filter out any category chooser from the service list */
+  const filteredServiceQuestions = useMemo(() => {
+    if (!serviceQuestions?.length) return [];
+    const catText = categoryQuestion?.question?.trim()?.toLowerCase();
+    return serviceQuestions.filter((q) => {
+      const sameText = catText && q.question?.trim()?.toLowerCase() === catText;
+      const isChooser =
+        q?.type === "service" || q?.kind === "service" || q?.isServiceChooser;
+      return !(sameText || isChooser);
+    });
+  }, [serviceQuestions, categoryQuestion?.question]);
+
+  /* Build pricing details payload from answers
+     → include original, lower, and slug variants to guarantee backend matches */
   const detailsForBeta = useMemo(() => {
     const out = {};
-    serviceQuestions.forEach((q) => {
+    const put = (k, v) => {
+      if (!k || v == null || v === "") return;
+      out[k] = v;
+    };
+
+    filteredServiceQuestions.forEach((q) => {
       const val = answers[q.id];
       if (!val) return;
+
       if (val === "Other") {
         const txt = (otherAnswers[q.id] || "").trim();
-        if (txt) out[q.question] = txt;
-      } else {
-        out[q.question] = val;
+        if (!txt) return;
+        put(q.question, txt);
+        put(q.question.toLowerCase(), txt);
+        put(slug(q.question), txt);
+        return;
       }
+
+      const v = String(val).trim();
+      // Original
+      put(q.question, v);
+      // Lowercase
+      put(q.question.toLowerCase(), v.toLowerCase());
+      // Slugged (both q & value)
+      put(slug(q.question), slug(v));
     });
+
+    if (__DEV__) L("🧾 detailsForBeta", out);
     return out;
-  }, [answers, otherAnswers, serviceQuestions]);
+  }, [answers, otherAnswers, filteredServiceQuestions]);
 
-  //Rush fee section
+  /* Fees & totals */
   const serviceFeeUSD = 0;
-  //adjustment to fee
-  // const serviceFeeUSD = Math.max(100, beta?.serviceFeeUSD ?? 0);
   const smartPriceUSD = beta?.priceUSD ?? 0;
-  const feeBaseUSD = smartPriceUSD; 
-  const convFee = Number((feeBaseUSD * FEE_RATE).toFixed(2));
-  const subtotal = smartPriceUSD + serviceFeeUSD;
-  // const convFee = Number((subtotal * FEE_RATE).toFixed(2));
-  const grandTotal = Number((subtotal + convFee).toFixed(2));
+  const convFee = Number(((smartPriceUSD + serviceFeeUSD) * FEE_RATE).toFixed(2));
+  const grandTotal = Number((smartPriceUSD + serviceFeeUSD + convFee).toFixed(2));
 
+  /* Selection toggles */
   const handleServiceSelect = (svc) => {
-    setSelected(svc);
+    setSelectedService((prev) => (prev === svc ? "" : svc)); // toggle
     setAnswers({});
     setOtherAnswers({});
     setBeta(null);
@@ -6385,12 +8418,20 @@ export default function EmergencyForm() {
   };
 
   const handleAnswerChange = (qId, val) => {
-    setAnswers((prev) => ({ ...prev, [qId]: val }));
-  };
-  const handleOtherChange = (qId, val) => {
-    setOtherAnswers((prev) => ({ ...prev, [qId]: val }));
+    setAnswers((prev) => {
+      const isSame = prev[qId] === val;
+      if (isSame) {
+        const { [qId]: _, ...rest } = prev; // toggle off
+        return rest;
+      }
+      return { ...prev, [qId]: val };
+    });
   };
 
+  const handleOtherChange = (qId, val) =>
+    setOtherAnswers((prev) => ({ ...prev, [qId]: val }));
+
+  /* Geocoding + push token */
   const fetchCoordinates = async () => {
     try {
       const query = encodeURIComponent(`${address}, ${city}, ${zipcode}`);
@@ -6399,28 +8440,26 @@ export default function EmergencyForm() {
       const json = await res.json();
       const loc = json.results[0]?.geometry?.location;
       return loc ? [loc.lng, loc.lat] : null;
-    } catch (e) {
+    } catch {
       return null;
     }
   };
 
   const registerPushToken = async () => {
-    if (Device.isDevice) {
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      if (existingStatus !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== "granted") return;
-
-      const token = (await Notifications.getExpoPushTokenAsync()).data;
-      await AsyncStorage.setItem("expoPushToken", token);
+    if (!Device.isDevice) return;
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
     }
+    if (finalStatus !== "granted") return;
+
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    await AsyncStorage.setItem("expoPushToken", token);
   };
 
-  // Debounced call to Smart Estimate API
+  /* Debounced pricing call */
   useEffect(() => {
     if (!selectedService) return;
     if (!address.trim() || !city.trim() || !zipcode.trim()) return;
@@ -6431,10 +8470,17 @@ export default function EmergencyForm() {
         setBetaLoading(true);
         setBetaError("");
 
+        L("🔎 Fetching smart estimate", {
+          service: selectedService,
+          details: detailsForBeta,
+          city,
+          zipcode,
+        });
+
         const resp = await api.post("/routes/pricing/v2/estimate", {
           service: selectedService,
           address,
-          address2: aptSuite || undefined, // include Apt/Suite for backend
+          address2: aptSuite || undefined,
           city,
           zipcode,
           details: detailsForBeta,
@@ -6443,13 +8489,21 @@ export default function EmergencyForm() {
         if (cancelled) return;
         const data = resp?.data || {};
         if (!data.ok) {
+          L("❌ Smart estimate error payload:", data);
           setBeta(null);
           setBetaError(data.error || "Could not fetch estimate");
         } else {
+          L("✅ Smart estimate ok:", {
+            base: data?.debug?.base,
+            anchorKey: data?.debug?.anchorKey,
+            matrixAdj: data?.debug?.matrixAdj,
+            priceUSD: data.priceUSD,
+          });
           setBeta(data);
         }
       } catch (err) {
         if (!cancelled) {
+          L("❌ Smart estimate request failed:", String(err?.message || err));
           setBeta(null);
           setBetaError("Could not fetch estimate");
         }
@@ -6464,6 +8518,17 @@ export default function EmergencyForm() {
     };
   }, [selectedService, address, aptSuite, city, zipcode, detailsForBeta]);
 
+  /* Extra debug on selection + questions map */
+  useEffect(() => {
+    console.log("selectedService:", selectedService);
+    console.log("questions[selectedService]:", questions[selectedService]);
+    if (isCategory) {
+      console.log("categoryQuestion:", categoryQuestion);
+      console.log("services for category:", servicesForCategory(categoryParam));
+    }
+  }, [selectedService, isCategory, categoryParam, categoryQuestion]);
+
+  /* Submit */
   const handleSubmit = async () => {
     if (!address.trim() || !city.trim() || !zipcode.trim()) {
       return Alert.alert("Info", "Please enter address, city, and zip code.");
@@ -6472,28 +8537,29 @@ export default function EmergencyForm() {
       return Alert.alert("Info", "Please choose your specific issue.");
     }
     if (!beta || betaLoading) {
-      return Alert.alert(
-        "Info",
-        "Getting your smart estimate. Please wait a moment."
-      );
+      return Alert.alert("Info", "Getting your smart estimate. Please wait a moment.");
     }
 
     setSubmitting(true);
     try {
       const coords = await fetchCoordinates();
       if (!coords) {
-        Alert.alert(
-          "Error",
-          "Failed to get coordinates. Please check your address."
-        );
+        Alert.alert("Error", "Failed to get coordinates. Please check your address.");
         setSubmitting(false);
         return;
       }
 
       await registerPushToken();
 
+      const serviceFeeUSD = 0;
+      const smartPriceUSD = beta?.priceUSD ?? 0;
+      const convFee = Number(((smartPriceUSD + serviceFeeUSD) * FEE_RATE).toFixed(2));
+      const grandTotal = Number((smartPriceUSD + serviceFeeUSD + convFee).toFixed(2));
+
       const payload = {
-        category,
+        category: isCategory
+          ? categoryParam
+          : (serviceToCategory?.[selectedService] || categoryParam || ""),
         service: selectedService,
         address,
         address2: aptSuite || undefined,
@@ -6507,16 +8573,14 @@ export default function EmergencyForm() {
         convenienceFee: convFee,
         estimatedTotal: grandTotal,
 
-        coveredDescription: getCoveredDescription(selectedService),
+        coveredDescription: coveredFor(selectedService),
         smartEstimateV2: { ...beta },
         location: { type: "Point", coordinates: coords },
       };
 
       const resp = await api.post("/jobs", payload);
-
       const createdJob = resp?.data?.job || resp?.data;
       const createdJobId = createdJob?._id || createdJob?.id;
-
       if (!createdJobId) throw new Error("No job id returned");
 
       await AsyncStorage.setItem("activeJobId", String(createdJobId));
@@ -6532,63 +8596,39 @@ export default function EmergencyForm() {
 
   const cancelEstimate = () => navigation.goBack();
 
-  const description = useMemo(() => {
-    return selectedService ? getCoveredDescription(selectedService) : "";
-  }, [selectedService]);
-
-  // Remove the chooser from the per-service list.
-  // IMPORTANT: IDs are local to each question list; don't compare cross-group IDs.
-  const filteredServiceQuestions = useMemo(() => {
-    if (!serviceQuestions?.length) return [];
-    const catText = categoryQuestion?.question?.trim()?.toLowerCase();
-
-    return serviceQuestions.filter((q) => {
-      const sameText =
-        catText && q.question?.trim()?.toLowerCase() === catText;
-      const isChooser =
-        q?.type === "service" || q?.kind === "service" || q?.isServiceChooser;
-      return !(sameText || isChooser);
-    });
-  }, [serviceQuestions, categoryQuestion?.question]);
-
+  /* ────────────────────────────────────────────────────────────────────────
+   *  UI
+   * ──────────────────────────────────────────────────────────────────────── */
   return (
-    <LinearGradient
-      colors={["#0f172a", "#1e3a8a", "#312e81"]}
-      style={styles.container}
-    >
+    <LinearGradient colors={["#0f172a", "#1e3a8a", "#312e81"]} style={styles.container}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={100}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View style={styles.header}>
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
+            <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
               <ArrowLeft color="#fff" size={24} />
             </Pressable>
             <View style={styles.headerBadge}>
               <Zap color="#facc15" size={16} />
               <Text style={styles.headerBadgeText}>Emergency Request</Text>
             </View>
-            <Text style={styles.title}>{category} Emergency Form</Text>
-            <Text style={styles.subtitle}>
-              Get connected with a professional in minutes
+            <Text style={styles.title}>
+              {isCategory ? `${categoryParam} Emergency Form` : `Emergency Form`}
             </Text>
+            <Text style={styles.subtitle}>Get connected with a professional in minutes</Text>
           </View>
 
-          {/* Location Section */}
+          {/* Location */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <MapPin color="#60a5fa" size={24} />
               <Text style={styles.cardTitle}>Service Location</Text>
             </View>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Address *</Text>
               <TextInput
@@ -6599,6 +8639,7 @@ export default function EmergencyForm() {
                 onChangeText={setAddress}
               />
             </View>
+
             <View style={styles.inputGroup}>
               <View style={styles.inputContainer}>
                 <TextInput
@@ -6637,42 +8678,32 @@ export default function EmergencyForm() {
             </View>
           </View>
 
-          {/* Service Selection – show only BEFORE a service is chosen */}
-          {!subcategory && !selectedService && categoryQuestion && (
+          {/* Category chooser */}
+          {isCategory && !selectedService && categoryQuestion && (
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Shield color="#4ade80" size={24} />
                 <Text style={styles.cardTitle}>Select Your Issue</Text>
               </View>
 
-              <Text style={styles.questionText}>
-                {categoryQuestion.question}
-              </Text>
+              <Text style={styles.questionText}>{categoryQuestion.question}</Text>
 
               <View style={styles.optionsContainer}>
                 {categoryQuestion.options.map((opt) => {
                   const value = opt.value ?? opt;
                   const label = opt.label ?? opt;
-                  const isSelected = selectedService === value;
+                  const isSel = selectedService === value;
 
                   return (
                     <HoverableCard
-                      key={value}
-                      style={[
-                        styles.optionCard,
-                        isSelected && styles.optionCardSelected,
-                      ]}
+                      key={String(value)}
+                      style={[styles.optionCard, isSel && styles.optionCardSelected]}
                       onPress={() => handleServiceSelect(value)}
                     >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          isSelected && styles.optionTextSelected,
-                        ]}
-                      >
+                      <Text style={[styles.optionText, isSel && styles.optionTextSelected]}>
                         {label}
                       </Text>
-                      {isSelected && <CheckCircle color="#22c55e" size={20} />}
+                      {isSel && <CheckCircle color="#22c55e" size={20} />}
                     </HoverableCard>
                   );
                 })}
@@ -6680,63 +8711,47 @@ export default function EmergencyForm() {
             </View>
           )}
 
-          {/* Service Questions – ONLY non-chooser questions (remount on service change) */}
+          {/* Service questions */}
           {selectedService && (
             <View key={selectedService}>
               {filteredServiceQuestions.map((q) => {
                 const selectedVal = answers[q.id] || "";
-
                 return (
                   <View key={q.id} style={styles.card}>
                     <Text style={styles.questionText}>{q.question}</Text>
 
                     <View style={styles.optionsContainer}>
-                      {q.options.map((opt) => (
-                        <HoverableCard
-                          key={opt.value}
-                          style={[
-                            styles.optionCard,
-                            selectedVal === opt.value &&
-                              styles.optionCardSelected,
-                          ]}
-                          onPress={() => handleAnswerChange(q.id, opt.value)}
-                        >
-                          <Text
-                            style={[
-                              styles.optionText,
-                              selectedVal === opt.value &&
-                                styles.optionTextSelected,
-                            ]}
+                      {q.options.map((opt) => {
+                        const value = opt.value ?? opt;
+                        const isSel = selectedVal === value;
+                        return (
+                          <HoverableCard
+                            key={String(value)}
+                            style={[styles.optionCard, isSel && styles.optionCardSelected]}
+                            onPress={() => handleAnswerChange(q.id, value)}
                           >
-                            {opt.value}
-                          </Text>
-                          {selectedVal === opt.value && (
-                            <CheckCircle color="#22c55e" size={20} />
-                          )}
-                        </HoverableCard>
-                      ))}
+                            <Text style={[styles.optionText, isSel && styles.optionTextSelected]}>
+                              {String(value)}
+                            </Text>
+                            {isSel && <CheckCircle color="#22c55e" size={20} />}
+                          </HoverableCard>
+                        );
+                      })}
 
-                      {!q.options.some((o) => o.value === "Other") && (
+                      {!q.options.some((o) => (o.value ?? o) === "Other") && (
                         <HoverableCard
-                          style={[
-                            styles.optionCard,
-                            selectedVal === "Other" &&
-                              styles.optionCardSelected,
-                          ]}
+                          style={[styles.optionCard, selectedVal === "Other" && styles.optionCardSelected]}
                           onPress={() => handleAnswerChange(q.id, "Other")}
                         >
                           <Text
                             style={[
                               styles.optionText,
-                              selectedVal === "Other" &&
-                                styles.optionTextSelected,
+                              selectedVal === "Other" && styles.optionTextSelected,
                             ]}
                           >
                             Other
                           </Text>
-                          {selectedVal === "Other" && (
-                            <CheckCircle color="#22c55e" size={20} />
-                          )}
+                          {selectedVal === "Other" && <CheckCircle color="#22c55e" size={20} />}
                         </HoverableCard>
                       )}
                     </View>
@@ -6760,7 +8775,7 @@ export default function EmergencyForm() {
           {selectedService && (
             <View style={styles.summaryCard}>
               <LinearGradient
-                colors={["rgba(34, 197, 94, 0.1)", "rgba(16, 185, 129, 0.1)"]}
+                colors={["rgba(34, 197, 94, 0.10)", "rgba(16, 185, 129, 0.10)"]}
                 style={styles.summaryGradient}
               >
                 <View style={styles.cardHeader}>
@@ -6769,92 +8784,52 @@ export default function EmergencyForm() {
                 </View>
 
                 {betaLoading && (
-                  <Text
-                    style={{
-                      color: "#e0e7ff",
-                      textAlign: "center",
-                      marginBottom: 8,
-                    }}
-                  >
+                  <Text style={{ color: "#e0e7ff", textAlign: "center", marginBottom: 8 }}>
                     Calculating smart price…
                   </Text>
                 )}
                 {!!betaError && (
-                  <Text
-                    style={{
-                      color: "#fecaca",
-                      textAlign: "center",
-                      marginBottom: 8,
-                    }}
-                  >
+                  <Text style={{ color: "#fecaca", textAlign: "center", marginBottom: 8 }}>
                     {betaError}
                   </Text>
                 )}
 
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>Smart Price</Text>
-                  <Text style={styles.priceValue}>
-                    ${(beta?.priceUSD ?? 0).toFixed(2)}
-                  </Text>
+                  <Text style={styles.priceValue}>${(beta?.priceUSD ?? 0).toFixed(2)}</Text>
                 </View>
-
-                {/* <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>
-                    Emergency/On-Demand Fee
-                  </Text>
-                  <Text style={styles.priceValue}>
-                    {`$${Math.max(100, beta?.serviceFeeUSD ?? 0).toFixed(2)}`}
-                  </Text>
-                </View> */}
 
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>
                     BlinqFix Fee ({(FEE_RATE * 100).toFixed(0)}%)
                   </Text>
-                  <Text style={styles.priceValue}>
-                    
-                    {/* {(
-                      ((beta?.priceUSD ?? 0) +
-                        Math.max(100, beta?.serviceFeeUSD ?? 0)) *
-                      FEE_RATE
-                    ).toFixed(2)} */}
-                    ${convFee.toFixed(2)}
-                  </Text>
+                  <Text style={styles.priceValue}>${convFee.toFixed(2)}</Text>
                 </View>
 
                 <View style={styles.divider} />
 
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Estimated Total</Text>
-                  <Text style={styles.totalValue}>
-                    ${grandTotal.toFixed(2)}
-                  </Text>
+                  <Text style={styles.totalValue}>${grandTotal.toFixed(2)}</Text>
                 </View>
 
                 <View style={styles.coveredSection}>
                   <Text style={styles.coveredTitle}>What's Covered</Text>
-                  <Text style={styles.coveredText}>
-                    {getCoveredDescription(selectedService)}
-                  </Text>
+                  <Text style={styles.coveredText}>{coveredFor(selectedService)}</Text>
                 </View>
 
                 <View style={styles.guaranteeBadge}>
                   <Shield color="#22c55e" size={16} />
-                  <Text style={styles.guaranteeText}>
-                    100% On-Demand Guaranteed
-                  </Text>
+                  <Text style={styles.guaranteeText}>100% On-Demand Guaranteed</Text>
                 </View>
               </LinearGradient>
             </View>
           )}
 
-          {/* Action Buttons */}
+          {/* Actions */}
           <View style={styles.actionContainer}>
             <HoverableCard style={styles.primaryButton} onPress={handleSubmit}>
-              <LinearGradient
-                colors={["#22c55e", "#16a34a"]}
-                style={styles.buttonGradient}
-              >
+              <LinearGradient colors={["#16a34a", "#22c55e"]} style={styles.buttonGradient}>
                 <CreditCard color="#fff" size={20} />
                 <Text style={styles.primaryButtonText}>
                   {submitting ? "Processing..." : "Pay & Book Service"}
@@ -6862,15 +8837,12 @@ export default function EmergencyForm() {
               </LinearGradient>
             </HoverableCard>
 
-            <HoverableCard
-              style={styles.secondaryButton}
-              onPress={cancelEstimate}
-            >
+            <HoverableCard style={styles.secondaryButton} onPress={cancelEstimate}>
               <Text style={styles.secondaryButtonText}>Cancel Estimate</Text>
             </HoverableCard>
           </View>
 
-          {/* Trust Indicators */}
+          {/* Trust */}
           <View style={styles.trustSection}>
             <View style={styles.trustItem}>
               <Clock color="#60a5fa" size={16} />
@@ -6879,7 +8851,7 @@ export default function EmergencyForm() {
             <View style={styles.trustItem}>
               <Shield color="#22c55e" size={16} />
               <Text style={styles.trustText}>Licensed & Insured</Text>
-            </View >
+            </View> 
             <View style={styles.trustItem}>
               <CheckCircle color="#c084fc" size={16} />
               <Text style={styles.trustText}>Quality Guaranteed</Text>
@@ -6891,6 +8863,9 @@ export default function EmergencyForm() {
   );
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ *  Styles
+ * ────────────────────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
@@ -6902,164 +8877,161 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    borderRadius: 99,
-    borderColor: "white",
-    borderStyle: "solid",
+    borderRadius: 999,
+    borderColor: "rgba(255,255,255,0.7)",
+    borderWidth: 1,
     width: 44,
     height: 44,
     top: 60,
     left: 0,
     padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
   headerBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 16,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginBottom: 14,
   },
   headerBadgeText: { color: "#fff", marginLeft: 8, fontWeight: "500" },
   title: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "900",
     color: "#fff",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  subtitle: { fontSize: 16, color: "#e0e7ff", textAlign: "center" },
+  subtitle: { fontSize: 15, color: "#e0e7ff", textAlign: "center" },
+
   card: {
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: 18,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    marginLeft: 12,
-  },
-  inputGroup: { marginBottom: 16 },
+  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  cardTitle: { fontSize: 18, fontWeight: "800", color: "#fff", marginLeft: 10 },
+
+  inputGroup: { marginBottom: 14 },
   inputRow: { flexDirection: "row", gap: 12 },
-  label: { fontSize: 16, fontWeight: "600", color: "#e0e7ff", marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: "700", color: "#e0e7ff", marginBottom: 6 },
   input: {
     backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     fontSize: 16,
     color: "#fff",
   },
+
   questionText: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
     color: "#fff",
-    marginBottom: 16,
+    marginBottom: 12,
     textAlign: "center",
   },
-  optionsContainer: { gap: 12 },
+  optionsContainer: { gap: 10 },
+
   optionCard: {
-    backgroundColor: "green", // keeping your visual debug; change back if desired
+    backgroundColor: "#16a34a",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   optionCardSelected: {
-    backgroundColor: "rgba(255,255,255,0.4)",
+    backgroundColor: "rgba(0, 100, 0, 1.0)",
     borderColor: "#22c55e",
   },
   optionText: { fontSize: 16, color: "#e0e7ff", flex: 1 },
-  optionTextSelected: { color: "#fff", fontWeight: "600" },
-  otherInput: { marginTop: 12 },
-  summaryCard: { marginBottom: 20, borderRadius: 16, overflow: "hidden" },
-  summaryGradient: { padding: 20 },
-  summaryTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#fff",
-    marginLeft: 12,
-  },
+  optionTextSelected: { color: "#fff", fontWeight: "800" },
+  otherInput: { marginTop: 10 },
+
+  summaryCard: { marginBottom: 18, borderRadius: 16, overflow: "hidden" },
+  summaryGradient: { padding: 18 },
+  summaryTitle: { fontSize: 20, fontWeight: "900", color: "#fff", marginLeft: 10 },
+
   priceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
-  priceLabel: { fontSize: 16, color: "#e0e7ff" },
-  priceValue: { fontSize: 16, fontWeight: "600", color: "#fff" },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginVertical: 12,
-  },
+  priceLabel: { fontSize: 15, color: "#e0e7ff" },
+  priceValue: { fontSize: 16, fontWeight: "800", color: "#fff" },
+
+  divider: { height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginVertical: 12 },
+
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
-  totalLabel: { fontSize: 20, fontWeight: "bold", color: "#fff" },
-  totalValue: { fontSize: 24, fontWeight: "900", color: "#22c55e" },
+  totalLabel: { fontSize: 18, fontWeight: "900", color: "#fff" },
+  totalValue: { fontSize: 22, fontWeight: "900", color: "#22c55e" },
+
   coveredSection: {
-    marginTop: 20,
-    padding: 16,
+    marginTop: 14,
+    padding: 12,
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 12,
   },
-  coveredTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 8,
-  },
+  coveredTitle: { fontSize: 15, fontWeight: "900", color: "#fff", marginBottom: 6 },
   coveredText: { fontSize: 14, color: "#e0e7ff", lineHeight: 20 },
+
   guaranteeBadge: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "rgba(34, 197, 94, 0.2)",
-    borderRadius: 8,
+    marginTop: 14,
+    padding: 10,
+    backgroundColor: "rgba(34, 197, 94, 0.18)",
+    borderRadius: 999,
   },
-  guaranteeText: { color: "#22c55e", fontWeight: "600", marginLeft: 8 },
-  actionContainer: { gap: 12, marginBottom: 32 },
-  primaryButton: { borderRadius: 16, overflow: "hidden" },
+  guaranteeText: { color: "#22c55e", fontWeight: "800", marginLeft: 8 },
+
+  actionContainer: { gap: 12, marginBottom: 28 },
+  primaryButton: { borderRadius: 14, overflow: "hidden" },
   buttonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  primaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  secondaryButton: {
-    backgroundColor: "rgba(255, 0, 0, 0.9)",
-    borderWidth: 2,
-    borderColor: "rgba(239, 68, 68, 0.3)",
-    borderRadius: 16,
     paddingVertical: 16,
+    paddingHorizontal: 22,
+    gap: 10,
+  },
+  primaryButtonText: { color: "#fff", fontSize: 17, fontWeight: "900" },
+
+  secondaryButton: {
+    backgroundColor: "red",
+    borderWidth: 2,
+    borderColor: "white",
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: "center",
   },
-  secondaryButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+  secondaryButtonText: { color: "#d1fae5", fontSize: 16, fontWeight: "800" },
+
   trustSection: {
     flexDirection: "column",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 16,
-    gap: 8,
+    paddingVertical: 14,
+    gap: 6,
   },
   trustItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  trustText: { color: "#e0e7ff", fontSize: 16, fontWeight: "500" },
+  trustText: { color: "#e0e7ff", fontSize: 15, fontWeight: "600" },
 });

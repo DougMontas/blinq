@@ -642,7 +642,7 @@ const categories = [
   { name: "Pest Control", icon: Bug, color: "#22c55e" },
   { name: "Painting", icon: Paintbrush, color: "#e879f9" },
   { name: "Landscaping", icon: Leaf, color: "#34d399" },
-  { name: "Consulting/Estimating", icon: ClipboardList, color: "#e0e7ff" }, // maps to General Contractor (Consulting/Estimating)
+  { name: "General Contractor", icon: ClipboardList, color: "#e0e7ff" }, // maps to General Contractor (Consulting/Estimating)
 ];
 
 export default function CustomerDashboard() {
