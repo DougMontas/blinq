@@ -81,6 +81,7 @@ export default {
     plugins: [
       [
         "expo-notifications",
+        "expo-barcode-scanner",
 
         {
           sounds: ["./assets/notification.mp3"],
