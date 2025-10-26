@@ -570,7 +570,7 @@
 //   export default DEFAULT;
 
 /* ========================================================================== */
-/* MATRIX (source of truth)                                                   */
+/* MATRIX                                                  */
 /* ========================================================================== */
 export const MATRIX = [
     /* ================== CORE TRADES ================== */
@@ -748,12 +748,12 @@ export const MATRIX = [
   
     // categories (choose labels that you want to show in the category picker)
     const serviceToCategory = {
-      Plumbing: "Plumbing",
-      Roofing: "Roofing",
-      HVAC: "HVAC",
-      Electrician: "Electrician",
-      Handyman: "Handyman",
-      Locksmith: "Locksmith",
+      "Plumbing": "Plumbing",
+      "Roofing": "Roofing",
+      "HVAC": "HVAC",
+      "Electrician": "Electrician",
+      "Handyman": "Handyman",
+      "Locksmith": "Locksmith",
       "Cleaner / Housekeeper": "Cleaning",
       "Mobile Mechanic": "Auto",
       "Pest Control / Exterminator": "Pest Control",
