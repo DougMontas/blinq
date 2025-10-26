@@ -366,7 +366,7 @@ export const MATRIX = [
     { Service: "Pest Control / Exterminator", Question: "severity", Option: "severe", Adjustment: 0 },
   
     // Consulting / Estimating
-    { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 3 hours", Adjustment: 0 },
+    { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 3 hours", Adjustment: 200 },
     { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 5 hours", Adjustment: 300 },
     { Service: "General Contractor (Consulting/Estimating)", Question: "scope", Option: "up to 8 hours", Adjustment: 500 },
   ];
