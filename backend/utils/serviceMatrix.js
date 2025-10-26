@@ -444,7 +444,7 @@ export const MATRIX = [
       "Landscaper / Lawn Care": "Landscaping",
       "Car Detailing (mobile)": "Auto",
       "Roadside Service": "Auto",
-      "General Contractor":"General Contractor (Consulting/Estimating)",
+      "(Consulting/Estimating)":"General Contractor (Consulting/Estimating)",
     };
   
     // Build category → services map
