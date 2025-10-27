@@ -3323,6 +3323,411 @@
  * Normalizer — canonicalize Q/A so MATRIX lookups always hit
  * ========================================================================== */
 
+// export const strip = (s) =>
+//   String(s || "")
+//     .toLowerCase()
+//     .replace(/\s+/g, " ")
+//     // allow word chars, space, +, /, \, - (keeps keys like car detailing (mobile))
+//     .replace(/[^\w\s/+\\-]/g, "")
+//     .trim();
+
+// /* ── MATRIX question labels we need to mirror for adjustments ──────────────
+//    left: canonical normalized key → right: MATRIX "Question" label.
+//    Keep the right-hand labels EXACTLY as they appear in MATRIX.
+// --------------------------------------------------------------------------- */
+// const MATRIX_QKEYS = {
+//   "plumbing": {
+//     "location": "where located",
+//     "severity": "severity",
+//     "access": "access",
+//     "leak_or_clog": "leak or clog",
+//   },
+//   "roofing": {
+//     "roof.material": "roof type",
+//     "access": "access",
+//     "area.size": "damaged area",
+//   },
+//   "hvac": {
+//     "system.type": "system type",
+//     "problem.type": "problem",
+//     "urgency": "urgency",
+//   },
+//   "electrician": {
+//     "issue.type": "type of issue",
+//     "scope": "scope of work",
+//     "access": "accessibility",
+//   },
+//   "handyman": {
+//     "job.length": "project length",
+//     "job.type": "project type",
+//     // legacy → new
+//     "job.size": "project length",
+//     "repair.type": "project type",
+//   },
+//   "cleaner / housekeeper": {
+//     "cleaning.type": "cleaning type",
+//   },
+//   "painter (interior/exterior)": {
+//     "painting.type": "painting type",
+//     "job.size": "job size",
+//     "ceiling.height": "ceiling height",
+//   },
+//   "landscaper / lawn care": {
+//     "work.type": "work type",
+//     "property.size": "property size",
+//   },
+//   "car detailing (mobile)": {
+//     "package": "package",
+//     "vehicle.size": "vehicle size",
+//   },
+//   "roadside service": {
+//     "issue": "issue",
+//     "vehicle.location": "vehicle location",
+//   },
+//   "mobile mechanic": {
+//     "issue": "issue",
+//   },
+//   "pest control / exterminator": {
+//     "pest.type": "pest type",
+//     "severity": "severity",
+//   },
+//   "general contractor (consulting/estimating)": {
+//     "scope": "scope",
+//   },
+//   "locksmith": {
+//     "lockout": "lockout",
+//     "lock.type": "lock type",
+//   },
+// };
+
+// /* ── Map resolved services → question groups (lowercased) ────────────────── */
+// const SERVICE_TO_QGROUP = {
+//   // anchors → groups
+//   "burst or leaking pipes": "plumbing",
+//   "sewer backups or clogged drains": "plumbing",
+//   "water heater failure": "plumbing",
+//   "gas leaks": "plumbing",
+
+//   "roof leaks or storm damage": "roofing",
+//   "hvac system failure": "hvac",
+//   "select electrical issues below": "electrician",
+
+//   // direct
+//   "plumbing": "plumbing",
+//   "roofing": "roofing",
+//   "hvac": "hvac",
+//   "electrician": "electrician",
+
+//   "handyman": "handyman",
+//   "handyman (general fixes)": "handyman",
+
+//   "locksmith": "locksmith",
+//   "cleaner / housekeeper": "cleaner / housekeeper",
+//   "painter (interior/exterior)": "painter (interior/exterior)",
+//   "pest control / exterminator": "pest control / exterminator",
+//   "landscaper / lawn care": "landscaper / lawn care",
+
+//   "mobile mechanic": "mobile mechanic",
+//   "car mechanic (general)": "mobile mechanic",
+
+//   "car detailing (mobile)": "car detailing (mobile)",
+
+//   "roadside service": "roadside service",
+//   "tow truck / roadside assistance": "roadside service",
+
+//   "general contractor (consulting/estimating)":
+//     "general contractor (consulting/estimating)",
+// };
+
+// /* ── QUESTION & OPTION ALIASES (UI phrasing → canonical keys/options) ───── */
+// export const QUESTION_ALIASES = {
+//   /* ===================== CORE TRADES ===================== */
+//   "plumbing": [
+//     [/^where.*(plumb|issue).*located|^(room|area)$/i, "location"],
+//     [/^leak or clog$/i, "leak_or_clog"],
+//     [/^severity/i, "severity"],
+//     [/^access(ibility)?|behind (wall|ceiling)|in (wall|ceiling)/i, "access"],
+//     [/^leak.*how long|how long.*leak/i, "leak.duration"],
+//     [/^still leaking/i, "leak.active"],
+//   ],
+
+//   "roofing": [
+//     [/^which roofing issue|^issue.*roof/i, "roof.issue"],
+//     [/^roof (material|type)$|^material$/i, "roof.material"],
+//     [/^access$|^accessibility|^is roof.*accessible/i, "access"],
+//     [/^size.*(damaged|area)|^area size$|^damaged area$/i, "area.size"],
+//     [/^interior damage$/i, "interior.damage"],
+//     [/^roof pitch|steep/i, "roof.pitch"],
+//   ],
+
+//   "hvac": [
+//     [/^system type/i, "system.type"],
+//     [/^what.?s the problem|problem type|symptom|^problem$/i, "problem.type"],
+//     [/^urgency|priority/i, "urgency"],
+//     [/^age.*system/i, "system.age"],
+//   ],
+
+//   "electrician": [
+//     [/^type of issue/i, "issue.type"],
+//     [/^scope of work/i, "scope"],
+//     [/^access(ibility)?/i, "access"],
+//     [/^panel|attic/i, "access.detail"],
+//   ],
+
+//   /* ===================== HOME SERVICES ===================== */
+//   "handyman": [
+//     [/^project length|hours?/i, "job.length"],
+//     [/^project type|repair type/i, "job.type"],
+//   ],
+//   "cleaner / housekeeper": [[/^type of cleaning/i, "cleaning.type"]],
+//   "painter (interior/exterior)": [
+//     [/^type of painting/i, "painting.type"],
+//     [/^size of job|scope|rooms?|job size/i, "job.size"],
+//     [/^ceiling height/i, "ceiling.height"],
+//   ],
+//   "landscaper / lawn care": [
+//     [/^type of work/i, "work.type"],
+//     [/^property size|lot size/i, "property.size"],
+//   ],
+
+//   "car detailing (mobile)": [
+//     [/^package$/i, "package"],
+//     [/^vehicle (size|type)$/i, "vehicle.size"],
+//   ],
+
+//   "roadside service": [
+//     [/^issue$/i, "issue"],
+//     [/^vehicle location$/i, "vehicle.location"],
+//   ],
+
+//   "mobile mechanic": [[/^issue$/i, "issue"]],
+
+//   "pest control / exterminator": [
+//     [/^type of pest|pest type/i, "pest.type"],
+//     [/^severity/i, "severity"],
+//   ],
+
+//   "general contractor (consulting/estimating)": [[/^scope$/i, "scope"]],
+
+//   "locksmith": [
+//     [/^lockout$/i, "lockout"],
+//     [/^lock type$/i, "lock.type"],
+//   ],
+
+//   /* ===================== GENERIC / FALLBACK ===================== */
+//   "generic": [
+//     [/^severity/i, "severity"],
+//     [/^access(ibility)?/i, "access"],
+//     [/^size|sq.?ft/i, "area.size"],
+//     [/^location|where/i, "location"],
+//     [/^type|issue|problem/i, "issue.type"],
+//   ],
+// };
+
+// export const OPTION_ALIASES = {
+//   /* ===== plumbing ===== */
+//   "plumbing": [
+//     // where located
+//     [/^kitchen( sink)?$/i, "kitchen sink"],
+//     [/^bath(room)?( sink)?$/i, "bathroom sink"],
+//     [/^toilet$/i, "bathroom toilet"],
+//     [/^shower$/i, "bathroom shower"],
+//     [/^tub|bathtub$/i, "bathroom bathtub"],
+  
+//     // leak or clog
+//     [/^leak$/i, "leak"],
+//     [/^clog(ged)?$/i, "clogged"],
+  
+//     // severity (keep clog vs leak distinct; order matters)
+//     [/^minor (clog|blockage)$/i, "minor clog"],
+//     [/^major (clog|blockage)$/i, "major clog"],
+//     [/^minor( leak| drip)?$/i, "minor leak"],
+//     [/^major( leak)?$/i, "major leak"],
+  
+//     // access
+//     [/^easy( access)?$/i, "easy access"],
+//     [/^(behind|in) (wall|ceiling)$/i, (m) => (m[2] === "wall" ? "behind wall" : "behind ceiling")],
+//   ],
+  
+
+//   "roofing": [
+//     [/^shingle(s)?$/i, "shingles"],
+//     [/^tile$/i, "tile"],
+//     [/^metal$/i, "metal"],
+//     [/^flat$/i, "flat"],
+//     [/^small.*patch/i, "small patch"],
+//     [/^large.*section/i, "large section"],
+//     [/^single story$/i, "single story"],
+//     [/^(second|2nd) story$/i, "second story"],
+//     [/^steep$/i, "steep"],
+//   ],
+
+//   "hvac": [
+//     [/^central ?a\.?c\.?$|^ac$/i, "central ac"],
+//     [/^(heating|furnace|heater)$/i, "heating"],
+//     [/^not cooling$/i, "not cooling"],
+//     [/^not heating$/i, "not heating"],
+//     [/^freez/i, "freezing"],
+//     [/^leak/i, "leaking"],
+//     [/^strange noise(s)?$/i, "strange noise"],
+//     [/^strange smell$/i, "strange smell"],
+//     [/^comfort issue$/i, "comfort issue"],
+//     [/^(system )?down$/i, "system down"],
+//   ],
+
+//   "electrician": [
+//     [/^outlet not working$/i, "outlet not working"],
+//     [/^light switch not working$/i, "light switch not working"],
+//     [/^light flickering$/i, "light flickering"],
+//     [/^breaker tripp?ing$/i, "breaker tripping"],
+//     [/^single outlet$/i, "single outlet"],
+//     [/^single fixture$/i, "single fixture"],
+//     [/^single switch$/i, "single switch"],
+//     [/^easy access$/i, "easy access"],
+//     [/^high ceiling$/i, "high ceiling"],
+//   ],
+
+//   "handyman": [
+//     [/^up to 3 hours$/i, "up to 3 hours"],
+//     [/^up to 5 hours$/i, "up to 5 hours"],
+//     [/^up to 8 hours$/i, "up to 8 hours"],
+//     [/^maintenance$/i, "maintenance"],
+//     [/^installation$/i, "installation"],
+//     [/^repair$/i, "repair"],
+//   ],
+
+//   "cleaner / housekeeper": [
+//     [/^basic/i, "basic (up to 3 hours)"],
+//     [/^deep/i, "deep cleaning (up to 5 hours)"],
+//     [/^move.*out|move.*in/i, "move out (up to 8 hours)"],
+//   ],
+
+//   "painter (interior/exterior)": [
+//     [/^interior$/i, "interior"],
+//     [/^exterior$/i, "exterior"],
+//     [/^up to 500/i, "up to 500 sqft"],
+//     [/^500 to 1000/i, "500 to 1000 sqft"],
+//     [/^1000 to 1500/i, "1000 to 1500 sqft"],
+//     [/^1500 to 2000/i, "1500 to 2000 sqft"],
+//     [/^up to 8/i, "up to 8 feet"],
+//     [/^up to 10/i, "up to 10 feet"],
+//     [/^up to 12/i, "up to 12 feet"],
+//   ],
+
+//   "landscaper / lawn care": [
+//     [/^mow/i, "mowing"],
+//     [/^trim|edg/i, "trimming"],
+//     [/^tree removal.*6/i, "tree removal (less than 6 inch diameter)"],
+//     [/^hedge removal$/i, "hedge removal"],
+//     [/^small yard$/i, "small yard"],
+//     [/^large property$/i, "large property"],
+//     [/^extra large$/i, "extra large"],
+//   ],
+
+//   "car detailing (mobile)": [
+//     [/^interior only$/i, "interior only"],
+//     [/^exterior only$/i, "exterior only"],
+//     [/\binterior\s*(and|&|\/)\s*exterior\b/i, "interior and exterior"],
+//     [/^car$/i, "car"],
+//     [/^suv$/i, "suv"],
+//     [/^large ?suv$/i, "large suv"],
+//   ],
+
+//   "roadside service": [
+//     [/^battery$/i, "battery"],
+//     [/^tire$/i, "tire"],
+//     [/^tow$/i, "tow"],
+//     [/^home (driveway|garage)$/i, "home driveway"],
+//     [/^highway$/i, "highway"],
+//     [/^remote$/i, "remote"],
+//   ],
+
+//   "mobile mechanic": [
+//     [/^no start|does not start$/i, "car does not start"],
+//     [/^oil change$/i, "oil change"],
+//     [/^brake/i, "brake replacement"],
+//   ],
+
+//   "pest control / exterminator": [
+//     [/^ants?$/i, "ants"],
+//     [/^roaches?$/i, "roaches"],
+//     [/^rodents?$/i, "rodents"],
+//     [/^termites?$/i, "termites"],
+//     [/^bed ?bugs?$/i, "bedbugs"],
+//     [/^mild$/i, "mild"],
+//     [/^severe$/i, "severe"],
+//   ],
+
+//   "general contractor (consulting/estimating)": [
+//     [/^up to 3 hours$/i, "up to 3 hours"],
+//     [/^up to 5 hours$/i, "up to 5 hours"],
+//     [/^up to 8 hours$/i, "up to 8 hours"],
+//   ],
+
+//   "generic": [
+//     [/^unknown|not sure$/i, "unknown"],
+//     [/^yes$/i, "yes"],
+//     [/^no$/i, "no"],
+//   ],
+// };
+
+// /* ── helpers ─────────────────────────────────────────────────────────────── */
+// function serviceToQGroup(service) {
+//   const s = strip(service);
+//   return SERVICE_TO_QGROUP[s] || s || "generic";
+// }
+
+// function buildQuestionMap(service) {
+//   const group = serviceToQGroup(service);
+//   const byService = QUESTION_ALIASES[group] || [];
+//   const common = QUESTION_ALIASES["generic"] || [];
+//   return [...byService, ...common];
+// }
+
+// function _mirrorToMatrixKey(group, canonKey) {
+//   const map = MATRIX_QKEYS[group];
+//   return map && map[canonKey] ? map[canonKey] : null;
+// }
+
+// /* ── Public API ──────────────────────────────────────────────────────────── */
+// export function normalizeQuestion(service, rawQuestion) {
+//   const q = String(rawQuestion || "").trim();
+//   for (const [rx, canon] of buildQuestionMap(service)) {
+//     if (rx.test(q)) return canon; // canonical dot-keys (or short keys)
+//   }
+//   return q.toLowerCase();
+// }
+
+// export function normalizeAnswer(service, canonicalQuestionKey, rawAnswer) {
+//   const a = String(rawAnswer || "").trim();
+//   const group = serviceToQGroup(service);
+//   const svcAliases = OPTION_ALIASES[group] || [];
+//   const common = OPTION_ALIASES["generic"] || [];
+//   for (const [rx, canonVal] of [...svcAliases, ...common]) {
+//     if (rx.test(a))
+//       return typeof canonVal === "function" ? canonVal(a.match(rx)) : canonVal;
+//   }
+//   return a.toLowerCase();
+// }
+
+// export function normalizeDetails(service, details = {}) {
+//   const out = {};
+//   const group = serviceToQGroup(service);
+//   for (const [rawQ, rawA] of Object.entries(details || {})) {
+//     // Canonical key/value
+//     const canonKey = normalizeQuestion(service, rawQ);
+//     const canonVal = normalizeAnswer(service, canonKey, rawA);
+//     out[canonKey] = canonVal;
+
+//     // Mirror to MATRIX label (so pricing/adjustments can find it)
+//     const matrixKey = _mirrorToMatrixKey(group, canonKey);
+//     if (matrixKey) out[matrixKey] = canonVal;
+//   }
+//   return out;
+// }
+
+// normalizer.js
+
 export const strip = (s) =>
   String(s || "")
     .toLowerCase()
@@ -3402,7 +3807,7 @@ const MATRIX_QKEYS = {
 
 /* ── Map resolved services → question groups (lowercased) ────────────────── */
 const SERVICE_TO_QGROUP = {
-  // anchors → groups
+  // anchors → groups (emergency shortcuts)
   "burst or leaking pipes": "plumbing",
   "sewer backups or clogged drains": "plumbing",
   "water heater failure": "plumbing",
@@ -3412,7 +3817,7 @@ const SERVICE_TO_QGROUP = {
   "hvac system failure": "hvac",
   "select electrical issues below": "electrician",
 
-  // direct
+  // direct (must match how FE/BE pass service names)
   "plumbing": "plumbing",
   "roofing": "roofing",
   "hvac": "hvac",
@@ -3435,7 +3840,12 @@ const SERVICE_TO_QGROUP = {
   "roadside service": "roadside service",
   "tow truck / roadside assistance": "roadside service",
 
+  // General Contractor aliases
   "general contractor (consulting/estimating)":
+    "general contractor (consulting/estimating)",
+  "general contractor":
+    "general contractor (consulting/estimating)",
+  "consulting / estimating":
     "general contractor (consulting/estimating)",
 };
 
@@ -3533,12 +3943,17 @@ export const OPTION_ALIASES = {
     [/^toilet$/i, "bathroom toilet"],
     [/^shower$/i, "bathroom shower"],
     [/^tub|bathtub$/i, "bathroom bathtub"],
+
     // leak or clog
     [/^leak$/i, "leak"],
     [/^clog(ged)?$/i, "clogged"],
-    // severity
-    [/^minor( leak| clog| drip)?$/i, () => "minor leak"],
-    [/^major( leak| clog)?$/i, () => "major leak"],
+
+    // severity (keep clog vs leak distinct; order matters)
+    [/^minor (clog|blockage)$/i, "minor clog"],
+    [/^major (clog|blockage)$/i, "major clog"],
+    [/^minor( leak| drip)?$/i, "minor leak"],
+    [/^major( leak)?$/i, "major leak"],
+
     // access
     [/^easy( access)?$/i, "easy access"],
     [/^(behind|in) (wall|ceiling)$/i, (m) => (m[2] === "wall" ? "behind wall" : "behind ceiling")],
