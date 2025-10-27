@@ -8812,7 +8812,6 @@
 // };
 // export default DEFAULT;
 
-
 export const MATRIX = [
   /* ================== CORE TRADES ================== */
   // Plumbing
@@ -9054,12 +9053,12 @@ export function buildArtifacts(matrix = MATRIX) {
 
   // Base prices (all zero for your testing)
   const basePrice = {
-    Plumbing: 0,
-    Roofing: 0,
-    HVAC: 0,
-    Electrician: 0,
-    Handyman: 0,
-    Locksmith: 0,
+    "Plumbing": 0,
+    "Roofing": 0,
+    "HVAC": 0,
+    "Electrician": 0,
+    "Handyman": 0,
+    "Locksmith": 0,
     "Cleaner / Housekeeper": 0,
     "Roadside Service": 0,
     "Mobile Mechanic": 0,
@@ -9103,17 +9102,17 @@ const COVERED_FALLBACK =
   "Includes basic on-site diagnosis and labor for the selected service. Parts, materials, or specialty equipment may incur additional charges.";
 
 const COVERED_MAP = {
-  Plumbing:
+  "Plumbing":
     "Covers leaks, clogs, and fixture issues (sinks, toilets, showers). Behind-wall repairs may need additional approval.",
-  Roofing:
+  "Roofing":
     "Covers leak patches and small repairs. Full replacements and permits not included.",
-  HVAC:
+  "HVAC":
     "Covers AC/heating diagnosis and common fixes. New unit installs quoted separately.",
-  Electrician:
+  "Electrician":
     "Covers outlets, switches, fixtures, and breaker issues. Panel upgrades quoted separately.",
-  Handyman:
+  "Handyman":
     "Covers small home repairs/installs. Large remodels not included.",
-  Locksmith:
+  "Locksmith":
     "Covers standard home/auto lockouts; specialty/high-security locks may add cost.",
   "Cleaner / Housekeeper":
     "Covers standard, deep, or move-out cleaning tasks; specialty cleaning extra.",
